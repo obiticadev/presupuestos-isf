@@ -2,7 +2,7 @@
 
 Aplicación web interna de presupuestos de ISF: catálogo → cliente → presupuesto → PDF corporativo. Solo se usa desde la red de la oficina.
 
-Estado: base (plan 1) con inicio de sesión, roles, usuarios, historial y configuración de empresa e impuestos. El catálogo, los clientes, los presupuestos y el PDF llegan en los planes 2 a 4 (`docs/superpowers/plans/`).
+Estado: base (plan 1) con inicio de sesión, roles, usuarios, historial y configuración, más catálogo y clientes (plan 2): conceptos con categorías y unidades editables, importación y exportación en Excel, y clientes con contactos, ubicaciones y condiciones. Los presupuestos y el PDF llegan en los planes 3 y 4 (`docs/superpowers/plans/`).
 
 ## Requisitos
 
@@ -53,6 +53,8 @@ src/modules/<módulo>/    schema.ts (Zod) · service.ts (lógica y permisos) · 
   audit/                 historial de acciones
   users/                 gestión de usuarios
   settings/              empresa, textos, logo e impuestos
+  catalog/               categorías, unidades, conceptos e importación/exportación en Excel (excel.ts, import.ts)
+  clients/               clientes, contactos y ubicaciones
 src/lib/                 BD, errores, decimales y validación
 prisma/                  esquema y migraciones
 scripts/admin.ts         CLI: create / reset-password
@@ -60,4 +62,4 @@ tests/                   pruebas (Vitest)
 docs/                    diseño, planes, diseño visual y operación
 ```
 
-Los permisos se comprueban siempre en el servidor, dentro de cada `service.ts`. Los importes van en `Decimal`, nunca en float.
+Los permisos se comprueban siempre en el servidor, dentro de cada `service.ts`. «Eliminar» un concepto o un cliente lo borra si nada lo usa y, si una clave foránea lo impide, lo desactiva (`src/lib/delete-or-deactivate.ts`). La plantilla de importación del catálogo se descarga desde `/catalogo/importar`. Los importes van en `Decimal`, nunca en float.

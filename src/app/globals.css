@@ -79,10 +79,16 @@ nav.rail .me button:hover{background:#003c38}
 .pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .field textarea{width:100%;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;resize:vertical}
 .warnbox{background:var(--amber-bg);color:var(--amber);padding:10px 12px;font-size:13px;font-weight:600}
+/* Filas editables en línea (contactos y ubicaciones) */
+.rowform{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:8px;align-items:start;padding:8px 0;border-bottom:1px solid var(--rule)}
+.rowform input{width:100%;min-width:0;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:6px 8px;min-height:36px}
+.rowform .msg{grid-column:1/-1;color:var(--red);font-weight:600;font-size:13px}
+.rowhead{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;padding:6px 0;border-bottom:1.5px solid var(--ink)}
 /* Móvil: el rail pasa a ser una barra superior con los mismos enlaces */
 @media (max-width:900px){
 .app{grid-template-rows:auto 1fr}
 .split{grid-template-columns:1fr}.panel{position:static;max-height:none}
+.rowform{grid-template-columns:1fr 1fr}.rowhead{display:none}
 .grid2{grid-template-columns:1fr}
 main{overflow-x:auto}
 nav.rail{position:sticky;top:0;z-index:10;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:6px 10px;gap:2px}
