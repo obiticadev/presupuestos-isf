@@ -19,9 +19,13 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 
 ## Estado actual
 
-- Diseño y plan 1 aprobados. La implementación todavía no ha empezado.
-- Siguiente paso: ejecutar el plan 1 en la rama `plan-1-base` (no en `master`).
-- Forma de ejecución: pendiente de que el usuario elija entre directo y con subagentes. La recomendación es directo.
+- Plan 1 (base) implementado en la rama `plan-1-base`: 7 tareas, 51 pruebas en verde, build y Docker verificados. Falta probarlo en el navegador y decidir la integración en `master`.
+- El código se trabaja en el worktree `D:\dev\presupuestos-isf`: Vite/Vitest no admite el `#` de `D:\# Otros\...`. La carpeta original sigue en `master` con los materiales originales.
+- Siguiente paso: escribir el plan 2 (catálogo y clientes).
+- Reglas aprendidas en el plan 1:
+  - Ningún rol tiene permisos del plugin admin de Better Auth: todo pasa por los servicios.
+  - Prisma 7 no regenera el cliente tras `migrate dev`, así que hay que ejecutar `pnpm exec prisma generate` y reiniciar `pnpm dev`.
+  - La BD de desarrollo está en el puerto 5433.
 
 Actualiza esta sección cuando cambie el estado.
 
