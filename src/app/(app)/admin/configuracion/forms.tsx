@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import type { ActionResult } from "@/lib/action-result";
+import { saveCategoryAction, saveUnitAction, setCategoryActiveAction, setUnitActiveAction } from "@/modules/catalog/actions";
 import { saveLogoAction, saveTaxAction, setTaxActiveAction, updateSettingsAction } from "@/modules/settings/actions";
 
 type Field = { name: string; label: string; value: string; kind?: "text" | "textarea" | "email" | "decimal" | "days" };
@@ -127,6 +128,64 @@ export function TaxesTable({ taxes }: { taxes: TaxRow[] }) {
             </tr>
           ))}
           <tr><td colSpan={2}><TaxForm /></td></tr>
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+type Act = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
+export type ListRow = { id: string; name: string; active: boolean };
+const LIST_ACTIONS: Record<"category" | "unit", { save: Act; setActive: Act }> = {
+  category: { save: saveCategoryAction, setActive: setCategoryActiveAction },
+  unit: { save: saveUnitAction, setActive: setUnitActiveAction },
+};
+
+function ListNameForm({ kind, row }: { kind: "category" | "unit"; row?: ListRow }) {
+  const [state, action, pending] = useActionState<ActionResult | null, FormData>(LIST_ACTIONS[kind].save, null);
+  return (
+    <form action={action} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      {row && <input type="hidden" name="id" value={row.id} />}
+      <input name="name" defaultValue={row?.name} aria-label="Nombre" placeholder="Nombre" required style={{ ...input, width: 180 }} />
+      <button className={row ? "btn" : "btn pri"} disabled={pending} style={small}>{row ? "Guardar" : "Añadir"}</button>
+      <Msg state={state} field="name" />
+      <Msg state={state} />
+    </form>
+  );
+}
+
+function ListActiveForm({ kind, row }: { kind: "category" | "unit"; row: ListRow }) {
+  const [state, action, pending] = useActionState<ActionResult | null, FormData>(LIST_ACTIONS[kind].setActive, null);
+  return (
+    <form action={action} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <input type="hidden" name="id" value={row.id} />
+      <input type="hidden" name="active" value={row.active ? "0" : "1"} />
+      <button className={row.active ? "btn warn" : "btn"} disabled={pending} style={small}>{row.active ? "Desactivar" : "Activar"}</button>
+      <Msg state={state} />
+    </form>
+  );
+}
+
+/** Categories or units: rename, add, deactivate. Nothing is deleted, so concepts keep their references. */
+export function ListTable({ kind, title, rows }: { kind: "category" | "unit"; title: string; rows: ListRow[] }) {
+  return (
+    <section>
+      <h2>{title}</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>Estado</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.id}-${r.active}`} style={r.active ? undefined : { opacity: 0.6 }}>
+              <td><ListNameForm kind={kind} row={r} /></td>
+              <td>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  {!r.active && <span className="badge off">Desactivado</span>}
+                  <ListActiveForm kind={kind} row={r} />
+                </div>
+              </td>
+            </tr>
+          ))}
+          <tr><td colSpan={2}><ListNameForm kind={kind} /></td></tr>
         </tbody>
       </table>
     </section>

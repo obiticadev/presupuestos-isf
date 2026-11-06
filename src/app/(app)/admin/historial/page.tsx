@@ -5,7 +5,10 @@ import { requireUser } from "@/modules/auth/session";
 
 export const metadata: Metadata = { title: "Historial · ISF Presupuestos" };
 
-const ENTITIES: Record<string, string> = { user: "Usuarios", settings: "Configuración", tax: "Impuestos" };
+const ENTITIES: Record<string, string> = {
+  user: "Usuarios", settings: "Configuración", tax: "Impuestos",
+  concept: "Catálogo", category: "Categorías", unit: "Unidades", client: "Clientes",
+};
 const ACTIONS: Record<string, string> = {
   create: "Alta",
   update: "Cambio",
@@ -14,6 +17,8 @@ const ACTIONS: Record<string, string> = {
   reactivate: "Reactivación",
   password: "Contraseña",
   logo: "Logo",
+  delete: "Baja",
+  import: "Importación",
 };
 
 const fmt = new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" });

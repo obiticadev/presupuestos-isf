@@ -1,13 +1,16 @@
 import type { Metadata } from "next";
+import { listCategories, listUnits } from "@/modules/catalog/lists";
 import { getSettings, listTaxes } from "@/modules/settings/service";
-import { LogoForm, SettingsSection, TaxesTable } from "./forms";
+import { ListTable, LogoForm, SettingsSection, TaxesTable } from "./forms";
 
 export const metadata: Metadata = { title: "Configuración · ISF Presupuestos" };
 
 const es = (d: { toFixed(n: number): string }) => d.toFixed(2).replace(".", ",");
 
 export default async function ConfiguracionPage() {
-  const [s, taxes] = await Promise.all([getSettings(), listTaxes({ includeInactive: true })]);
+  const [s, taxes, categories, units] = await Promise.all([
+    getSettings(), listTaxes({ includeInactive: true }), listCategories({ includeInactive: true }), listUnits({ includeInactive: true }),
+  ]);
 
   return (
     <>
@@ -56,6 +59,10 @@ export default async function ConfiguracionPage() {
       <TaxesTable
         taxes={taxes.map((t) => ({ id: t.id, name: t.name, rate: es(t.ratePct), isDefault: t.isDefault, active: t.active }))}
       />
+      <div className="grid2" style={{ alignItems: "start", marginTop: 24 }}>
+        <ListTable kind="category" title="Categorías del catálogo" rows={categories} />
+        <ListTable kind="unit" title="Unidades de cobro" rows={units} />
+      </div>
     </>
   );
 }

@@ -122,3 +122,17 @@ model Tax {
   isDefault Boolean @default(false)
   active    Boolean @default(true)
 }
+
+/// Categorías del catálogo (Servicios, Personal, Material…). No se borran: se desactivan.
+model Category {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  active Boolean @default(true)
+}
+
+/// Unidades de cobro (km, h, m, ud…). No se borran: se desactivan.
+model Unit {
+  id     String  @id @default(cuid())
+  name   String  @unique
+  active Boolean @default(true)
+}

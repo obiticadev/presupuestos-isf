@@ -1,4 +1,4 @@
-import { parseDecimalEs } from "@/lib/decimal";
+import { formatDecimalEs, parseDecimalEs } from "@/lib/decimal";
 
 test.each([
   ["21", "21"],
@@ -13,3 +13,12 @@ test.each([
 test.each(["", "abc", "1,2,3", "12a", "21,", ",5", "1.23,4", "1e3"])("parseDecimalEs(%s) = null", (i) =>
   expect(parseDecimalEs(i)).toBeNull(),
 );
+
+test.each([
+  ["1234.5", undefined, "1.234,50"],
+  ["10", undefined, "10,00"],
+  ["0.005", undefined, "0,01"],
+  ["0.305", { max: 4 }, "0,305"],
+  ["15845.22", undefined, "15.845,22"],
+  ["-1234.5", undefined, "-1.234,50"],
+])("formatDecimalEs(%s, %o) = %s", (v, o, out) => expect(formatDecimalEs(v, o)).toBe(out));
