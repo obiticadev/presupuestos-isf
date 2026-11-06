@@ -12,21 +12,32 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 - Planes de implementación, en este orden:
   1. `docs/superpowers/plans/2026-11-06-plan-1-base.md`: proyecto, BD, autenticación, usuarios, historial, configuración y Docker.
   2. `docs/superpowers/plans/2026-11-06-plan-2-catalogo-clientes.md`: categorías, unidades, conceptos, Excel y clientes.
-  3. Presupuestos: cálculo, conjuntos, editor, emisión y revisiones (por escribir).
+  3. `docs/superpowers/plans/2026-11-06-plan-3-presupuestos.md`: cálculo, conjuntos, editor, emisión, revisiones y listado.
   4. PDF, Dokploy y copias de seguridad (por escribir).
 - Diseño visual elegido («Esquema unifilar»): `docs/diseno/README.md` y `docs/diseno/maquetas/`. El contrato de dirección está en `.impeccable/surfaces/src-app.md`.
 - Contexto de producto: `PRODUCT.md`.
 
 ## Estado actual
 
-- Plan 1 (base) implementado en la rama `plan-1-base`: 7 tareas, 51 pruebas en verde, build y Docker verificados. Probado en el navegador el 2026-11-06; los fallos encontrados están corregidos (notas #11 y #12 de claude-mem). Falta decidir la integración en `master`.
-- El código se trabaja en el worktree `D:\dev\presupuestos-isf`: Vite/Vitest no admite el `#` de `D:\# Otros\...`. La carpeta original sigue en `master` con los materiales originales.
-- Plan 2 (catálogo y clientes) implementado en la rama `plan-2-catalogo-clientes`, creada desde `plan-1-base`: 6 tareas, 99 pruebas en verde, build limpio y probado en Chrome. Pendiente de revisión final de rama e integración.
-- Siguiente paso: escribir el plan 3 (presupuestos: cálculo, conjuntos, conceptos obligatorios, editor, emisión y revisiones). Debe probar el «eliminar» que desactiva conceptos y clientes en uso.
-- Reglas aprendidas en el plan 1:
+**El detalle completo (cronología, cómo retomar en otro equipo, decisiones tomadas y pendientes) está en `docs/superpowers/progreso.md`. Léelo antes de seguir.**
+
+- Ramas encadenadas:
+  - `plan-1-base`: plan 1 terminado (PR #1).
+  - `plan-2-catalogo-clientes`: plan 2 terminado (PR #2, contra `plan-1-base`).
+  - `plan-3-presupuestos`: plan 3 en curso (PR #3, contra `master`, que lleva los tres planes).
+- Plan 3:
+  - Tareas 1 a 5 terminadas y probadas en Chrome: cálculo, conjuntos, borradores, conjuntos en el presupuesto, ajustes de precio y editor.
+  - Tareas 6 y 7 (emisión y numeración; estados, revisiones, duplicado y listado): servicios y pruebas hechos (174 pruebas en verde). **Falta la interfaz**; la lista exacta está en `progreso.md`, sección «Pendiente».
+- Siguiente paso: terminar la interfaz de las tareas 6 y 7 y cerrar el plan 3 (build, Chrome, revisión final). Después, escribir el plan 4 (PDF, Dokploy y copias).
+- El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`.
+- Reglas aprendidas:
   - Ningún rol tiene permisos del plugin admin de Better Auth: todo pasa por los servicios.
-  - Prisma 7 no regenera el cliente tras `migrate dev`, así que hay que ejecutar `pnpm exec prisma generate` y reiniciar `pnpm dev`.
+  - Prisma 7 no regenera el cliente tras `migrate dev`: ejecuta `pnpm exec prisma generate` y **reinicia `pnpm dev`**.
   - La BD de desarrollo está en el puerto 5433.
+  - Las pruebas se ejecutan con `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="Autorizo el reset (Recomendado)" pnpm test`; solo reinician `presupuestos_test`.
+  - Formularios con `ActionForm` (`src/components/action-form.tsx`), que conserva lo escrito ante un error del servidor.
+  - Toda escritura de un borrador pasa por `withDraft()`. Lo emitido no se modifica.
+  - Las pruebas de interfaz se hacen con Claude in Chrome. El progreso se registra a mano en claude-mem y en `progreso.md`.
 
 Actualiza esta sección cuando cambie el estado.
 
