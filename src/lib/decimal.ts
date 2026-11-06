@@ -1,0 +1,14 @@
+const PLAIN = /^-?\d+(\.\d+)?$/; // "21", "21.50"
+const SPANISH = /^-?(\d{1,3}(\.\d{3})+|\d+),\d+$/; // "21,5", "1.234,56"
+
+/**
+ * Reads a number typed the Spanish way and returns it normalised with a dot ("1.234,56" → "1234.56"),
+ * as a string so it can go straight into a Prisma Decimal without passing through a float.
+ * A dot alone is a decimal point ("21.50"); with a comma, dots are thousands separators.
+ */
+export function parseDecimalEs(input: string): string | null {
+  const s = input.trim();
+  if (PLAIN.test(s)) return s;
+  if (SPANISH.test(s)) return s.replace(/\./g, "").replace(",", ".");
+  return null;
+}

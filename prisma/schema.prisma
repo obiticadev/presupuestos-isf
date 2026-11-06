@@ -91,3 +91,34 @@ model AuditLog {
   @@index([entity, entityId])
   @@index([createdAt])
 }
+
+/// Configuración de la empresa: fila única con id = 1. Los valores por defecto viven aquí.
+model CompanySettings {
+  id                  Int      @id @default(1)
+  legalName           String   @default("ISF Instalaciones, Servicios y Formación, S.L.")
+  taxId               String   @default("")
+  address             String   @default("")
+  phone               String   @default("")
+  email               String   @default("")
+  registryText        String   @default("") @db.Text
+  logoPath            String?
+  letterGreeting      String   @default("Muy Sres. Nuestros:")
+  letterIntro         String   @default("Agradeciendo la confianza depositada en nuestra firma, tenemos el gusto de presentarle nuestra mejor oferta en referencia a") @db.Text
+  letterClosing       String   @default("Esperando que la presente oferta sea de su agrado, quedamos a su entera disposición para cuantas consultas desee realizar sin compromiso alguno por su parte.\n\nSin otro particular, reciba un cordial saludo.\n\nAtentamente.") @db.Text
+  letterPlace         String   @default("Alcalá de Henares")
+  defaultExclusions   String   @default("") @db.Text
+  defaultPaymentTerms String   @default("") @db.Text
+  offerValidityDays   Int      @default(30)
+  defaultMarginPct    Decimal  @default(35) @db.Decimal(5, 2)
+  travelOriginText    String   @default("Alcalá de Henares")
+  updatedAt           DateTime @updatedAt
+}
+
+/// Impuestos. No se borran: se desactivan. Como máximo uno por defecto.
+model Tax {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  ratePct   Decimal @db.Decimal(5, 2)
+  isDefault Boolean @default(false)
+  active    Boolean @default(true)
+}
