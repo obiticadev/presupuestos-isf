@@ -116,7 +116,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
           )}
         </section>
 
-        <div className="qtable" style={{ marginTop: 22 }}>
+        <div className="qtable" id="partidas" style={{ marginTop: 22 }}>
           <div className="qrow qhead"><span>P</span><span>Denominación</span><span className="n">Cantidad</span><span className="n">Precio</span><span className="n">Importe</span><span /></div>
           {q.sections.map((s, i) => (
             <div key={s.id}>

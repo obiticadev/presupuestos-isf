@@ -83,3 +83,30 @@ export const removeKitAction: Action = action((actor, f) => removeKitInstance(ac
 
 export const setWaiverAction: Action = action((actor, f) =>
   quotes.setWaiver(actor, str(f, "quoteId"), str(f, "conceptId"), f.get("clear") === "1" ? null : str(f, "reason")));
+
+export const issueAction: Action = action(async (actor, f) => (await import("./issue")).issueQuote(actor, str(f, "id")));
+export const setStatusAction: Action = action(async (actor, f) =>
+  (await import("./lifecycle")).setStatus(actor, str(f, "id"), str(f, "status") as Parameters<typeof import("./lifecycle").setStatus>[2]));
+export const refreshPricesAction: Action = action(async (actor, f) => (await import("./lifecycle")).refreshPricesFromCatalog(actor, str(f, "id")));
+export const addRequiredConceptAction: Action = action((actor, f) => quotes.addRequiredConcept(actor, str(f, "conceptId")));
+export const removeRequiredConceptAction: Action = action((actor, f) => quotes.removeRequiredConcept(actor, str(f, "conceptId")));
+
+export async function createRevisionAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const { createRevision } = await import("./lifecycle");
+  let id = "";
+  const result = await toActionResult(async () => { id = (await createRevision(actor, str(form, "id"))).id; });
+  if (!result.ok) return result;
+  revalidatePath("/", "layout");
+  redirect(`/presupuestos/${id}`);
+}
+
+export async function duplicateAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const { duplicateQuote } = await import("./lifecycle");
+  let id = "";
+  const result = await toActionResult(async () => { id = (await duplicateQuote(actor, str(form, "id"))).quote.id; });
+  if (!result.ok) return result;
+  revalidatePath("/", "layout");
+  redirect(`/presupuestos/${id}`);
+}

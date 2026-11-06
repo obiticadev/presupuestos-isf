@@ -77,7 +77,7 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
   const loose = sub.lines.filter((l) => !l.kitInstanceId);
   const amount = ctx.totals.subsections[sub.id];
   return (
-    <div className="subblock">
+    <div className="subblock" id={`seccion-${sub.id}`}>
       <div className="qrow sub">
         <span>{number}</span>
         {ctx.editable ? (

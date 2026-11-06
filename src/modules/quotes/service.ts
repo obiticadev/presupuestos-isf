@@ -5,6 +5,7 @@ import { formatDecimalEs } from "@/lib/decimal";
 import { parseOrThrow } from "@/lib/validation";
 import type { Prisma, Quote, QuoteLine, QuoteSection, RequiredConcept, Concept } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
+import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { getSettings } from "@/modules/settings/service";
 import { calculateQuote, type CalcSection, type QuoteTotals } from "./calculation";
@@ -174,8 +175,8 @@ export async function deleteDraft(actor: CurrentUser, id: string): Promise<void>
   });
 }
 
-export async function getQuote(id: string): Promise<QuoteDetail> {
-  const q = await prisma.quote.findUnique({ where: { id }, include: DETAIL });
+export async function getQuote(id: string, db: Tx | typeof prisma = prisma): Promise<QuoteDetail> {
+  const q = await db.quote.findUnique({ where: { id }, include: DETAIL });
   if (!q) throw new NotFoundError("El presupuesto no existe");
   return { ...q, waivers: (q.waivers ?? {}) as Record<string, string>, totals: calculateQuote(toCalc(q.sections)) };
 }
@@ -388,5 +389,25 @@ export async function setWaiver(actor: CurrentUser, quoteId: string, conceptId: 
     else waivers[conceptId] = text;
     await tx.quote.update({ where: { id: quoteId }, data: { waivers } });
     await logQuote(tx, actor, quoteId, "update", text === null ? `${required.concept.code}: se quita la renuncia` : `${required.concept.code} a cero: ${text}`);
+  });
+}
+
+export async function addRequiredConcept(actor: CurrentUser, conceptId: string): Promise<void> {
+  assertAdmin(actor);
+  await prisma.$transaction(async (tx) => {
+    const c = await tx.concept.findUnique({ where: { id: conceptId } });
+    if (!c?.active) throw new ValidationError({ conceptId: "Elige un concepto activo" });
+    await tx.requiredConcept.upsert({ where: { conceptId }, create: { conceptId }, update: {} });
+    await logAction(tx, { userId: actor.id, entity: "settings", entityId: "1", action: "update", summary: `Concepto obligatorio: ${c.code}` });
+  });
+}
+
+export async function removeRequiredConcept(actor: CurrentUser, conceptId: string): Promise<void> {
+  assertAdmin(actor);
+  await prisma.$transaction(async (tx) => {
+    const r = await tx.requiredConcept.findUnique({ where: { conceptId }, include: { concept: true } });
+    if (!r) return;
+    await tx.requiredConcept.delete({ where: { conceptId } });
+    await logAction(tx, { userId: actor.id, entity: "settings", entityId: "1", action: "update", summary: `Ya no es obligatorio: ${r.concept.code}` });
   });
 }

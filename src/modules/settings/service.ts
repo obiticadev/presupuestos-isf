@@ -16,6 +16,7 @@ const FIELD_LABEL: Record<keyof SettingsInput, string> = {
   letterClosing: "Despedida", letterPlace: "Lugar de la firma", defaultExclusions: "Exclusiones",
   defaultPaymentTerms: "Forma de pago", offerValidityDays: "Validez de la oferta",
   defaultMarginPct: "Margen por defecto", travelOriginText: "Origen del desplazamiento",
+  numberPattern: "Patrón de numeración", numberYearlyReset: "Reinicio anual", numberStart: "Valor inicial",
 };
 
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;

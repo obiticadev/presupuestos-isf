@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { CurrentUser } from "@/modules/auth/session";
 import { createClient, saveContact, saveLocation } from "@/modules/clients/service";
-import { createDraft, getQuote } from "@/modules/quotes/service";
+import { prisma } from "@/lib/db";
+import { addCatalogLine, createDraft, getQuote } from "@/modules/quotes/service";
 import { makeUser } from "./users";
 
 /** A client with one location and one contact. */
@@ -27,3 +28,12 @@ export async function makeDraft(opts: { clientOver?: Parameters<typeof makeClien
 export const conceptFields = (c: { code: string; categoryId: string; unitId: string; taxId: string; description: string; validated: boolean }) => ({
   code: c.code, categoryId: c.categoryId, unitId: c.unitId, taxId: c.taxId, description: c.description, validated: c.validated,
 });
+
+/** A draft that passes every issue check: location, conditions, required concepts (100 km + 20 h) and validated prices. */
+export async function completeDraft() {
+  const d = await makeDraft({ clientOver: { paymentTerms: "Transferencia a 30 días" } });
+  await prisma.concept.updateMany({ data: { validated: true } });
+  await addCatalogLine(d.actor, d.sub.id, { conceptId: "concept-ser-despl", quantity: "100" });
+  await addCatalogLine(d.actor, d.sub.id, { conceptId: "concept-ser-prog", quantity: "20" });
+  return d;
+}

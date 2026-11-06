@@ -114,6 +114,10 @@ model CompanySettings {
   offerValidityDays   Int      @default(30)
   defaultMarginPct    Decimal  @default(35) @db.Decimal(5, 2)
   travelOriginText    String   @default("Alcalá de Henares")
+  /// Numeración (spec 5.6): {AAAA} año, {N…} número con ceros a la izquierda, {RR} revisión.
+  numberPattern       String   @default("PR-{AAAA}{NNNNNN}-R{RR}")
+  numberYearlyReset   Boolean  @default(false)
+  numberStart         Int      @default(1)
   updatedAt           DateTime @updatedAt
 }
 
@@ -290,6 +294,7 @@ model Quote {
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   sections       QuoteSection[]
+  issued         IssuedDocument?
 
   @@unique([seqYear, seq, revision])
   @@index([status])
@@ -386,4 +391,22 @@ model PriceAdjustment {
 model RequiredConcept {
   conceptId String  @id
   concept   Concept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+}
+
+/// Contador de numeración: clave "global" o el año si hay reinicio anual.
+model NumberCounter {
+  key   String @id
+  value Int
+}
+
+/// Lo emitido no cambia: instantánea completa del documento al emitir (el PDF llega en el plan 4).
+model IssuedDocument {
+  id              String   @id @default(cuid())
+  quoteId         String   @unique
+  quote           Quote    @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  snapshot        Json
+  templateVersion String
+  pdfPath         String?
+  sha256          String?
+  createdAt       DateTime @default(now())
 }
