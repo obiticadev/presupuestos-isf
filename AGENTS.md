@@ -21,10 +21,10 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 
 **El detalle completo (cronología, cómo retomar en otro equipo, decisiones tomadas y pendientes) está en `docs/superpowers/progreso.md`. Léelo antes de seguir.**
 
-- Ramas encadenadas:
-  - `plan-1-base`: plan 1 terminado (PR #1).
-  - `plan-2-catalogo-clientes`: plan 2 terminado (PR #2, contra `plan-1-base`).
-  - `plan-3-presupuestos`: plan 3 en curso (PR #3, contra `master`, que lleva los tres planes).
+- Ramas:
+  - `master` ya tiene el plan 1 (PR #1 fusionado).
+  - El plan 2 se fusionó en `plan-1-base` (PR #2), no en `master`.
+  - `plan-3-presupuestos` (plan 3 en curso) lleva los planes 2 y 3; su PR #3 contra `master` es el que llevará ambos a `master`.
 - Plan 3:
   - Tareas 1 a 5 terminadas y probadas en Chrome: cálculo, conjuntos, borradores, conjuntos en el presupuesto, ajustes de precio y editor.
   - Tareas 6 y 7 (emisión y numeración; estados, revisiones, duplicado y listado): servicios y pruebas hechos (174 pruebas en verde). **Falta la interfaz**; la lista exacta está en `progreso.md`, sección «Pendiente».

@@ -7,7 +7,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 ## Cronología
 
 1. **Diseño y maquetas.** Spec aprobada (`specs/2026-11-06-app-presupuestos-design.md`) y dirección visual «Esquema unifilar» (`docs/diseno/`).
-2. **Plan 1, base:** sesión, usuarios, historial, configuración y Docker. Rama `plan-1-base`, PR #1 contra `master`.
+2. **Plan 1, base:** sesión, usuarios, historial, configuración y Docker. Rama `plan-1-base`; PR #1 ya fusionado en `master`.
    - Se probó en Chrome y aparecieron 7 fallos de interfaz, ya corregidos:
      - casilla de impuesto predeterminado desactualizada;
      - página 404 propia;
@@ -16,11 +16,11 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
      - vista previa del logo;
      - menú lateral fijo;
      - barra de navegación en móvil.
-3. **Plan 2, catálogo y clientes.** Rama `plan-2-catalogo-clientes`, creada desde la del plan 1; PR #2 contra `plan-1-base`.
+3. **Plan 2, catálogo y clientes.** Rama `plan-2-catalogo-clientes`, creada desde la del plan 1; PR #2 fusionado en `plan-1-base` (no en `master`).
    - Una revisión de toda la rama encontró dos fallos importantes, ya corregidos:
      - «1.500» se guardaba como 1,50; ahora se rechaza por ambiguo;
      - una fórmula de Excel con error dejaba el precio vacío; ahora es un error de fila.
-4. **Plan 3, presupuestos.** Rama `plan-3-presupuestos`, creada desde la del plan 2; PR #3 contra `master`, que contiene los planes 1, 2 y 3.
+4. **Plan 3, presupuestos.** Rama `plan-3-presupuestos`, creada desde la del plan 2; PR #3 contra `master`, que llevará a `master` los planes 2 y 3.
    - Tareas 1 a 5 terminadas y probadas en Chrome.
    - Tareas 6 y 7: servicios y pruebas hechos; falta la interfaz. Ver «Pendiente».
 
@@ -102,7 +102,7 @@ Los servicios ya existen y tienen pruebas: `issue.ts`, `numbering.ts`, `lifecycl
 ### Después
 
 - **Plan 4, por escribir:** PDF con Playwright (plantilla en `src/pdf/templates/`), Dokploy y copias de seguridad. La emisión ya guarda la instantánea con `templateVersion: "v1"`; `IssuedDocument.pdfPath` y `sha256` están a `null` hasta ese plan.
-- **Integración.** El PR #3 contra `master` lleva los planes 1, 2 y 3. Si se fusiona, los PR #1 y #2 sobran.
+- **Integración.** `master` solo tiene el plan 1. El PR #3 llevará los planes 2 y 3 cuando el plan 3 esté terminado.
 - **Docker.** La imagen no se ha vuelto a construir desde que se añadió `exceljs` (plan 2).
 
 ## Decisiones tomadas por el camino
