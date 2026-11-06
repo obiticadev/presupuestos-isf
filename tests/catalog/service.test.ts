@@ -69,9 +69,9 @@ test("cambiar el precio deja el antes y el después en el historial", async () =
 
 test("eliminar un concepto sin uso lo borra", async () => {
   const admin = await makeUser("admin");
-  expect(await removeConcept(admin, "concept-ser-prog")).toBe("deleted");
-  await expect(getConcept("concept-ser-prog")).rejects.toThrow(NotFoundError);
-  expect(await prisma.auditLog.count({ where: { entity: "concept", entityId: "concept-ser-prog", action: "delete" } })).toBe(1);
+  expect(await removeConcept(admin, "concept-man-12x075")).toBe("deleted");
+  await expect(getConcept("concept-man-12x075")).rejects.toThrow(NotFoundError);
+  expect(await prisma.auditLog.count({ where: { entity: "concept", entityId: "concept-man-12x075", action: "delete" } })).toBe(1);
 });
 
 test("un presupuestador consulta pero no modifica", async () => {

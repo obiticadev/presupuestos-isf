@@ -11,6 +11,8 @@ export async function seedDefaults(tx: Prisma.TransactionClient | PrismaClient):
   await tx.unit.createMany({ data: UNITS });
   await tx.concept.createMany({ data: CONCEPTS.map((c) => ({ ...c, taxId: "iva-21", validated: false })) });
   await tx.kitTemplate.create({ data: KIT_BOMBA });
+  // Required concepts (spec 5.5); the quotes migration inserts the same rows.
+  await tx.requiredConcept.createMany({ data: [{ conceptId: "concept-ser-despl" }, { conceptId: "concept-ser-prog" }] });
 }
 
 // The example kit of spec 5.3; the kits_seed migration inserts the same row.
