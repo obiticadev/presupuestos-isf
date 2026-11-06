@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <div className="brand">ISF<small>PRESUPUESTOS</small></div>
         <RailLink href="/">Presupuestos</RailLink>
         <a className="off" aria-disabled="true">Clientes <span>Próximamente</span></a>
-        <a className="off" aria-disabled="true">Catálogo <span>Próximamente</span></a>
+        <RailLink href="/catalogo">Catálogo</RailLink>
         {user.role === "admin" && (
           <>
             <div className="sep">Administración</div>
