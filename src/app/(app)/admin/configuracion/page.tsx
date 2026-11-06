@@ -26,7 +26,7 @@ export default async function ConfiguracionPage() {
           ]}
         />
         <div>
-          <LogoForm hasLogo={!!s.logoPath} />
+          <LogoForm logoVersion={s.logoPath ? s.updatedAt.getTime() : null} />
           <SettingsSection
             title="Margen y desplazamiento"
             fields={[

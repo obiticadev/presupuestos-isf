@@ -9,6 +9,15 @@ import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { settingsInput, taxInput, type SettingsInput, type TaxInput } from "./schema";
 
+// Spanish labels for the audit log summary; the history page shows it as is.
+const FIELD_LABEL: Record<keyof SettingsInput, string> = {
+  legalName: "Razón social", taxId: "CIF", address: "Dirección", phone: "Teléfono", email: "Email",
+  registryText: "Datos registrales", letterGreeting: "Saludo", letterIntro: "Introducción",
+  letterClosing: "Despedida", letterPlace: "Lugar de la firma", defaultExclusions: "Exclusiones",
+  defaultPaymentTerms: "Forma de pago", offerValidityDays: "Validez de la oferta",
+  defaultMarginPct: "Margen por defecto", travelOriginText: "Origen del desplazamiento",
+};
+
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
 export const dataDir = () => path.resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR ?? "./data");
@@ -24,7 +33,7 @@ export async function updateSettings(actor: CurrentUser, raw: SettingsInput): Pr
     await tx.companySettings.update({ where: { id: 1 }, data });
     await logAction(tx, {
       userId: actor.id, entity: "settings", entityId: "1", action: "update",
-      summary: `Configuración: ${Object.keys(data).join(", ")}`, data,
+      summary: `Configuración: ${Object.keys(data).map((k) => FIELD_LABEL[k as keyof SettingsInput]).join(", ")}`, data,
     });
   });
 }
@@ -50,6 +59,7 @@ export async function saveTax(actor: CurrentUser, raw: TaxInput): Promise<Tax> {
     if (input.id) {
       const current = await tx.tax.findUnique({ where: { id: input.id } });
       if (!current) throw new NotFoundError("El impuesto no existe");
+      if (input.isDefault && !current.active) throw new ValidationError({ isDefault: "Activa el impuesto antes de marcarlo como predeterminado" });
       if (current.isDefault && !input.isDefault) throw new ValidationError({ isDefault: "Marca otro impuesto como predeterminado en su lugar" });
       tax = await tx.tax.update({ where: { id: input.id }, data });
     } else {
@@ -57,7 +67,7 @@ export async function saveTax(actor: CurrentUser, raw: TaxInput): Promise<Tax> {
     }
     await logAction(tx, {
       userId: actor.id, entity: "tax", entityId: tax.id, action: input.id ? "update" : "create",
-      summary: `${tax.name}: ${tax.ratePct.toFixed(2)} %${tax.isDefault ? " (por defecto)" : ""}`,
+      summary: `${tax.name}: ${tax.ratePct.toFixed(2).replace(".", ",")} %${tax.isDefault ? " (por defecto)" : ""}`,
     });
     return tax;
   });

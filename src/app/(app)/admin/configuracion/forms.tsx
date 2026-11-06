@@ -48,15 +48,15 @@ export function SettingsSection({ title, fields }: { title: string; fields: Fiel
   );
 }
 
-export function LogoForm({ hasLogo }: { hasLogo: boolean }) {
+export function LogoForm({ logoVersion }: { logoVersion: number | null }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(saveLogoAction, null);
   return (
     <section>
       <h2>Logo</h2>
       <form action={action} className="sheet" style={{ display: "flex", gap: 18, alignItems: "flex-end", flexWrap: "wrap" }}>
-        {hasLogo ? (
+        {logoVersion !== null ? (
           // eslint-disable-next-line @next/next/no-img-element -- served from DATA_DIR behind the session, not a static asset
-          <img src={`/api/logo?v=${state?.ok ? "new" : "cur"}`} alt="Logo actual" style={{ maxHeight: 80, maxWidth: 220, border: "1px solid var(--rule)" }} />
+          <img src={`/api/logo?v=${logoVersion}`} alt="Logo actual" style={{ maxHeight: 80, maxWidth: 220, border: "1px solid var(--rule)" }} />
         ) : (
           <span className="mut">Sin logo</span>
         )}
@@ -116,7 +116,7 @@ export function TaxesTable({ taxes }: { taxes: TaxRow[] }) {
         <thead><tr><th>Impuesto</th><th>Estado</th></tr></thead>
         <tbody>
           {taxes.map((t) => (
-            <tr key={t.id} style={t.active ? undefined : { opacity: 0.6 }}>
+            <tr key={`${t.id}-${t.isDefault}`} style={t.active ? undefined : { opacity: 0.6 }}>
               <td><TaxForm tax={t} /></td>
               <td>
                 <div style={{ display: "flex", gap: 10, alignItems: "center" }}>

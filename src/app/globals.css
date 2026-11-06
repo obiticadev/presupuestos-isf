@@ -7,7 +7,7 @@ a{color:inherit}
 :focus-visible{outline:2px solid var(--green);outline-offset:2px}
 .app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
 .app.with-aside{grid-template-columns:224px 1fr 360px}
-nav.rail{background:var(--green);color:var(--green-ink);padding:22px 0;display:flex;flex-direction:column;gap:2px}
+nav.rail{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--green);color:var(--green-ink);padding:22px 0;display:flex;flex-direction:column;gap:2px}
 .brand{padding:0 22px 24px;font-weight:800;font-size:28px;letter-spacing:.02em;font-stretch:110%;color:#fff}
 .brand small{display:block;font-size:10px;font-weight:600;letter-spacing:.14em;color:#b9d3cc;margin-top:4px;font-stretch:100%}
 nav.rail a{display:flex;justify-content:space-between;padding:11px 22px;font-size:15px;text-decoration:none}
@@ -67,12 +67,24 @@ tr:hover td{background:#f9faf8}
 .sheet{background:var(--sheet);border:1.5px solid var(--ink);padding:18px}
 dl{display:grid;grid-template-columns:150px 1fr;gap:8px 16px;font-size:14px}
 dt{color:var(--mut);font-weight:600}
-@media (max-width:900px){.app,.app.with-aside{grid-template-columns:1fr}nav.rail{display:none}main{padding:16px}h1{font-size:30px}}
+@media (max-width:900px){.app,.app.with-aside{grid-template-columns:1fr}main{padding:16px}h1{font-size:30px}}
 /* Rail: enlaces deshabilitados y botón de salir */
 nav.rail a.off{opacity:.55;pointer-events:none}
 nav.rail .me form{margin-top:10px}
 nav.rail .me button{font:600 13px var(--font-archivo),sans-serif;background:none;border:1px solid #7fb3a7;color:#fff;padding:6px 10px;cursor:pointer}
 nav.rail .me button:hover{background:#003c38}
+/* Móvil: el rail pasa a ser una barra superior con los mismos enlaces */
+@media (max-width:900px){
+.app{grid-template-rows:auto 1fr}
+.grid2{grid-template-columns:1fr}
+main{overflow-x:auto}
+nav.rail{position:sticky;top:0;z-index:10;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:6px 10px;gap:2px}
+nav.rail .brand{padding:0 12px 0 4px;font-size:20px}nav.rail .brand small{display:none}
+nav.rail a{padding:10px 12px;font-size:14px}nav.rail a.on{box-shadow:inset 0 -3px 0 #7fd1b9}
+nav.rail a.off,nav.rail .sep{display:none}
+nav.rail .me{margin:0 0 0 auto;padding:0;border:0;display:flex;align-items:center;gap:8px}
+nav.rail .me br,nav.rail .me span{display:none}nav.rail .me form{margin:0}
+}
 /* Inicio de sesión */
 .login{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
 .login .side{background:var(--green);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:space-between}

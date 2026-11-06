@@ -12,6 +12,8 @@ test("un impuesto «21,5» se guarda exacto como 21.50", async () => {
   const admin = await makeUser("admin");
   const t = await saveTax(admin, { name: "IVA reducido prueba", ratePct: "21,5", isDefault: false });
   expect(t.ratePct.toFixed(2)).toBe("21.50");
+  const log = await prisma.auditLog.findFirstOrThrow({ where: { entity: "tax", entityId: t.id } });
+  expect(log.summary).toBe("IVA reducido prueba: 21,50 %");
 });
 
 test.each(["150", "-1", "abc"])("ratePct %s se rechaza con ValidationError", async (r) => {
@@ -24,6 +26,14 @@ test("marcar un impuesto por defecto desmarca el anterior", async () => {
   const t = await saveTax(admin, { name: "IVA 10 %", ratePct: "10", isDefault: true });
   const defaults = (await listTaxes()).filter((x) => x.isDefault);
   expect(defaults.map((x) => x.id)).toEqual([t.id]);
+});
+
+test("un impuesto desactivado no puede ser el predeterminado", async () => {
+  const admin = await makeUser("admin");
+  const t = await saveTax(admin, { name: "IVA 4 %", ratePct: "4", isDefault: false });
+  await setTaxActive(admin, t.id, false);
+  await expect(saveTax(admin, { id: t.id, name: "IVA 4 %", ratePct: "4", isDefault: true })).rejects.toThrow(ValidationError);
+  expect((await listTaxes()).find((x) => x.isDefault)?.name).toBe("IVA 21 %");
 });
 
 test("un impuesto desactivado no se lista salvo que se pida", async () => {
@@ -50,7 +60,8 @@ test("updateSettings guarda los textos y lo registra en el historial", async () 
   expect(s.legalName).toBe("ISF, S.L.");
   expect(s.offerValidityDays).toBe(45);
   expect(s.defaultMarginPct.toFixed(2)).toBe("35.50");
-  expect(await prisma.auditLog.count({ where: { entity: "settings", action: "update" } })).toBe(1);
+  const log = await prisma.auditLog.findFirstOrThrow({ where: { entity: "settings", action: "update" } });
+  expect(log.summary).toBe("Configuración: Razón social, Validez de la oferta, Margen por defecto");
 });
 
 test("el logo solo admite PNG/JPEG de hasta 2 MB", async () => {

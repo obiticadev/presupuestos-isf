@@ -19,7 +19,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 
 ## Estado actual
 
-- Plan 1 (base) implementado en la rama `plan-1-base`: 7 tareas, 51 pruebas en verde, build y Docker verificados. Falta probarlo en el navegador y decidir la integración en `master`.
+- Plan 1 (base) implementado en la rama `plan-1-base`: 7 tareas, 51 pruebas en verde, build y Docker verificados. Probado en el navegador el 2026-11-06; los fallos encontrados están corregidos (notas #11 y #12 de claude-mem). Falta decidir la integración en `master`.
 - El código se trabaja en el worktree `D:\dev\presupuestos-isf`: Vite/Vitest no admite el `#` de `D:\# Otros\...`. La carpeta original sigue en `master` con los materiales originales.
 - Siguiente paso: escribir el plan 2 (catálogo y clientes).
 - Reglas aprendidas en el plan 1:

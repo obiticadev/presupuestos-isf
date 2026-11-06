@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { startTransition, useActionState, useEffect, useRef } from "react";
 import type { ActionResult } from "@/lib/action-result";
 import type { Role } from "@/modules/auth/session";
 import { createUserAction, resetPasswordAction, setActiveAction, setRoleAction } from "@/modules/users/actions";
@@ -15,10 +15,17 @@ function FieldError({ msg }: { msg?: string }) {
 export function NewUserForm() {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(createUserAction, null);
   const e = errorsOf(state);
+  const form = useRef<HTMLFormElement>(null);
+  // Submitted via onSubmit, not `action`, so React keeps what was typed when the server rejects it.
+  useEffect(() => { if (state?.ok) form.current?.reset(); }, [state]);
   return (
     <details className="sheet" style={{ marginTop: 18 }} open={!!state && !state.ok}>
       <summary className="btn pri" style={{ listStyle: "none" }}>Nuevo usuario</summary>
-      <form action={action} className="filters" style={{ alignItems: "flex-start" }}>
+      <form
+        ref={form}
+        onSubmit={(ev) => { ev.preventDefault(); const data = new FormData(ev.currentTarget); startTransition(() => action(data)); }}
+        className="filters" style={{ alignItems: "flex-start" }}
+      >
         <label className="field">Nombre<input name="name" required maxLength={100} /><FieldError msg={e.name} /></label>
         <label className="field">Email<input name="email" type="email" required /><FieldError msg={e.email} /></label>
         <label className="field">
