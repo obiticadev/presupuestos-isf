@@ -126,6 +126,14 @@ async function activeTax(tx: Tx, taxId: string) {
 
 // ── Draft lifecycle ────────────────────────────────────────────────────────────
 
+/** A client's quotes, newest first, for the client page. */
+export async function listClientQuotes(clientId: string) {
+  return prisma.quote.findMany({
+    where: { clientId }, orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+    select: { id: true, reference: true, seq: true, revision: true, status: true, date: true, subject: true, total: true, supersededById: true },
+  });
+}
+
 export async function createDraft(actor: CurrentUser, input: { clientId: string }): Promise<Quote> {
   const [client, settings] = await Promise.all([
     prisma.client.findUnique({

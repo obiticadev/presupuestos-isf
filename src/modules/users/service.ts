@@ -23,6 +23,12 @@ export async function listUsers(actor: CurrentUser): Promise<UserRow[]> {
     .sort((a, b) => Number(b.active) - Number(a.active) || a.name.localeCompare(b.name, "es"));
 }
 
+/** Names of active users, for the «responsable» picker; any signed-in user may read them. */
+export async function listActiveUserNames(): Promise<{ id: string; name: string }[]> {
+  const users = await prisma.user.findMany({ where: { OR: [{ banned: false }, { banned: null }] }, select: { id: true, name: true } });
+  return users.sort((a, b) => a.name.localeCompare(b.name, "es"));
+}
+
 export async function createUser(actor: CurrentUser, raw: CreateUserInput): Promise<{ id: string }> {
   assertAdmin(actor);
   const input = parseOrThrow(createUserInput, raw);

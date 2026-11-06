@@ -3,6 +3,10 @@ import Link from "next/link";
 import { NotFoundError } from "@/lib/errors";
 import { requireUser } from "@/modules/auth/session";
 import { getClient, type ClientDetail } from "@/modules/clients/service";
+import { formatDateEs } from "@/lib/dates";
+import { formatDecimalEs } from "@/lib/decimal";
+import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
+import { listClientQuotes, quoteLabel } from "@/modules/quotes/service";
 import { getSettings } from "@/modules/settings/service";
 import { ClientDangerZone, ClientForm, EditableRows, type ClientValues } from "../forms";
 
@@ -33,7 +37,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<"/
       </>
     );
   }
-  const settings = await getSettings();
+  const [settings, quotes] = await Promise.all([getSettings(), listClientQuotes(id)]);
   const v = values(client);
 
   return (
@@ -43,7 +47,10 @@ export default async function ClientePage({ params, searchParams }: PageProps<"/
         <h1>{client.legalName}</h1>
         <span className="mut">CIF {client.taxId}</span>
         {!client.active && <span className="badge off">Desactivado</span>}
-        <div className="actions">{!editing && <Link className="btn" href={`/clientes/${id}?editar=1`}>Editar</Link>}</div>
+        <div className="actions">
+          {!editing && <Link className="btn" href={`/clientes/${id}?editar=1`}>Editar</Link>}
+          {client.active && <Link className="btn pri" href={`/presupuestos/nuevo?cliente=${id}`}>Nuevo presupuesto</Link>}
+        </div>
       </div>
 
       {editing ? (
@@ -80,7 +87,27 @@ export default async function ClientePage({ params, searchParams }: PageProps<"/
       <EditableRows kind="location" clientId={id} rows={client.locations} />
 
       <h2>Presupuestos</h2>
-      <p className="mut">Los presupuestos de este cliente aparecerán aquí.</p>
+      {quotes.length === 0 ? (
+        <p className="mut">Todavía no tiene presupuestos.</p>
+      ) : (
+        <table>
+          <thead><tr><th>Referencia</th><th>Asunto</th><th>Fecha</th><th>Estado</th><th className="n">Total</th></tr></thead>
+          <tbody>
+            {quotes.map((q) => (
+              <tr key={q.id}>
+                <td><Link className="code" href={`/presupuestos/${q.id}`}>{quoteLabel(q)}</Link></td>
+                <td>{q.subject || <span className="mut">—</span>}</td>
+                <td>{formatDateEs(q.date)}</td>
+                <td>
+                  <span className={`st ${STATUS_CLASS[q.status]}`}><i />{STATUS_LABEL[q.status]}</span>
+                  {q.supersededById && <span className="mut"> · sustituido</span>}
+                </td>
+                <td className="n">{formatDecimalEs(q.total)} €</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       <div style={{ marginTop: 28, paddingTop: 14, borderTop: "1px solid var(--rule)" }}>
         <ClientDangerZone client={v} />

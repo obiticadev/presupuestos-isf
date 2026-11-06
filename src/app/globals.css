@@ -116,3 +116,75 @@ nav.rail .me br,nav.rail .me span{display:none}nav.rail .me form{margin:0}
 .err{background:#fbe8e6;color:var(--red);padding:10px 12px;font-weight:600;font-size:13px}
 .field .msg{color:var(--red);font-weight:600;letter-spacing:0}
 @media (max-width:900px){.login{grid-template-columns:1fr}.login .side{padding:28px}.login .one{display:none}}
+
+/* Editor de presupuestos */
+.err.formerr{display:block;width:100%;margin-top:6px;font-size:13px}
+.headform{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.headform .wide{grid-column:1/-1}
+.qtable{border-top:1.5px solid var(--ink);background:var(--sheet)}
+.qrow{display:grid;grid-template-columns:96px minmax(0,1fr) 110px 100px 112px auto;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--rule);font-size:14px}
+.qrow .n{text-align:right;font-variant-numeric:tabular-nums}
+.qrow.line>span:first-child{font-size:12px;overflow-wrap:anywhere}
+.kit .qrow{grid-template-columns:96px minmax(0,1fr) 110px 100px 112px auto}
+.qhead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;border-bottom:1.5px solid var(--ink)}
+.qrow.part{background:var(--band);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.qrow.part input{text-transform:uppercase;font-weight:700}.qrow.part .confirm summary{text-transform:none;letter-spacing:0}
+.inline>span>input[name=title],.inline>span>input[name=description]{flex:1 1 200px}.inline>span{display:contents}
+.qrow.sub{font-weight:700}
+.qrow.line.hidden{opacity:.55}
+.qrow input,.qrow select{font:inherit;color:var(--ink);border:1px solid var(--rule);background:var(--sheet);padding:5px 7px;min-height:32px;min-width:0}
+.qrow input:focus,.qrow select:focus{border-color:var(--ink)}
+.inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
+.inline>input[name=title],.inline>input[name=description]{flex:1 1 200px}
+.lineform{grid-column:span 2}
+.inline .num,.addrow .num{width:96px;text-align:right}
+.inline .unit{min-width:24px}
+.acts{display:flex;gap:4px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.icon{font:600 14px var(--font-archivo),sans-serif;min-width:30px;min-height:30px;padding:0 6px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);cursor:pointer;display:inline-grid;place-items:center;list-style:none}
+.icon:hover{border-color:var(--ink)}.icon[disabled]{opacity:.35;cursor:default}
+.flags{grid-column:2/-1;display:flex;gap:6px;flex-wrap:wrap}.flags:empty{display:none}
+.subnote{font-size:12px;padding:4px 8px 4px 104px}
+.check.small{min-height:30px;font-size:12px;gap:4px}.check.small input{width:16px;height:16px}
+.confirm{position:relative}
+.confirm>summary{list-style:none;cursor:pointer}.confirm>summary::-webkit-details-marker{display:none}
+.confirmbox{position:absolute;right:0;top:calc(100% + 4px);z-index:5;background:var(--sheet);border:1.5px solid var(--ink);padding:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:max-content;max-width:300px;font-size:13px;text-transform:none;letter-spacing:0;font-weight:400}
+.adders{display:flex;gap:8px;flex-wrap:wrap;padding:8px 8px 12px 104px;border-bottom:1px solid var(--rule)}
+.adders>details[open]{flex-basis:100%}
+.adders summary{list-style:none;cursor:pointer;display:inline-block}.adders summary::-webkit-details-marker{display:none}
+.addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.addrow select,.addrow input{font:inherit;border:1.5px solid var(--ink);background:var(--sheet);padding:6px 8px;min-height:36px;min-width:0}
+.addrow select{flex:1 1 260px}.addrow input[name=description],.addrow input[name=title]{flex:1 1 220px}
+.kit{margin:8px 8px 8px 104px;border:1.5px solid var(--ink);background:var(--sheet)}
+.kit header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--rule);font-size:14px}
+.kit header b{text-transform:uppercase;letter-spacing:.04em}
+.diagram{display:flex;align-items:center;gap:0;padding:26px 16px 22px;overflow-x:auto}
+.node{width:48px;height:48px;border:2px solid var(--ink);display:grid;place-items:center;font-weight:800;flex:none}
+.wire{flex:1 1 140px;min-width:120px;position:relative;height:2px;background:var(--ink)}
+.wire::after{content:"";position:absolute;right:-1px;top:-23px;width:44px;height:44px;border:2px solid var(--ink);border-radius:50%;background:var(--sheet)}
+.wire.miss{background:none;height:0;border-top:3px dashed var(--amber-line)}.wire.miss::after{border-color:var(--amber-line);border-style:dashed}
+.wire label{position:absolute;left:40%;transform:translateX(-50%);top:-24px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--sheet);padding:0 4px}
+.wire.miss label{color:var(--amber)}
+.wire small{position:absolute;left:40%;transform:translateX(-50%);top:8px;font-size:12px;color:var(--mut);white-space:nowrap}
+.mult{font-weight:800;margin-left:56px;flex:none}
+.kitsum{padding:0 12px 10px;font-size:14px}.kitsum .amber,.amber{color:var(--amber);font-weight:600}
+.kit .qrow{grid-template-columns:96px minmax(0,1fr) 110px 100px 112px auto}
+.kitfoot{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start;padding:10px 12px}
+.kitfoot>details{flex:1 1 300px}.kitfoot summary{list-style:none;cursor:pointer;display:inline-block}
+.kitform{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin-top:10px;align-items:end}
+.tot h3,.panel h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-bottom:6px}
+.tot>div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--rule);font-size:15px;font-variant-numeric:tabular-nums}
+.tot>div.big{font-size:28px;font-weight:700;font-stretch:88%;border-bottom:none;padding-top:12px}
+@media (max-width:900px){
+  .headform{grid-template-columns:1fr}
+  .qhead{display:none}
+  .qrow,.kit .qrow{grid-template-columns:repeat(3,minmax(0,1fr));row-gap:4px}
+  .qrow>:nth-child(-n+2),.qrow>.acts,.qrow>.flags,.lineform{grid-column:1/-1}
+  .qrow>span:empty:not(.flags){display:none}
+  .qrow .n{text-align:left}
+  .qrow.line>span:first-child{font-size:11px}
+  .wire label{max-width:70%;overflow:hidden;text-overflow:ellipsis}
+  .acts{justify-content:flex-start}
+  .subnote,.adders{padding-left:8px}
+  .kit{margin-left:0;margin-right:0}
+  .confirmbox{right:auto;left:0}
+}

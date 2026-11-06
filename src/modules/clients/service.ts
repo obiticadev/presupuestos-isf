@@ -38,6 +38,11 @@ export async function listClients(filter: { q?: string; status?: "active" | "ina
   return { items, total };
 }
 
+/** Active clients in a light shape, for pickers. */
+export async function listClientOptions(): Promise<{ id: string; legalName: string; taxId: string }[]> {
+  return prisma.client.findMany({ where: { active: true }, select: { id: true, legalName: true, taxId: true }, orderBy: { legalName: "asc" } });
+}
+
 export async function getClient(id: string): Promise<ClientDetail> {
   const client = await prisma.client.findUnique({ where: { id }, include: DETAIL });
   if (!client) throw new NotFoundError("El cliente no existe");
