@@ -22,3 +22,8 @@ test.each([
   ["15845.22", undefined, "15.845,22"],
   ["-1234.5", undefined, "-1.234,50"],
 ])("formatDecimalEs(%s, %o) = %s", (v, o, out) => expect(formatDecimalEs(v, o)).toBe(out));
+
+test.each(["1.500", "2.000", "-1.500", "12.345.678"])("parseDecimalEs(%s) = null: punto de miles sin coma es ambiguo", (i) =>
+  expect(parseDecimalEs(i)).toBeNull());
+test.each([["21.50", "21.50"], ["1.500,00", "1500.00"], ["1500", "1500"], ["0,305", "0.305"]])("parseDecimalEs(%s) sigue = %s", (i, o) =>
+  expect(parseDecimalEs(i)).toBe(o));

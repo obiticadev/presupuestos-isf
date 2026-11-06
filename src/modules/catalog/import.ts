@@ -45,8 +45,8 @@ export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts
   const results: ImportRow[] = [];
   const writes: { current?: Concept; data: Prisma.ConceptUncheckedCreateInput }[] = [];
 
-  for (const { row, values } of sheet.rows) {
-    const errors: string[] = [];
+  for (const { row, values, cellErrors } of sheet.rows) {
+    const errors: string[] = [...cellErrors];
     const code = values.Codigo.trim().toUpperCase();
     const current = existing.get(code);
     if (code && firstRow.has(code)) errors.push(`Código repetido en la fila ${firstRow.get(code)}`);

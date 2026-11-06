@@ -3,6 +3,10 @@ import { Prisma } from "@/generated/prisma/browser";
 
 const PLAIN = /^-?\d+(\.\d+)?$/; // "21", "21.50"
 const SPANISH = /^-?(\d{1,3}(\.\d{3})+|\d+),\d+$/; // "21,5", "1.234,56"
+const AMBIGUOUS = /^-?\d{1,3}\.\d{3}$/; // "1.500": thousands to a Spanish reader, 1.5 to the PLAIN rule
+
+/** True for "1.500"-style input, which is rejected rather than guessed (it could mean 1500 or 1,5). */
+export const isAmbiguousDecimal = (input: string) => AMBIGUOUS.test(input.trim());
 
 /**
  * Reads a number typed the Spanish way and returns it normalised with a dot ("1.234,56" → "1234.56"),
@@ -11,6 +15,7 @@ const SPANISH = /^-?(\d{1,3}(\.\d{3})+|\d+),\d+$/; // "21,5", "1.234,56"
  */
 export function parseDecimalEs(input: string): string | null {
   const s = input.trim();
+  if (AMBIGUOUS.test(s)) return null;
   if (PLAIN.test(s)) return s;
   if (SPANISH.test(s)) return s.replace(/\./g, "").replace(",", ".");
   return null;

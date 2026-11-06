@@ -85,3 +85,30 @@ test("un presupuestador no puede importar", async () => {
   const p = await makeUser("presupuestador");
   await expect(importConcepts(p, await book([]), { apply: false })).rejects.toThrow(ForbiddenError);
 });
+
+test("«1.500» escrito como texto es un error de fila, no 1,50", async () => {
+  const admin = await makeUser("admin");
+  const r = await importConcepts(admin, await book([row({ Codigo: "AMB-1", Precio_venta: "1.500" })]), { apply: false });
+  expect(r.rows[0].errors[0]).toContain("ambiguo");
+});
+
+test("celdas numéricas con tres decimales o artefactos de suma se importan bien", async () => {
+  const admin = await makeUser("admin");
+  const r = await importConcepts(admin, await book([row({ Codigo: "N1", Precio_venta: 0.305 }), row({ Codigo: "N2", Precio_venta: 0.1 + 0.2 }), row({ Codigo: "N3", Precio_venta: 1500 })]), { apply: true });
+  expect(r.applied).toBe(true);
+  const { items } = await listConcepts({ status: "all" });
+  expect(["N1", "N2", "N3"].map((c) => items.find((x) => x.code === c)?.salePrice?.toFixed(4))).toEqual(["0.3050", "0.3000", "1500.0000"]);
+});
+
+test("una fórmula con error es un error de fila y no vacía el precio", async () => {
+  const admin = await makeUser("admin");
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("Catalogo");
+  ws.addRow([...COLUMNS]);
+  ws.addRow(row({ Codigo: "MAN-4X25", Categoria: "Mangueras", Unidad: "m" }));
+  ws.getCell("E2").value = { formula: "F2*1.35", result: { error: "#REF!" } } as ExcelJS.CellValue;
+  const r = await importConcepts(admin, new Uint8Array(await wb.xlsx.writeBuffer()), { apply: true });
+  expect(r.applied).toBe(false);
+  expect(r.rows[0].errors.join(" ")).toContain("Precio_venta");
+  expect((await getConcept("concept-man-4x25")).salePrice?.toFixed(2)).toBe("10.00");
+});

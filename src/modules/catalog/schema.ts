@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Prisma } from "@/generated/prisma/browser";
-import { parseDecimalEs } from "@/lib/decimal";
+import { isAmbiguousDecimal, parseDecimalEs } from "@/lib/decimal";
 
 const text = (max: number) => z.string().trim().max(max, `Máximo ${max} caracteres`);
 
@@ -11,7 +11,10 @@ const amount = (max: number) =>
     if (!s) return null;
     const n = parseDecimalEs(s);
     if (n === null) {
-      ctx.addIssue({ code: "custom", message: "Escribe un número, por ejemplo 12,50" });
+      const message = isAmbiguousDecimal(s)
+        ? `«${s}» es ambiguo: escribe 1500 si son mil quinientos, o 1,5 si lleva decimales`
+        : "Escribe un número, por ejemplo 12,50";
+      ctx.addIssue({ code: "custom", message });
       return z.NEVER;
     }
     if (new Prisma.Decimal(n).lt(0) || new Prisma.Decimal(n).gt(max)) {

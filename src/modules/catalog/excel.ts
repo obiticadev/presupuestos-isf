@@ -8,7 +8,7 @@ export const COLUMNS = [
   "Observaciones", "Fabricante", "Referencia_proveedor", "Proveedor", "PVP", "Descuento_pct",
 ] as const;
 export type Column = (typeof COLUMNS)[number];
-export type RawRow = { row: number; values: Record<Column, string> };
+export type RawRow = { row: number; values: Record<Column, string>; cellErrors: string[] };
 
 export const MAX_IMPORT_ROWS = 5000;
 export const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
@@ -57,10 +57,23 @@ export async function writeCatalogSheet(rows: ConceptDetail[]): Promise<Uint8Arr
   return new Uint8Array((await wb.xlsx.writeBuffer()) as ArrayBuffer);
 }
 
+/** Excel error values (#REF!, #DIV/0!…) and formulas without a cached result: never read as an empty cell. */
+function cellError(value: ExcelJS.CellValue): string | null {
+  if (value === null || typeof value !== "object" || value instanceof Date) return null;
+  if ("error" in value) return String(value.error);
+  if ("formula" in value || "sharedFormula" in value) {
+    const result = (value as { result?: unknown }).result;
+    if (result === undefined) return "fórmula sin resultado";
+    if (result && typeof result === "object" && "error" in result) return String((result as { error: unknown }).error);
+  }
+  return null;
+}
+
 /** Cell value as text; numbers go through Decimal (4 places) so float artefacts never reach the database. */
 function cellText(value: ExcelJS.CellValue): string {
   if (value === null || value === undefined) return "";
-  if (typeof value === "number") return new Prisma.Decimal(value).toDecimalPlaces(4).toString();
+  // Comma decimal, so "0.305" is not read as the ambiguous thousands form "1.500" by parseDecimalEs.
+  if (typeof value === "number") return new Prisma.Decimal(value).toDecimalPlaces(4).toFixed().replace(".", ",");
   if (typeof value === "string") return value.trim();
   if (typeof value === "boolean") return value ? "SI" : "NO";
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -88,9 +101,11 @@ export async function readCatalogSheet(bytes: Uint8Array): Promise<{ rows: RawRo
   const rows: RawRow[] = [];
   for (let r = 2; r <= ws.rowCount; r++) {
     const row = ws.getRow(r);
-    const values = Object.fromEntries(COLUMNS.map((c) => [c, cellText(row.getCell(position.get(c)!).value)])) as Record<Column, string>;
-    if (Object.values(values).every((v) => v === "")) continue;
-    rows.push({ row: r, values });
+    const cells = COLUMNS.map((c) => [c, row.getCell(position.get(c)!).value] as const);
+    const values = Object.fromEntries(cells.map(([c, v]) => [c, cellText(v)])) as Record<Column, string>;
+    const cellErrors = cells.flatMap(([c, v]) => { const err = cellError(v); return err ? [`${c}: la celda tiene un error (${err})`] : []; });
+    if (cellErrors.length === 0 && Object.values(values).every((v) => v === "")) continue;
+    rows.push({ row: r, values, cellErrors });
     if (rows.length > MAX_IMPORT_ROWS) return { error: `El archivo tiene más de ${MAX_IMPORT_ROWS.toLocaleString("es-ES")} filas` };
   }
   return { rows };
