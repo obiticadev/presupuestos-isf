@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String     @id
+  name          String
+  email         String
+  emailVerified Boolean    @default(false)
+  image         String?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  role          String?
+  banned        Boolean?   @default(false)
+  banReason     String?
+  banExpires    DateTime?
+  sessions      Session[]
+  accounts      Account[]
+  auditLogs     AuditLog[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id             String   @id
+  expiresAt      DateTime
+  token          String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  ipAddress      String?
+  userAgent      String?
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  impersonatedBy String?
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+/// Historial de acciones relevantes. Se escribe en la misma transacción que la acción.
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  entity    String
+  entityId  String
+  action    String
+  summary   String
+  data      Json?
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
+
+/// Configuración de la empresa: fila única con id = 1. Los valores por defecto viven aquí.
+model CompanySettings {
+  id                  Int      @id @default(1)
+  legalName           String   @default("ISF Instalaciones, Servicios y Formación, S.L.")
+  taxId               String   @default("")
+  address             String   @default("")
+  phone               String   @default("")
+  email               String   @default("")
+  registryText        String   @default("") @db.Text
+  logoPath            String?
+  letterGreeting      String   @default("Muy Sres. Nuestros:")
+  letterIntro         String   @default("Agradeciendo la confianza depositada en nuestra firma, tenemos el gusto de presentarle nuestra mejor oferta en referencia a") @db.Text
+  letterClosing       String   @default("Esperando que la presente oferta sea de su agrado, quedamos a su entera disposición para cuantas consultas desee realizar sin compromiso alguno por su parte.\n\nSin otro particular, reciba un cordial saludo.\n\nAtentamente.") @db.Text
+  letterPlace         String   @default("Alcalá de Henares")
+  defaultExclusions   String   @default("") @db.Text
+  defaultPaymentTerms String   @default("") @db.Text
+  offerValidityDays   Int      @default(30)
+  defaultMarginPct    Decimal  @default(35) @db.Decimal(5, 2)
+  travelOriginText    String   @default("Alcalá de Henares")
+  updatedAt           DateTime @updatedAt
+}
+
+/// Impuestos. No se borran: se desactivan. Como máximo uno por defecto.
+model Tax {
+  id        String  @id @default(cuid())
+  name      String  @unique
+  ratePct   Decimal @db.Decimal(5, 2)
+  isDefault Boolean @default(false)
+  active    Boolean @default(true)
+}

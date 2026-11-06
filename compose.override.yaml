@@ -1,0 +1,6 @@
+# Solo para desarrollo local: publica PostgreSQL en el equipo.
+# En producción se usa `docker compose -f compose.yaml`, que no lee este archivo.
+services:
+  db:
+    ports:
+      - "5433:5432"

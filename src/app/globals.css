@@ -1,0 +1,103 @@
+/* Tokens y base de la dirección «Esquema unifilar» (docs/diseno/maquetas/isf.css). */
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--sheet:#fff;--rule:#d5dbd6;--band:#eceeea;--green:#004742;--green-deep:#00332f;--green-ink:#cfe0db;--amber:#8f5600;--amber-line:#b86e00;--amber-bg:#fff3dc;--ok:#1d7a4a;--red:#a3261e;--mut:#56645f}
+*{box-sizing:border-box;margin:0;padding:0}
+::selection{background:#004742;color:#fff}
+body{font-family:var(--font-archivo),sans-serif;color:var(--ink);background:var(--paper);font-variant-numeric:tabular-nums;font-size:14px;line-height:1.4}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
+.app.with-aside{grid-template-columns:224px 1fr 360px}
+nav.rail{position:sticky;top:0;height:100vh;overflow-y:auto;background:var(--green);color:var(--green-ink);padding:22px 0;display:flex;flex-direction:column;gap:2px}
+.brand{padding:0 22px 24px;font-weight:800;font-size:28px;letter-spacing:.02em;font-stretch:110%;color:#fff}
+.brand small{display:block;font-size:10px;font-weight:600;letter-spacing:.14em;color:#b9d3cc;margin-top:4px;font-stretch:100%}
+nav.rail a{display:flex;justify-content:space-between;padding:11px 22px;font-size:15px;text-decoration:none}
+nav.rail a:hover{background:#003c38;color:#fff}
+nav.rail a.on{background:var(--green-deep);color:#fff;box-shadow:inset 4px 0 0 #7fd1b9;font-weight:600}
+nav.rail a span{font-size:12px;color:#b9d3cc}
+nav.rail .sep{margin:18px 22px 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#b9d3cc}
+nav.rail .me{margin-top:auto;padding:16px 22px 0;border-top:1px solid #0d5e57;font-size:13px}
+main{padding:26px 32px;min-width:0}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:8px}
+.head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
+h1{font-size:40px;font-weight:700;font-stretch:88%;letter-spacing:-.01em;line-height:1.1}
+h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin:28px 0 10px}
+h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.tag{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border:1.5px solid currentColor;padding:3px 8px}
+.actions{margin-left:auto;display:flex;gap:10px}
+.btn{font:600 14px var(--font-archivo),sans-serif;padding:9px 14px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;min-height:40px}
+.btn:hover{background:var(--band)}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.btn.pri:hover{background:var(--green-deep)}
+.btn.warn{border-color:var(--amber-line);color:var(--amber);background:var(--amber-bg)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2}
+.filters{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 14px}
+.filters .field{min-width:150px}
+.field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut);font-weight:600;letter-spacing:.04em}
+.field input,.field select{width:100%;min-width:0;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px;min-width:150px}
+.field.grow{flex:1}.field.grow input{width:100%}
+table{width:100%;border-collapse:collapse;background:var(--sheet)}
+th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);text-align:left;font-weight:600;padding:9px 12px;border-bottom:1.5px solid var(--ink);white-space:nowrap}
+td{padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:hover td{background:#f9faf8}
+.n{text-align:right;white-space:nowrap}
+.code{font-weight:700;color:var(--green);white-space:nowrap}
+.mut{color:var(--mut)}
+.st{display:inline-flex;align-items:center;gap:8px;font-weight:600;white-space:nowrap}
+.st i{width:11px;height:11px;border:2px solid var(--ink);display:inline-block;flex:none}
+.st.borrador i{border-style:dashed;border-color:var(--mut)}
+.st.emitido i{background:var(--ink)}
+.st.enviado i{border-color:var(--green)}
+.st.aceptado i{background:var(--green);border-color:var(--green)}
+.st.rechazado i{background:var(--red);border-color:var(--red)}
+.st.caducado{color:var(--mut)}.st.caducado i{border-color:var(--mut);background:linear-gradient(to top right,transparent 45%,var(--mut) 45% 55%,transparent 55%)}
+.st.alerta{color:var(--amber)}.st.alerta i{border-color:var(--amber-line)}
+.sumbar{display:flex;justify-content:space-between;align-items:center;padding:12px;border-top:1.5px solid var(--ink);background:var(--sheet);font-size:15px}
+.sumbar b{font-size:22px;font-stretch:88%}
+.strip{display:grid;grid-template-columns:repeat(7,1fr);border:1.5px solid var(--ink);background:var(--sheet);margin:18px 0 0}
+.strip a{padding:12px 14px;border-right:1px solid var(--rule);text-decoration:none}
+.strip a:last-child{border-right:none}
+.strip a.on{background:var(--band);box-shadow:inset 0 -3px 0 var(--green)}
+.strip b{display:block;font-size:26px;font-weight:700;font-stretch:88%}
+.strip span{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.badge{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border:1px solid currentColor;white-space:nowrap}
+.badge.amber{color:var(--amber);background:var(--amber-bg)}
+.badge.off{color:var(--mut)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.sheet{background:var(--sheet);border:1.5px solid var(--ink);padding:18px}
+dl{display:grid;grid-template-columns:150px 1fr;gap:8px 16px;font-size:14px}
+dt{color:var(--mut);font-weight:600}
+@media (max-width:900px){.app,.app.with-aside{grid-template-columns:1fr}main{padding:16px}h1{font-size:30px}}
+/* Rail: enlaces deshabilitados y botón de salir */
+nav.rail a.off{opacity:.55;pointer-events:none}
+nav.rail .me form{margin-top:10px}
+nav.rail .me button{font:600 13px var(--font-archivo),sans-serif;background:none;border:1px solid #7fb3a7;color:#fff;padding:6px 10px;cursor:pointer}
+nav.rail .me button:hover{background:#003c38}
+/* Móvil: el rail pasa a ser una barra superior con los mismos enlaces */
+@media (max-width:900px){
+.app{grid-template-rows:auto 1fr}
+.grid2{grid-template-columns:1fr}
+main{overflow-x:auto}
+nav.rail{position:sticky;top:0;z-index:10;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:6px 10px;gap:2px}
+nav.rail .brand{padding:0 12px 0 4px;font-size:20px}nav.rail .brand small{display:none}
+nav.rail a{padding:10px 12px;font-size:14px}nav.rail a.on{box-shadow:inset 0 -3px 0 #7fd1b9}
+nav.rail a.off,nav.rail .sep{display:none}
+nav.rail .me{margin:0 0 0 auto;padding:0;border:0;display:flex;align-items:center;gap:8px}
+nav.rail .me br,nav.rail .me span{display:none}nav.rail .me form{margin:0}
+}
+/* Inicio de sesión */
+.login{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
+.login .side{background:var(--green);color:#fff;padding:56px;display:flex;flex-direction:column;justify-content:space-between}
+.login .side .brand{padding:0;font-size:56px}
+.login .side .brand small{font-size:13px}
+.login .side p{color:var(--green-ink);max-width:40ch;font-size:15px}
+.login .one{display:flex;align-items:center;margin:40px 0}
+.login .one .node{width:56px;height:56px;border:2px solid #fff;display:grid;place-items:center;font-weight:800;flex:none}
+.login .one .node.m{border-radius:50%}
+.login .one .w{flex:1;height:2px;background:#fff;position:relative}
+.login .one .w span{position:absolute;top:-26px;left:50%;transform:translateX(-50%);font-size:13px;font-weight:700;white-space:nowrap}
+.login .form{display:flex;align-items:center;justify-content:center;padding:40px}
+.login .form form{width:100%;max-width:380px;display:flex;flex-direction:column;gap:16px}
+.err{background:#fbe8e6;color:var(--red);padding:10px 12px;font-weight:600;font-size:13px}
+.field .msg{color:var(--red);font-weight:600;letter-spacing:0}
+@media (max-width:900px){.login{grid-template-columns:1fr}.login .side{padding:28px}.login .one{display:none}}

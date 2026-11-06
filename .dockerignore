@@ -1,0 +1,16 @@
+.git
+.next
+node_modules
+src/generated
+data
+coverage
+.env
+.env.*
+!.env.example
+.superpowers
+.claude
+.agents
+.impeccable
+docs
+tests
+*.log

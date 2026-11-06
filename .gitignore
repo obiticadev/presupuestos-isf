@@ -16,3 +16,13 @@
 .env.*
 !.env.example
 node_modules/
+
+# App
+/.next/
+/out/
+/coverage
+/src/generated
+/data
+*.tsbuildinfo
+next-env.d.ts
+.superpowers/
