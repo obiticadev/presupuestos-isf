@@ -1,0 +1,53 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Catálogo · ISF</title><link rel="stylesheet" href="isf.css"></head><body>
+<div class="app with-aside">
+<nav class="rail" aria-label="Principal">
+ <div class="brand">ISF<small>PRESUPUESTOS</small></div>
+ <a href="listado.html">Presupuestos <span>48</span></a>
+ <a href="clientes.html">Clientes <span>132</span></a>
+ <a class="on" href="catalogo.html">Catálogo <span>214</span></a>
+ <a href="#">Conjuntos <span>9</span></a>
+ <div class="sep">Administración</div>
+ <a href="#">Usuarios</a><a href="#">Configuración</a><a href="#">Historial</a>
+ <div class="me">A. Gil<br><span style="color:#a9c6bf">Administrador</span></div>
+</nav>
+<main>
+ <div class="head"><h1>Catálogo</h1>
+  <div class="actions"><a class="btn" href="#">Importar Excel</a><a class="btn" href="#">Exportar</a><a class="btn pri" href="#"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo concepto</a></div></div>
+ <div class="filters">
+  <label class="field grow">Buscar<input value="mangu"></label>
+  <label class="field">Categoría<select><option>Todas</option></select></label>
+  <label class="field">Estado<select><option>Activos</option></select></label>
+  <label class="field">Validación<select><option>Todos</option></select></label>
+ </div>
+ <table>
+  <thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Unidad</th><th class="n">Coste</th><th class="n">Venta</th><th>IVA</th><th></th></tr></thead>
+  <tbody>
+  <tr><td class="code">MAN-4X25</td><td>Manguera 4 hilos × 2,5 mm²</td><td>Mangueras</td><td>m</td><td class="n mut">—</td><td class="n">10,00 €</td><td>21&nbsp;%</td><td><span class="badge amber">Sin validar</span></td></tr>
+  <tr style="background:var(--band)"><td class="code">MAN-12X075</td><td>Manguera 12 hilos × 0,75 mm²</td><td>Mangueras</td><td>m</td><td class="n mut">—</td><td class="n">15,00 €</td><td>21&nbsp;%</td><td><span class="badge amber">Sin validar</span></td></tr>
+  <tr><td class="code">MAN-5X6</td><td>Manguera 5 hilos × 6 mm²</td><td>Mangueras</td><td>m</td><td class="n">14,20 €</td><td class="n">19,17 €</td><td>21&nbsp;%</td><td></td></tr>
+  <tr class="mut"><td class="code" style="color:var(--mut)">MAN-3X15</td><td>Manguera 3 hilos × 1,5 mm²</td><td>Mangueras</td><td>m</td><td class="n">3,10 €</td><td class="n">4,19 €</td><td>21&nbsp;%</td><td><span class="badge off">Desactivado</span></td></tr>
+  </tbody>
+ </table>
+ <p class="mut" style="margin-top:12px;font-size:12px">4 resultados. Los conceptos desactivados siguen apareciendo en los presupuestos que ya los usan.</p>
+</main>
+<aside style="border-left:1.5px solid var(--ink);background:var(--sheet);padding:26px">
+ <h2 style="margin:0;font-size:11px;color:var(--mut)">Concepto</h2>
+ <h1 style="font-size:30px;margin:6px 0 4px">MAN-12X075</h1>
+ <p class="mut" style="margin-bottom:18px">Manguera 12 hilos × 0,75 mm²</p>
+ <div style="display:flex;flex-direction:column;gap:14px">
+  <label class="field">Descripción<input value="Manguera 12 hilos × 0,75 mm²"></label>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+   <label class="field">Categoría<select><option>Mangueras</option></select></label>
+   <label class="field">Unidad<select><option>m</option></select></label>
+   <label class="field">Coste<input placeholder="Opcional"></label>
+   <label class="field">Precio de venta<input value="15,00"></label>
+  </div>
+  <label class="field">Impuesto<select><option>IVA 21 %</option></select></label>
+  <label style="display:flex;gap:10px;align-items:center;font-weight:600"><input type="checkbox" style="width:20px;height:20px;accent-color:#004742"> Precio validado</label>
+  <p style="background:var(--amber-bg);color:var(--amber);padding:10px 12px;font-size:13px;font-weight:600">Mientras no esté validado, se puede usar en borradores, pero bloquea la emisión.</p>
+  <div style="display:flex;gap:10px;margin-top:6px"><button class="btn pri">Guardar</button><button class="btn">Eliminar</button></div>
+  <p class="mut" style="font-size:12px">Usado en 3 presupuestos: «Eliminar» lo desactivará en lugar de borrarlo.</p>
+ </div>
+</aside>
+</div>
+</body></html>

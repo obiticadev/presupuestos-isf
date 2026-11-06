@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--rule:#d5dbd6;--green:#004742;--green2:#0b5c55;--line:#0f1f1d;--amber:#9a5c00;--amberbg:#fff3dc;--ok:#1d7a4a;--mut:#5b6b67}
+*{box-sizing:border-box;margin:0;padding:0}
+body{width:1440px;height:900px;overflow:hidden;font-family:Archivo,sans-serif;color:var(--ink);background:var(--paper);display:grid;grid-template-columns:224px 1fr 360px;font-variant-numeric:tabular-nums}
+nav{background:var(--green);color:#e6efec;padding:22px 0;display:flex;flex-direction:column;gap:2px}
+.brand{padding:0 22px 24px;font-weight:800;font-size:28px;letter-spacing:.02em;font-stretch:110%}
+.brand small{display:block;font-size:10px;font-weight:600;letter-spacing:.14em;color:#b9d3cc;margin-top:4px;font-stretch:100%}
+nav a{display:flex;justify-content:space-between;padding:11px 22px;font-size:15px;color:#cfe0db;text-decoration:none}
+nav a.on{background:#00332f;color:#fff;box-shadow:inset 4px 0 0 #7fd1b9;font-weight:600}
+nav a span{font-size:12px;color:#b9d3cc}
+nav .sep{margin:18px 22px 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#b9d3cc}
+main{padding:26px 32px;overflow:hidden}
+.crumb{font-size:13px;color:var(--mut);margin-bottom:8px}
+.ref{display:flex;align-items:baseline;gap:16px}
+.ref h1{font-size:40px;font-weight:700;font-stretch:88%;letter-spacing:-.01em}
+.tag{font-size:12px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;border:1.5px solid var(--ink);padding:3px 8px}
+.meta{display:flex;gap:36px;margin:14px 0 20px;font-size:14px}
+.meta b{display:block;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;margin-bottom:3px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);text-align:left;font-weight:600;padding:8px 10px;border-bottom:1.5px solid var(--ink)}
+td{padding:9px 10px;border-bottom:1px solid var(--rule)}
+td.n,th.n{text-align:right}
+tr.part td{font-weight:700;text-transform:uppercase;letter-spacing:.03em;background:#eceeea}
+tr.sub td{font-weight:700}
+.code{font-weight:700;color:var(--green)}
+.kit{margin:14px 0 6px;border:1.5px solid var(--ink);background:#fff}
+.kit header{display:flex;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--rule);font-size:14px}
+.kit header b{text-transform:uppercase;letter-spacing:.04em}
+.diagram{display:flex;align-items:center;padding:22px 24px 18px;gap:0}
+.node{width:62px;height:62px;border:2px solid var(--line);display:grid;place-items:center;font-weight:800;font-size:15px;flex:none}
+.motor{border-radius:50%}
+.wire{flex:1;position:relative;height:2px;background:var(--line);margin:0 0}
+.wire.miss{background:none;height:0;border-top:3px dashed var(--amber)}
+.wire label{position:absolute;left:50%;transform:translateX(-50%);top:-30px;font-size:13px;font-weight:700;white-space:nowrap;background:#fff;padding:0 6px}
+.wire small{position:absolute;left:50%;transform:translateX(-50%);top:10px;font-size:12px;color:var(--mut);white-space:nowrap}
+.wire.miss label{color:var(--amber)}
+.mult{font-weight:800;font-size:15px;margin-left:10px}
+.kitfoot{display:flex;gap:10px;padding:0 14px 12px}
+.btn{font:600 14px Archivo;padding:9px 14px;border:1.5px solid var(--ink);background:#fff}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+.btn.warn{border-color:var(--amber);color:var(--amber);background:var(--amberbg)}
+aside{border-left:1.5px solid var(--ink);background:#fff;padding:26px 26px;display:flex;flex-direction:column;gap:22px}
+.tot div{display:flex;justify-content:space-between;padding:8px 0;font-size:15px;border-bottom:1px solid var(--rule)}
+.tot .big{font-size:30px;font-weight:700;font-stretch:88%;border-bottom:none;padding-top:14px}
+h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.chk li{list-style:none;display:flex;gap:10px;padding:8px 0;font-size:14px;border-bottom:1px solid var(--rule)}
+.dot{width:12px;height:12px;border:2px solid var(--ok);background:var(--ok);margin-top:3px;flex:none}
+.dot.h{background:transparent;border-color:var(--amber)}
+.chk em{display:block;font-style:normal;color:var(--mut);font-size:12px}
+.emit{margin-top:auto}
+.emit .btn{width:100%;padding:14px;font-size:15px;background:#c9d6d2;border-color:#c9d6d2;color:#3d4f4b;cursor:not-allowed}
+.emit p{font-size:12px;color:var(--amber);margin-top:8px;font-weight:600}
+</style></head><body>
+<nav>
+ <div class="brand">ISF<small>PRESUPUESTOS</small></div>
+ <a class="on" href="#">Presupuestos <span>48</span></a>
+ <a href="#">Clientes <span>132</span></a>
+ <a href="#">Catálogo <span>214</span></a>
+ <a href="#">Conjuntos <span>9</span></a>
+ <div class="sep">Administración</div>
+ <a href="#">Usuarios</a><a href="#">Configuración</a><a href="#">Historial</a>
+</nav>
+<main>
+ <div class="crumb">Presupuestos / Borrador creado hoy por M. Ortega</div>
+ <div class="ref"><h1>Borrador · sin número</h1><span class="tag">Borrador</span></div>
+ <div class="meta">
+  <div><b>Cliente</b>Talleres Henares, S.A.</div>
+  <div><b>Ubicación</b>Nave 3 · Torrejón de Ardoz</div>
+  <div><b>Asunto</b>Instalación de grupo de bombeo y programación</div>
+ </div>
+ <table>
+  <tr><th style="width:70px">P</th><th>Denominación</th><th class="n">Cantidad</th><th class="n">Precio</th><th class="n">Importe</th></tr>
+  <tr class="part"><td class="code">1</td><td>Grupo de bombeo nave 3</td><td></td><td></td><td class="n">1.434,00 €</td></tr>
+  <tr class="sub"><td class="code">1.1</td><td>Instalación de bombas</td><td class="n">1</td><td class="n">por suma</td><td class="n">404,00 €</td></tr>
+ </table>
+ <div class="kit">
+  <header><b>Conjunto · Instalación de bomba</b><span>2 bombas ≤ 7,5 kW · distancia al cuadro 10 m</span></header>
+  <div class="diagram">
+   <div class="node">CG</div>
+   <div class="wire"><label>Manguera 4 × 2,5 mm²</label><small>10 m por circuito · 20 m en total</small></div>
+   <div class="node motor">M</div><span class="mult">× 2</span>
+  </div>
+  <div class="kitfoot"><button class="btn">Editar conjunto</button><span style="margin-left:auto;font-size:14px;align-self:center">2 × (102,00 + 10 × 10,00) = <b>404,00 €</b></span></div>
+ </div>
+ <div class="kit">
+  <header><b>Conjunto · Instalación de bomba</b><span>1 bomba &gt; 7,5 kW · distancia al cuadro 25 m</span></header>
+  <div class="diagram">
+   <div class="node">CG</div>
+   <div class="wire miss"><label>Falta elegir manguera</label><small>25 m por circuito</small></div>
+   <div class="node motor">M</div><span class="mult">× 1</span>
+  </div>
+  <div class="kitfoot"><button class="btn warn">Elegir manguera</button><span style="margin-left:auto;font-size:14px;align-self:center;color:var(--amber);font-weight:600">Sin valorar hasta elegir la manguera</span></div>
+ </div>
+ <table><tr class="sub"><td class="code" style="width:70px">1.2</td><td>Desplazamiento y programación</td><td class="n">1</td><td class="n">por suma</td><td class="n">1.030,00 €</td></tr></table>
+</main>
+<aside>
+ <div class="tot"><h2 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Totales</h2>
+  <div><span>Base imponible</span><span>1.434,00 €</span></div>
+  <div><span>IVA 21 %</span><span>301,14 €</span></div>
+  <div class="big"><span>Total</span><span>1.735,14 €</span></div>
+ </div>
+ <div><h2 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Para emitir</h2><ul class="chk">
+  <li><i class="dot"></i><div>Desplazamiento<em>100 km facturables desde Alcalá de Henares</em></div></li>
+  <li><i class="dot"></i><div>Horas de programador<em>20 h</em></div></li>
+  <li><i class="dot h"></i><div>Conjunto de bomba &gt; 7,5 kW<em>Falta la manguera</em></div></li>
+  <li><i class="dot h"></i><div>Precios de ejemplo<em>3 conceptos sin validar</em></div></li>
+ </ul></div>
+ <div class="emit"><button class="btn pri">Emitir presupuesto</button><p>Faltan 2 datos para poder emitir.</p></div>
+</aside>
+</body></html>

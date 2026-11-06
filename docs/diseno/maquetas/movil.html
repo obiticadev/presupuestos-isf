@@ -1,0 +1,42 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Presupuesto (móvil) · ISF</title><link rel="stylesheet" href="isf.css">
+<style>
+body{max-width:390px;margin:0 auto;background:var(--paper)}
+.bar{background:var(--green);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;position:sticky;top:0}
+.bar b{font-size:20px;font-weight:800;font-stretch:110%}
+.bar button{background:none;border:1.5px solid #7fb5aa;color:#fff;font:600 14px Archivo;padding:8px 12px;min-height:40px}
+.wrap{padding:16px}
+.ref{font-size:28px;font-weight:700;font-stretch:84%;line-height:1.1;word-break:break-all}
+.card{background:var(--sheet);border:1.5px solid var(--ink);margin-top:14px}
+.card .row{display:flex;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--rule);gap:12px}
+.card .row:last-child{border-bottom:none}
+.total{font-size:26px;font-weight:700;font-stretch:88%}
+.states{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.states .btn{justify-content:center;min-height:48px}
+.states .btn.sel{background:var(--green);border-color:var(--green);color:#fff}
+.tabs{position:sticky;bottom:0;display:grid;grid-template-columns:repeat(3,1fr);background:var(--sheet);border-top:1.5px solid var(--ink);margin-top:24px}
+.tabs a{text-align:center;padding:14px 0;font-weight:600;text-decoration:none}
+.tabs a.on{color:var(--green);box-shadow:inset 0 3px 0 var(--green)}
+</style></head><body>
+<div class="bar"><b>ISF</b><button>Buscar</button></div>
+<div class="wrap">
+ <div class="crumb">Presupuestos / Enviados</div>
+ <div class="ref">PR-2026001044-R01</div>
+ <p style="margin-top:6px"><b>Conservas Ribera, S.A.</b><br><span class="mut">Ampliación grupo de bombeo · E. Rubio</span></p>
+ <div class="card">
+  <div class="row"><span>Estado</span><span class="st alerta"><i></i>Enviado · 31 días</span></div>
+  <div class="row"><span>Emitido</span><span>06/10/2026</span></div>
+  <div class="row"><span>Válido hasta</span><span>05/11/2026 <span class="badge amber">Vencida</span></span></div>
+  <div class="row"><span>Base</span><span>5.705,88 €</span></div>
+  <div class="row"><span>IVA 21 %</span><span>1.198,24 €</span></div>
+  <div class="row"><span><b>Total</b></span><span class="total">6.904,12 €</span></div>
+ </div>
+ <h2>Cambiar estado</h2>
+ <div class="states">
+  <button class="btn sel">Enviado</button><button class="btn">Aceptado</button>
+  <button class="btn">Rechazado</button><button class="btn">Caducado</button>
+ </div>
+ <button class="btn" style="width:100%;justify-content:center;margin-top:14px;min-height:48px">Descargar PDF</button>
+ <p class="mut" style="margin-top:12px;font-size:12px">Datos ficticios de maqueta.</p>
+</div>
+<nav class="tabs" aria-label="Principal"><a class="on" href="#">Presupuestos</a><a href="#">Clientes</a><a href="#">Catálogo</a></nav>
+</body></html>

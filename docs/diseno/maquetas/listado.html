@@ -1,0 +1,45 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Presupuestos · ISF</title><link rel="stylesheet" href="isf.css"></head><body>
+<div class="app">
+<nav class="rail" aria-label="Principal">
+ <div class="brand">ISF<small>PRESUPUESTOS</small></div>
+ <a class="on" href="listado.html">Presupuestos <span>48</span></a>
+ <a href="clientes.html">Clientes <span>132</span></a>
+ <a href="catalogo.html">Catálogo <span>214</span></a>
+ <a href="#">Conjuntos <span>9</span></a>
+ <div class="sep">Administración</div>
+ <a href="#">Usuarios</a><a href="#">Configuración</a><a href="#">Historial</a>
+ <div class="me">M. Ortega<br><span class="mut" style="color:#a9c6bf">Presupuestador</span></div>
+</nav>
+<main>
+ <div class="head"><h1>Presupuestos · octubre 2026</h1>
+  <div class="actions"><a class="btn" href="#">Exportar</a><a class="btn pri" href="editor.html"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nuevo presupuesto</a></div></div>
+ <div class="strip" role="tablist" aria-label="Estado">
+  <a href="#"><span>Todos</span><b>32</b></a>
+  <a href="#"><span>Borrador</span><b>6</b></a>
+  <a href="#"><span>Emitido</span><b>3</b></a>
+  <a class="on" href="#" aria-selected="true"><span>Enviado</span><b>9</b></a>
+  <a href="#"><span>Aceptado</span><b>11</b></a>
+  <a href="#"><span>Rechazado</span><b>2</b></a>
+  <a href="#"><span>Caducado</span><b>1</b></a>
+ </div>
+ <div class="filters">
+  <label class="field grow">Buscar<input placeholder="Referencia, cliente o asunto"></label>
+  <label class="field">Mes<select><option>Octubre 2026</option></select></label>
+  <label class="field">Cliente<select><option>Todos</option></select></label>
+  <label class="field">Responsable<select><option>Todos</option></select></label>
+ </div>
+ <table>
+  <thead><tr><th>Referencia</th><th>Cliente</th><th>Asunto</th><th>Responsable</th><th>Emitido</th><th>Estado</th><th class="n">Total</th></tr></thead>
+  <tbody>
+  <tr><td class="code">PR-2026001041-R00</td><td>Plásticos del Jarama, S.L.</td><td>Cuadro de control línea 2</td><td>E. Rubio</td><td>02/10/2026</td><td><span class="st alerta"><i></i>Enviado · 35 días</span></td><td class="n">18.320,50 €</td></tr>
+  <tr><td class="code">PR-2026001044-R01</td><td>Conservas Ribera, S.A.</td><td>Ampliación grupo de bombeo<br><span class="mut">Sustituye a R00</span></td><td>M. Ortega</td><td>06/10/2026</td><td><span class="st alerta"><i></i>Enviado · 31 días</span></td><td class="n">6.904,12 €</td></tr>
+  <tr><td class="code">PR-2026001049-R00</td><td>Aceros Corredor, S.L.</td><td>Desplazamiento y puesta en marcha</td><td>J. Sanz</td><td>14/10/2026</td><td><span class="st enviado"><i></i>Enviado · 23 días</span></td><td class="n">1.609,30 €</td></tr>
+  <tr><td class="code">PR-2026001052-R00</td><td>Talleres Henares, S.A.</td><td>Programación PLC envasadora 2</td><td>M. Ortega</td><td>20/10/2026</td><td><span class="st enviado"><i></i>Enviado · 17 días</span></td><td class="n">11.250,00 €</td></tr>
+  <tr><td class="code">PR-2026001055-R00</td><td>Frigoríficos Tajo, S.A.</td><td>Sustitución de 2 bombas</td><td>E. Rubio</td><td>27/10/2026</td><td><span class="st enviado"><i></i>Enviado · 10 días</span></td><td class="n">2.851,74 €</td></tr>
+  <tr><td class="code">PR-2026001058-R00</td><td>Hormigones Alcarria, S.L.</td><td>Cableado de cuadro secundario</td><td>J. Sanz</td><td>30/10/2026</td><td><span class="st enviado"><i></i>Enviado · 7 días</span></td><td class="n">4.402,90 €</td></tr>
+  </tbody>
+ </table>
+ <div class="sumbar"><span>6 de 9 enviados · pendientes de aprobación</span><span>Total filtrado <b>45.338,56 €</b></span></div>
+ <p class="mut" style="margin-top:12px;font-size:12px">Datos ficticios de maqueta.</p>
+</main></div>
+</body></html>
