@@ -1,0 +1,30 @@
+{
+  "enabledPlugins": {
+    "superpowers@superpowers-marketplace": true,
+    "ponytail@ponytail": true,
+    "claude-mem@thedotmack": true
+  },
+  "extraKnownMarketplaces": {
+    "superpowers-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      }
+    },
+    "thedotmack": {
+      "source": {
+        "source": "github",
+        "repo": "thedotmack/claude-mem"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    }
+  },
+  "env": {
+    "PONYTAIL_DEFAULT_MODE": "full"
+  }
+}

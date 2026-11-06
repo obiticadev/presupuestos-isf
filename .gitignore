@@ -1,0 +1,18 @@
+# Material de referencia original: datos reales de la empresa y clientes, no se sube
+/Word y Excel con datos reales/
+/Para agregar al cuaderno/
+/preparacion/
+*.msg
+*.docx
+*.xls
+*.xlsx
+*.pdf
+/EMPEZAR AQUI.md
+/INSTRUCCIONES para pegar en Copilot.txt
+
+# Local
+.claude/settings.local.json
+.env
+.env.*
+!.env.example
+node_modules/
