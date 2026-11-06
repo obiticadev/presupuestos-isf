@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { todayMadrid } from "@/lib/dates";
 import { NotFoundError, ValidationError } from "@/lib/errors";
+import { formatDecimalEs } from "@/lib/decimal";
 import { parseOrThrow } from "@/lib/validation";
 import type { Prisma, Quote, QuoteLine, QuoteSection, RequiredConcept, Concept } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
@@ -8,8 +9,8 @@ import type { CurrentUser } from "@/modules/auth/session";
 import { getSettings } from "@/modules/settings/service";
 import { calculateQuote, type CalcSection, type QuoteTotals } from "./calculation";
 import {
-  catalogLineInput, customLineInput, headerInput, lineUpdateInput, LOCKED, sectionInput,
-  type CatalogLineInput, type CustomLineInput, type HeaderInput, type LineUpdateInput, type SectionInput,
+  catalogLineInput, customLineInput, headerInput, lineUpdateInput, LOCKED, priceAdjustInput, sectionInput,
+  type CatalogLineInput, type CustomLineInput, type HeaderInput, type LineUpdateInput, type PriceAdjustInput, type SectionInput,
 } from "./schema";
 
 // Spec 5.1: every signed-in user edits every quote, so these functions take the actor for the history only.
@@ -19,8 +20,12 @@ export type Tx = Prisma.TransactionClient;
 
 const LINE_INCLUDE = {
   concept: { select: { code: true, active: true, validated: true, salePrice: true } },
+  adjustments: { orderBy: { createdAt: "asc" } },
 } satisfies Prisma.QuoteLineInclude;
-const SUB_INCLUDE = { lines: { orderBy: { position: "asc" }, include: LINE_INCLUDE } } satisfies Prisma.QuoteSectionInclude;
+const SUB_INCLUDE = {
+  lines: { orderBy: [{ kitInstanceId: "asc" }, { position: "asc" }], include: LINE_INCLUDE },
+  kits: { orderBy: { position: "asc" } },
+} satisfies Prisma.QuoteSectionInclude;
 const DETAIL = {
   client: true, location: true, contact: true, owner: { select: { id: true, name: true } },
   sections: {
@@ -30,6 +35,7 @@ const DETAIL = {
 } satisfies Prisma.QuoteInclude;
 type DetailRow = Prisma.QuoteGetPayload<{ include: typeof DETAIL }>;
 export type QuoteDetail = Omit<DetailRow, "waivers"> & { waivers: Record<string, string>; totals: QuoteTotals };
+export type KitInstanceDetail = DetailRow["sections"][number]["children"][number]["kits"][number];
 export type SectionDetail = DetailRow["sections"][number];
 export type SubsectionDetail = SectionDetail["children"][number];
 export type LineDetail = SubsectionDetail["lines"][number];
@@ -304,9 +310,12 @@ export async function addCustomLine(actor: CurrentUser, subsectionId: string, ra
   });
 }
 
+const KIT_LINE = "Las líneas de un conjunto se cambian desde el conjunto";
+
 export async function updateLine(actor: CurrentUser, lineId: string, raw: LineUpdateInput): Promise<void> {
   const input = parseOrThrow(lineUpdateInput, raw);
   const line = await findLine(lineId);
+  if (line.kitInstanceId && (input.description !== undefined || input.quantity !== null)) throw new ValidationError({ _: KIT_LINE });
   await withDraft(line.section.quoteId, async (tx) => {
     const data: Prisma.QuoteLineUpdateInput = {};
     if (input.description !== undefined) data.description = input.description;
@@ -319,8 +328,9 @@ export async function updateLine(actor: CurrentUser, lineId: string, raw: LineUp
 
 export async function moveLine(actor: CurrentUser, lineId: string, dir: -1 | 1): Promise<void> {
   const line = await findLine(lineId);
+  if (line.kitInstanceId) throw new ValidationError({ _: KIT_LINE });
   await withDraft(line.section.quoteId, async (tx) => {
-    const siblings = await tx.quoteLine.findMany({ where: { sectionId: line.sectionId }, orderBy: { position: "asc" } });
+    const siblings = await tx.quoteLine.findMany({ where: { sectionId: line.sectionId, kitInstanceId: null }, orderBy: { position: "asc" } });
     const i = siblings.findIndex((l) => l.id === lineId);
     const other = siblings[i + dir];
     if (!other) return;
@@ -331,9 +341,24 @@ export async function moveLine(actor: CurrentUser, lineId: string, dir: -1 | 1):
 
 export async function removeLine(actor: CurrentUser, lineId: string): Promise<void> {
   const line = await findLine(lineId);
+  if (line.kitInstanceId) throw new ValidationError({ _: KIT_LINE });
   await withDraft(line.section.quoteId, async (tx) => {
     await tx.quoteLine.delete({ where: { id: lineId } });
     await logQuote(tx, actor, line.section.quoteId, "update", `Línea eliminada: ${line.description}`);
+  });
+}
+
+/** Changes a line's unit price with a mandatory reason; the original price and the author stay on record (spec 5.5). */
+export async function adjustPrice(actor: CurrentUser, lineId: string, raw: PriceAdjustInput): Promise<void> {
+  const input = parseOrThrow(priceAdjustInput, raw);
+  const line = await findLine(lineId);
+  await withDraft(line.section.quoteId, async (tx) => {
+    const current = await tx.quoteLine.findUniqueOrThrow({ where: { id: lineId }, include: { section: true } });
+    if (current.unitPrice === null || current.section.mode === "GLOBAL") throw new ValidationError({ _: "Esta línea es descriptiva: no tiene precio que ajustar" });
+    await tx.priceAdjustment.create({ data: { lineId, originalPrice: current.unitPrice, newPrice: input.newPrice, reason: input.reason, userId: actor.id } });
+    await tx.quoteLine.update({ where: { id: lineId }, data: { unitPrice: input.newPrice } });
+    const fmt = (v: { toString(): string }) => formatDecimalEs(v, { max: 4 });
+    await logQuote(tx, actor, line.section.quoteId, "adjust", `Ajuste de precio: ${current.description} ${fmt(current.unitPrice)} → ${fmt(input.newPrice)} (${input.reason})`);
   });
 }
 

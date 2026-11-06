@@ -8,22 +8,23 @@ datasource db {
 }
 
 model User {
-  id            String     @id
-  name          String
-  email         String
-  emailVerified Boolean    @default(false)
-  image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  role          String?
-  banned        Boolean?   @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
-  auditLogs     AuditLog[]
-  quotesOwned   Quote[]    @relation("QuoteOwner")
-  quotesCreated Quote[]    @relation("QuoteCreator")
+  id               String            @id
+  name             String
+  email            String
+  emailVerified    Boolean           @default(false)
+  image            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  role             String?
+  banned           Boolean?          @default(false)
+  banReason        String?
+  banExpires       DateTime?
+  sessions         Session[]
+  accounts         Account[]
+  auditLogs        AuditLog[]
+  quotesOwned      Quote[]           @relation("QuoteOwner")
+  quotesCreated    Quote[]           @relation("QuoteCreator")
+  priceAdjustments PriceAdjustment[]
 
   @@unique([email])
   @@map("user")
@@ -225,13 +226,14 @@ model ClientLocation {
 /// Conjunto (plantilla de cálculo). La definición es JSON validado con Zod en src/modules/kits/definition.ts.
 /// No se borra: se desactiva. Las instancias insertadas en presupuestos guardan su propia copia.
 model KitTemplate {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  description String   @default("") @db.Text
-  active      Boolean  @default(true)
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String        @default("") @db.Text
+  active      Boolean       @default(true)
   definition  Json
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  instances   KitInstance[]
 }
 
 enum QuoteStatus {
@@ -312,6 +314,7 @@ model QuoteSection {
   taxName     String?
   taxRatePct  Decimal?       @db.Decimal(5, 2)
   lines       QuoteLine[]
+  kits        KitInstance[]
 
   @@index([quoteId])
   @@index([parentId])
@@ -319,23 +322,64 @@ model QuoteSection {
 
 /// Línea: copia de un concepto del catálogo (conceptId), específica del presupuesto o generada por un conjunto.
 model QuoteLine {
-  id          String       @id @default(cuid())
-  sectionId   String
-  section     QuoteSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  position    Int
-  conceptId   String?
-  concept     Concept?     @relation(fields: [conceptId], references: [id], onDelete: Restrict)
-  description String       @db.Text
-  unitName    String       @default("")
-  quantity    Decimal      @db.Decimal(14, 4)
+  id            String            @id @default(cuid())
+  sectionId     String
+  section       QuoteSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  position      Int
+  conceptId     String?
+  concept       Concept?          @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  description   String            @db.Text
+  unitName      String            @default("")
+  quantity      Decimal           @db.Decimal(14, 4)
   /// null en una línea descriptiva (subpartida de precio global).
-  unitPrice   Decimal?     @db.Decimal(14, 4)
-  taxName     String?
-  taxRatePct  Decimal?     @db.Decimal(5, 2)
-  visible     Boolean      @default(true)
+  unitPrice     Decimal?          @db.Decimal(14, 4)
+  taxName       String?
+  taxRatePct    Decimal?          @db.Decimal(5, 2)
+  visible       Boolean           @default(true)
+  /// Línea generada por un conjunto: se rehace al cambiar el conjunto; a mano solo cambia su visibilidad o su precio (ajuste).
+  kitInstanceId String?
+  kitInstance   KitInstance?      @relation(fields: [kitInstanceId], references: [id], onDelete: Cascade)
+  kitSlot       String?
+  adjustments   PriceAdjustment[]
 
   @@index([sectionId])
   @@index([conceptId])
+  @@index([kitInstanceId])
+}
+
+/// Conjunto insertado en una subpartida. Guarda su propia copia de la definición: cambiar la plantilla no lo altera.
+model KitInstance {
+  id         String       @id @default(cuid())
+  sectionId  String
+  section    QuoteSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  templateId String?
+  template   KitTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  name       String
+  definition Json
+  quantity   Decimal      @db.Decimal(14, 4)
+  params     Json         @default("{}")
+  choices    Json         @default("{}")
+  /// Lo que falta para valorarlo (etiquetas de expandKit); vacío = completo.
+  missing    Json         @default("[]")
+  position   Int
+  lines      QuoteLine[]
+
+  @@index([sectionId])
+}
+
+/// Cambio manual del precio de una línea, con motivo obligatorio (spec 5.5).
+model PriceAdjustment {
+  id            String    @id @default(cuid())
+  lineId        String
+  line          QuoteLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  originalPrice Decimal   @db.Decimal(14, 4)
+  newPrice      Decimal   @db.Decimal(14, 4)
+  reason        String
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt     DateTime  @default(now())
+
+  @@index([lineId])
 }
 
 /// Conceptos que todo presupuesto debe incluir para emitirse (o dejarse a cero con motivo).

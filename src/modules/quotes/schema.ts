@@ -53,4 +53,17 @@ export const lineUpdateInput = z.object({
 });
 export type LineUpdateInput = z.input<typeof lineUpdateInput>;
 
+export const priceAdjustInput = z.object({
+  newPrice: decimalField(),
+  reason: text(300).min(1, "Escribe el motivo del ajuste"),
+});
+export type PriceAdjustInput = z.input<typeof priceAdjustInput>;
+
+export const kitInstanceInput = z.object({
+  quantity: decimalField(),
+  params: z.record(z.string(), z.string()).default({}),
+  choices: z.record(z.string(), z.string()).default({}),
+});
+export type KitInstanceInput = z.input<typeof kitInstanceInput>;
+
 export const LOCKED = "El presupuesto ya está emitido y no se puede modificar";
