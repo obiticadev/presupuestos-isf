@@ -167,3 +167,50 @@ model Concept {
   @@index([categoryId])
   @@index([description])
 }
+
+/// Cliente. «Eliminar» borra si ningún presupuesto lo usa y, si no, desactiva.
+model Client {
+  id                String           @id @default(cuid())
+  legalName         String
+  tradeName         String           @default("")
+  taxId             String           @unique
+  fiscalAddress     String           @default("") @db.Text
+  notes             String           @default("") @db.Text
+  paymentTerms      String           @default("") @db.Text
+  exclusions        String           @default("") @db.Text
+  /// Sin valor, se usa la validez por defecto de la configuración.
+  offerValidityDays Int?
+  active            Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  contacts          ClientContact[]
+  locations         ClientLocation[]
+
+  @@index([legalName])
+}
+
+model ClientContact {
+  id       String  @id @default(cuid())
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name     String
+  role     String  @default("")
+  email    String  @default("")
+  phone    String  @default("")
+  active   Boolean @default(true)
+
+  @@index([clientId])
+}
+
+model ClientLocation {
+  id       String  @id @default(cuid())
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name     String
+  address  String  @default("")
+  city     String  @default("")
+  province String  @default("")
+  active   Boolean @default(true)
+
+  @@index([clientId])
+}
