@@ -44,9 +44,20 @@ Cambia la contraseña, reactiva al usuario y cierra todas sus sesiones abiertas.
 
 ## Dentro del contenedor
 
-Con la aplicación desplegada en Docker, los mismos comandos se ejecutan dentro del contenedor `app` (el comando exacto se fija en la Tarea 7 del plan 1):
+Con la aplicación desplegada en Docker, los mismos comandos se ejecutan dentro del contenedor `app` con el CLI ya empaquetado (`scripts/admin.mjs`):
 
 ```bash
-docker compose exec app node scripts/admin.js create --email admin@isf-esp.com --name "Administración"
-docker compose exec app node scripts/admin.js reset-password --email admin@isf-esp.com
+docker compose exec app node scripts/admin.mjs create --email admin@isf-esp.com --name "Administración"
+docker compose exec app node scripts/admin.mjs reset-password --email admin@isf-esp.com
 ```
+
+Sin terminal interactiva (por ejemplo, desde Dokploy), pasa la contraseña con `-e ADMIN_PASSWORD=…`.
+
+## Docker
+
+```bash
+docker compose -f compose.yaml up -d --build   # db → migrate → app
+docker compose -f compose.yaml ps              # migrate: Exited (0); app: healthy
+```
+
+Las migraciones las aplica el servicio `migrate` en cada arranque (`prisma migrate deploy`). La app no arranca si fallan.

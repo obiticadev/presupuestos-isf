@@ -1,7 +1,7 @@
 // CLI de operación: crear el primer administrador y recuperar el acceso.
 // Uso: pnpm admin create --email E --name N   |   pnpm admin reset-password --email E
 // La contraseña se lee de ADMIN_PASSWORD o se pide por teclado sin mostrarla; nunca va en los argumentos.
-import "dotenv/config";
+import "./load-env";
 import { parseArgs } from "node:util";
 import { createAdmin, resetPassword } from "../src/modules/auth/admin-cli";
 import { prisma } from "../src/lib/db";

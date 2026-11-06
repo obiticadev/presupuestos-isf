@@ -11,7 +11,7 @@ import { settingsInput, taxInput, type SettingsInput, type TaxInput } from "./sc
 
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 
-export const dataDir = () => path.resolve(process.env.DATA_DIR ?? "./data");
+export const dataDir = () => path.resolve(/*turbopackIgnore: true*/ process.env.DATA_DIR ?? "./data");
 
 export async function getSettings(): Promise<CompanySettings> {
   return prisma.companySettings.findUniqueOrThrow({ where: { id: 1 } });
