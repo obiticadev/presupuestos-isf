@@ -51,6 +51,17 @@ export async function getConcept(id: string): Promise<ConceptDetail> {
   return concept;
 }
 
+export type ConceptOption = { id: string; code: string; description: string; categoryId: string; unitName: string; salePrice: string | null; active: boolean; validated: boolean };
+
+/** Every concept in a light shape for pickers (kits, quote editor); callers filter by `active`. */
+export async function listConceptOptions(): Promise<ConceptOption[]> {
+  const rows = await prisma.concept.findMany({ include: { unit: true }, orderBy: { code: "asc" } });
+  return rows.map((c) => ({
+    id: c.id, code: c.code, description: c.description, categoryId: c.categoryId, unitName: c.unit.name,
+    salePrice: c.salePrice?.toFixed() ?? null, active: c.active, validated: c.validated,
+  }));
+}
+
 /** Every concept, active or not, for the Excel export. */
 export async function exportConcepts(): Promise<ConceptDetail[]> {
   return prisma.concept.findMany({ include: INCLUDE, orderBy: { code: "asc" } });

@@ -214,3 +214,15 @@ model ClientLocation {
 
   @@index([clientId])
 }
+
+/// Conjunto (plantilla de cálculo). La definición es JSON validado con Zod en src/modules/kits/definition.ts.
+/// No se borra: se desactiva. Las instancias insertadas en presupuestos guardan su propia copia.
+model KitTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String   @default("") @db.Text
+  active      Boolean  @default(true)
+  definition  Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

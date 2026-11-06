@@ -10,7 +10,18 @@ export async function seedDefaults(tx: Prisma.TransactionClient | PrismaClient):
   await tx.category.createMany({ data: CATEGORIES });
   await tx.unit.createMany({ data: UNITS });
   await tx.concept.createMany({ data: CONCEPTS.map((c) => ({ ...c, taxId: "iva-21", validated: false })) });
+  await tx.kitTemplate.create({ data: KIT_BOMBA });
 }
+
+// The example kit of spec 5.3; the kits_seed migration inserts the same row.
+const KIT_BOMBA = {
+  id: "kit-bomba", name: "Instalación de bomba", description: "Bomba con la manguera hasta el cuadro: los metros salen de la distancia.",
+  definition: {
+    main: { categoryId: "cat-bombas", label: "Bomba" },
+    params: [{ key: "distancia", label: "Distancia al cuadro", unit: "m", required: true }],
+    components: [{ slot: "c1", label: "Manguera", ref: { categoryId: "cat-mangueras" }, required: true, formula: { type: "PER_QTY_AND_PARAM", param: "distancia", k: "1" } }],
+  },
+};
 
 // Initial catalog lists; the catalog_lists migration inserts the same rows.
 const CATEGORIES = [

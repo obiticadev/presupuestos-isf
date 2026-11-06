@@ -13,6 +13,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
         <RailLink href="/">Presupuestos</RailLink>
         <RailLink href="/clientes">Clientes</RailLink>
         <RailLink href="/catalogo">Catálogo</RailLink>
+        <RailLink href="/conjuntos">Conjuntos</RailLink>
         {user.role === "admin" && (
           <>
             <div className="sep">Administración</div>

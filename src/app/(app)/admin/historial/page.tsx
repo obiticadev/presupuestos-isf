@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Historial · ISF Presupuestos" };
 
 const ENTITIES: Record<string, string> = {
   user: "Usuarios", settings: "Configuración", tax: "Impuestos",
-  concept: "Catálogo", category: "Categorías", unit: "Unidades", client: "Clientes",
+  concept: "Catálogo", category: "Categorías", unit: "Unidades", client: "Clientes", kit: "Conjuntos",
 };
 const ACTIONS: Record<string, string> = {
   create: "Alta",

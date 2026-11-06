@@ -1,6 +1,9 @@
 // Browser entry: these helpers also run in client components (price suggestion, formatting).
 import { Prisma } from "@/generated/prisma/browser";
 
+/** The Decimal instance type; the browser entry exports Prisma.Decimal only as a value. */
+export type Decimal = InstanceType<typeof Prisma.Decimal>;
+
 const PLAIN = /^-?\d+(\.\d+)?$/; // "21", "21.50"
 const SPANISH = /^-?(\d{1,3}(\.\d{3})+|\d+),\d+$/; // "21,5", "1.234,56"
 const AMBIGUOUS = /^-?\d{1,3}\.\d{3}$/; // "1.500": thousands to a Spanish reader, 1.5 to the PLAIN rule
