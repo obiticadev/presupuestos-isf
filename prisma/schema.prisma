@@ -119,20 +119,51 @@ model Tax {
   id        String  @id @default(cuid())
   name      String  @unique
   ratePct   Decimal @db.Decimal(5, 2)
-  isDefault Boolean @default(false)
-  active    Boolean @default(true)
+  isDefault Boolean   @default(false)
+  active    Boolean   @default(true)
+  concepts  Concept[]
 }
 
 /// Categorías del catálogo (Servicios, Personal, Material…). No se borran: se desactivan.
 model Category {
-  id     String  @id @default(cuid())
-  name   String  @unique
-  active Boolean @default(true)
+  id       String    @id @default(cuid())
+  name     String    @unique
+  active   Boolean   @default(true)
+  concepts Concept[]
 }
 
 /// Unidades de cobro (km, h, m, ud…). No se borran: se desactivan.
 model Unit {
-  id     String  @id @default(cuid())
-  name   String  @unique
-  active Boolean @default(true)
+  id       String    @id @default(cuid())
+  name     String    @unique
+  active   Boolean   @default(true)
+  concepts Concept[]
+}
+
+/// Concepto del catálogo: todo lo que tiene precio. «Eliminar» borra si nada lo usa y, si no, desactiva.
+model Concept {
+  id           String   @id @default(cuid())
+  code         String   @unique
+  categoryId   String
+  category     Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  description  String
+  unitId       String
+  unit         Unit     @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  salePrice    Decimal? @db.Decimal(14, 4)
+  cost         Decimal? @db.Decimal(14, 4)
+  taxId        String
+  tax          Tax      @relation(fields: [taxId], references: [id], onDelete: Restrict)
+  active       Boolean  @default(true)
+  validated    Boolean  @default(false)
+  notes        String   @default("") @db.Text
+  manufacturer String   @default("")
+  supplierRef  String   @default("")
+  supplier     String   @default("")
+  listPrice    Decimal? @db.Decimal(14, 4)
+  discountPct  Decimal? @db.Decimal(5, 2)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([description])
 }

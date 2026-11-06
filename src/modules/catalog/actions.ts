@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
 import * as lists from "./lists";
+import * as catalog from "./service";
 
 async function run(paths: string[], fn: () => Promise<unknown>): Promise<ActionResult> {
   const result = await toActionResult(fn);
@@ -32,4 +33,43 @@ export async function saveUnitAction(_prev: ActionResult | null, form: FormData)
 export async function setUnitActiveAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const actor = await requireUser();
   return run(LIST_PATHS, () => lists.setUnitActive(actor, String(form.get("id")), form.get("active") === "1"));
+}
+
+const CATALOG = ["/catalogo"];
+
+/** Reads the concept form; checkboxes arrive only when ticked. */
+function conceptArgs(form: FormData) {
+  const s = (k: string) => String(form.get(k) ?? "");
+  return {
+    code: s("code"), categoryId: s("categoryId"), description: s("description"), unitId: s("unitId"), taxId: s("taxId"),
+    salePrice: s("salePrice"), cost: s("cost"), listPrice: s("listPrice"), discountPct: s("discountPct"),
+    validated: form.get("validated") === "on", notes: s("notes"),
+    manufacturer: s("manufacturer"), supplierRef: s("supplierRef"), supplier: s("supplier"),
+  };
+}
+
+export type SaveConceptResult = ActionResult & { id?: string };
+
+export async function saveConceptAction(_prev: SaveConceptResult | null, form: FormData): Promise<SaveConceptResult> {
+  const actor = await requireUser();
+  const id = String(form.get("id") ?? "");
+  let savedId = id;
+  const result = await run(CATALOG, async () => {
+    savedId = id ? (await catalog.updateConcept(actor, id, conceptArgs(form))).id : (await catalog.createConcept(actor, conceptArgs(form))).id;
+  });
+  return result.ok ? { ok: true, id: savedId } : result;
+}
+
+export async function setConceptActiveAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  return run(CATALOG, () => catalog.setConceptActive(actor, String(form.get("id")), form.get("active") === "1"));
+}
+
+export type RemoveResult = ActionResult & { outcome?: "deleted" | "deactivated" };
+
+export async function removeConceptAction(_prev: RemoveResult | null, form: FormData): Promise<RemoveResult> {
+  const actor = await requireUser();
+  let outcome: "deleted" | "deactivated" = "deleted";
+  const result = await run(CATALOG, async () => { outcome = await catalog.removeConcept(actor, String(form.get("id"))); });
+  return result.ok ? { ok: true, outcome } : result;
 }
