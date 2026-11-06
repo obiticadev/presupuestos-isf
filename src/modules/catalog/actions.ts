@@ -5,6 +5,8 @@ import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
 import * as lists from "./lists";
 import * as catalog from "./service";
+import { MAX_IMPORT_BYTES } from "./excel";
+import { importConcepts, type ImportResult } from "./import";
 
 async function run(paths: string[], fn: () => Promise<unknown>): Promise<ActionResult> {
   const result = await toActionResult(fn);
@@ -72,4 +74,27 @@ export async function removeConceptAction(_prev: RemoveResult | null, form: Form
   let outcome: "deleted" | "deactivated" = "deleted";
   const result = await run(CATALOG, async () => { outcome = await catalog.removeConcept(actor, String(form.get("id"))); });
   return result.ok ? { ok: true, outcome } : result;
+}
+
+export type ImportState = { ok: false; errors: Record<string, string> } | ({ ok: true } & ImportResult) | null;
+
+/** Preview and confirm both receive the file: the server keeps nothing between the two steps. */
+async function runImport(form: FormData, apply: boolean): Promise<ImportState> {
+  const actor = await requireUser();
+  const file = form.get("file");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, errors: { file: "Elige un archivo .xlsx" } };
+  if (file.size > MAX_IMPORT_BYTES) return { ok: false, errors: { file: "El archivo no puede pasar de 2 MB" } };
+  let result: ImportResult | undefined;
+  const r = await toActionResult(async () => { result = await importConcepts(actor, new Uint8Array(await file.arrayBuffer()), { apply }); });
+  if (!r.ok) return r;
+  if (result!.applied) revalidatePath("/catalogo");
+  return { ok: true, ...result! };
+}
+
+export async function previewImportAction(_prev: ImportState, form: FormData): Promise<ImportState> {
+  return runImport(form, false);
+}
+
+export async function applyImportAction(_prev: ImportState, form: FormData): Promise<ImportState> {
+  return runImport(form, true);
 }

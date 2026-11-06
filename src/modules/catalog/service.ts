@@ -51,6 +51,11 @@ export async function getConcept(id: string): Promise<ConceptDetail> {
   return concept;
 }
 
+/** Every concept, active or not, for the Excel export. */
+export async function exportConcepts(): Promise<ConceptDetail[]> {
+  return prisma.concept.findMany({ include: INCLUDE, orderBy: { code: "asc" } });
+}
+
 type Parsed = ReturnType<typeof conceptInput.parse>;
 
 /** Category, unit and tax must exist and be active, unless the concept already had that inactive one. */
@@ -70,7 +75,7 @@ async function checkRefs(tx: Prisma.TransactionClient, input: Parsed, current?: 
 
 const price = (v: Prisma.Decimal | null) => (v ? formatDecimalEs(v, { max: 4 }) : "sin precio");
 
-function changeSummary(before: Concept, after: Concept): string {
+export function changeSummary(before: Concept, after: Concept): string {
   const changes: string[] = [];
   if (String(before.salePrice) !== String(after.salePrice)) changes.push(`precio ${price(before.salePrice)} → ${price(after.salePrice)}`);
   if (String(before.cost) !== String(after.cost)) changes.push(`coste ${price(before.cost)} → ${price(after.cost)}`);
