@@ -23,7 +23,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 4. **Plan 3, presupuestos.** Rama `plan-3-presupuestos`, creada desde la del plan 2; PR #3 contra `master`, que llevará a `master` los planes 2 y 3.
    - Tareas 1 a 5 terminadas y probadas en Chrome.
    - Tareas 6 y 7: servicios y pruebas hechos; falta la interfaz. Ver «Pendiente».
-5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos y los nombres del historial; quedan el listado, la configuración y el cierre.
+5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos, los nombres del historial y el listado; quedan la configuración y el cierre.
 
 ## Cómo retomar en otro equipo
 
@@ -88,12 +88,11 @@ Los servicios ya existen y tienen pruebas: `issue.ts`, `numbering.ts`, `lifecycl
    - en los borradores, aviso de `priceWarnings` y «Actualizar precios desde catálogo» (probado: 0,30 → 0,35);
    - `<details>` «Historial» al pie con `listQuoteHistory`.
    - `getQuote` incluye ahora `parent` y `revisions` (también entran en la instantánea de emisión).
-3. **Listado en `/`** (maqueta `listado.html`), con `listQuotes`:
-   - pestañas de estado con `counts`;
-   - filtros GET: buscar, mes (este mes, mes anterior, desde/hasta), cliente y responsable;
-   - columnas referencia, cliente, asunto, responsable, fecha, estado y total;
-   - «· N días» mientras está enviado, y «Validez vencida» si `isExpired`;
-   - pie con el total filtrado.
+3. ~~**Listado en `/`**~~ **Hecho el 2026-11-09** (`src/app/(app)/page.tsx`) y probado en Chrome:
+   - pestañas de estado con `counts`; filtros GET `q`, `mes` (`este` por defecto, `anterior`, `todos`), `desde`/`hasta` (mandan sobre el mes), `cliente`, `responsable`, `estado` (slug en español) y `pagina`;
+   - título «Presupuestos · noviembre de 2026» o con el rango; «Enviado · N días»; «Validez vencida»; «Sustituye a R00»; pie con resultados y total filtrado;
+   - comprobado: R00 sustituida no sale, mes anterior, todas las fechas (2 resultados, 78,65 €), borrador + búsqueda, desde/hasta;
+   - móvil (iframe de 390 px): sin desbordamiento horizontal en el listado ni en el editor; la tabla y las pestañas se desplazan dentro de su caja.
 4. **Configuración** (`/admin/configuracion`):
    - sección «Numeración»: `numberPattern`, `numberYearlyReset` («si»/«no») y `numberStart`, con una vista previa hecha con `formatReference`;
    - sección «Conceptos obligatorios».
