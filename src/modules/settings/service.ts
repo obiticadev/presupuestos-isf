@@ -16,6 +16,7 @@ const FIELD_LABEL: Record<keyof SettingsInput, string> = {
   letterClosing: "Despedida", letterPlace: "Lugar de la firma", defaultExclusions: "Exclusiones",
   defaultPaymentTerms: "Forma de pago", offerValidityDays: "Validez de la oferta",
   defaultMarginPct: "Margen por defecto", travelOriginText: "Origen del desplazamiento",
+  numberPattern: "Patrón de numeración", numberYearlyReset: "Reinicio anual", numberStart: "Valor inicial",
 };
 
 export const MAX_LOGO_BYTES = 2 * 1024 * 1024;
@@ -30,6 +31,12 @@ export async function updateSettings(actor: CurrentUser, raw: SettingsInput): Pr
   assertAdmin(actor);
   const data = parseOrThrow(settingsInput, raw);
   await prisma.$transaction(async (tx) => {
+    if (data.numberYearlyReset !== undefined || data.numberPattern !== undefined) {
+      const current = await tx.companySettings.findUniqueOrThrow({ where: { id: 1 } });
+      // With a yearly reset the numbers repeat every year, so only the year keeps the references unique.
+      if ((data.numberYearlyReset ?? current.numberYearlyReset) && !(data.numberPattern ?? current.numberPattern).includes("{AAAA}"))
+        throw new ValidationError({ numberYearlyReset: "Para reiniciar cada año, el patrón debe llevar el año ({AAAA})" });
+    }
     await tx.companySettings.update({ where: { id: 1 }, data });
     await logAction(tx, {
       userId: actor.id, entity: "settings", entityId: "1", action: "update",

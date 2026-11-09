@@ -11,21 +11,33 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 - Diseño aprobado: `docs/superpowers/specs/2026-11-06-app-presupuestos-design.md`
 - Planes de implementación, en este orden:
   1. `docs/superpowers/plans/2026-11-06-plan-1-base.md`: proyecto, BD, autenticación, usuarios, historial, configuración y Docker.
-  2. Catálogo y clientes (por escribir).
-  3. Presupuestos: cálculo, conjuntos, editor, emisión y revisiones (por escribir).
+  2. `docs/superpowers/plans/2026-11-06-plan-2-catalogo-clientes.md`: categorías, unidades, conceptos, Excel y clientes.
+  3. `docs/superpowers/plans/2026-11-06-plan-3-presupuestos.md`: cálculo, conjuntos, editor, emisión, revisiones y listado.
   4. PDF, Dokploy y copias de seguridad (por escribir).
 - Diseño visual elegido («Esquema unifilar»): `docs/diseno/README.md` y `docs/diseno/maquetas/`. El contrato de dirección está en `.impeccable/surfaces/src-app.md`.
 - Contexto de producto: `PRODUCT.md`.
 
 ## Estado actual
 
-- Plan 1 (base) implementado en la rama `plan-1-base`: 7 tareas, 51 pruebas en verde, build y Docker verificados. Probado en el navegador el 2026-11-06; los fallos encontrados están corregidos (notas #11 y #12 de claude-mem). Falta decidir la integración en `master`.
-- El código se trabaja en el worktree `D:\dev\presupuestos-isf`: Vite/Vitest no admite el `#` de `D:\# Otros\...`. La carpeta original sigue en `master` con los materiales originales.
-- Siguiente paso: escribir el plan 2 (catálogo y clientes).
-- Reglas aprendidas en el plan 1:
+**El detalle completo (cronología, cómo retomar en otro equipo, decisiones tomadas y pendientes) está en `docs/superpowers/progreso.md`. Léelo antes de seguir.**
+
+- Ramas:
+  - `master` ya tiene el plan 1 (PR #1 fusionado).
+  - El plan 2 se fusionó en `plan-1-base` (PR #2), no en `master`.
+  - `plan-3-presupuestos` (plan 3 en curso) lleva los planes 2 y 3; su PR #3 contra `master` es el que llevará ambos a `master`.
+- Plan 3: **terminado** (2026-11-10). Tareas 1 a 7 hechas y probadas en Chrome, criterio de éxito de la spec comprobado contra `pnpm start`, revisión final de la rama corregida, 180 pruebas en verde y `pnpm build` correcto. PR #3 subido como definitivo; falta revisarlo y fusionarlo en `master`.
+- Siguiente paso: escribir el plan 4 (PDF con Playwright, Dokploy y copias de seguridad).
+- El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).
+- Reglas aprendidas:
   - Ningún rol tiene permisos del plugin admin de Better Auth: todo pasa por los servicios.
-  - Prisma 7 no regenera el cliente tras `migrate dev`, así que hay que ejecutar `pnpm exec prisma generate` y reiniciar `pnpm dev`.
+  - Prisma 7 no regenera el cliente tras `migrate dev`: ejecuta `pnpm exec prisma generate` y **reinicia `pnpm dev`**.
   - La BD de desarrollo está en el puerto 5433.
+  - Las pruebas se ejecutan con `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="Autorizo el reset (Recomendado)" pnpm test`; solo reinician `presupuestos_test`.
+  - Formularios con `ActionForm` (`src/components/action-form.tsx`), que conserva lo escrito ante un error del servidor.
+  - Toda escritura de un borrador pasa por `withDraft()`. Lo emitido no se modifica.
+  - Las pruebas de interfaz se hacen con Claude in Chrome. El progreso se registra a mano en claude-mem y en `progreso.md`.
+  - Al reescribir `AGENTS.md` o `progreso.md` desde un script, conserva sus saltos de línea CRLF.
+  - Para matar el servidor desde Bash usa un patrón que no se encuentre a sí mismo: `pkill -f '[n]ext dev'`.
 
 Actualiza esta sección cuando cambie el estado.
 

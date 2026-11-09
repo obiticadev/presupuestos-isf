@@ -1,0 +1,58 @@
+import { ForbiddenError, ValidationError } from "@/lib/errors";
+import { prisma } from "@/lib/db";
+import { setConceptActive } from "@/modules/catalog/service";
+import type { KitDefinition } from "@/modules/kits/definition";
+import { getKit, listKits, saveKit, setKitActive } from "@/modules/kits/service";
+import { makeUser } from "../helpers/users";
+
+const def = (over: Partial<KitDefinition> = {}): KitDefinition => ({
+  main: { conceptId: "concept-ser-prog", label: "Programación" },
+  params: [{ key: "entradas", label: "Entradas", unit: "ud", required: true }],
+  components: [{ slot: "c1", label: "Manguera", ref: { conceptId: "concept-man-12x075" }, required: true, formula: { type: "PER_QTY_AND_PARAM", param: "entradas", k: "2" } }],
+  ...over,
+});
+
+test("la semilla trae «Instalación de bomba»", async () => {
+  expect((await listKits()).map((k) => k.name)).toEqual(["Instalación de bomba"]);
+  const k = await getKit("kit-bomba");
+  expect(k.definition.components[0].formula).toEqual({ type: "PER_QTY_AND_PARAM", param: "distancia", k: "1" });
+});
+
+test("guardar, renombrar y desactivar un conjunto; queda en el historial", async () => {
+  const admin = await makeUser("admin");
+  const k = await saveKit(admin, { name: "Cuadro con PLC", description: "", definition: def() });
+  await saveKit(admin, { id: k.id, name: "Cuadro PLC", description: "x", definition: def() });
+  await setKitActive(admin, k.id, false);
+  expect((await listKits()).map((x) => x.name)).toEqual(["Instalación de bomba"]);
+  expect((await listKits({ includeInactive: true })).map((x) => x.name)).toContain("Cuadro PLC");
+  expect(await prisma.auditLog.count({ where: { entity: "kit", entityId: k.id } })).toBe(3);
+});
+
+test("una fórmula que usa un dato inexistente se rechaza", async () => {
+  const admin = await makeUser("admin");
+  const bad = def({ components: [{ slot: "c1", label: "M", ref: { conceptId: "concept-man-12x075" }, required: true, formula: { type: "PER_QTY_AND_PARAM", param: "altura", k: "1" } }] });
+  await expect(saveKit(admin, { name: "X", description: "", definition: bad })).rejects.toThrow(ValidationError);
+});
+
+test("k vacío o no numérico se rechaza", async () => {
+  const admin = await makeUser("admin");
+  const bad = def({ components: [{ slot: "c1", label: "M", ref: { conceptId: "concept-man-12x075" }, required: true, formula: { type: "FIXED", k: "" } }] });
+  await expect(saveKit(admin, { name: "X", description: "", definition: bad })).rejects.toThrow(ValidationError);
+});
+
+test("un concepto desactivado o inexistente no se puede referenciar", async () => {
+  const admin = await makeUser("admin");
+  await setConceptActive(admin, "concept-ser-prog", false);
+  await expect(saveKit(admin, { name: "X", description: "", definition: def() })).rejects.toThrow(ValidationError);
+  await expect(saveKit(admin, { name: "Y", description: "", definition: def({ main: { categoryId: "no-existe", label: "B" } }) })).rejects.toThrow(ValidationError);
+});
+
+test("nombre repetido se rechaza", async () => {
+  const admin = await makeUser("admin");
+  await expect(saveKit(admin, { name: "Instalación de bomba", description: "", definition: def() })).rejects.toThrow("Ya existe un conjunto con ese nombre");
+});
+
+test("un presupuestador no puede guardar conjuntos", async () => {
+  const p = await makeUser("presupuestador");
+  await expect(saveKit(p, { name: "X", description: "", definition: def() })).rejects.toThrow(ForbiddenError);
+});

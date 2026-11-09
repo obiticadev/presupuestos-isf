@@ -8,20 +8,23 @@ datasource db {
 }
 
 model User {
-  id            String     @id
-  name          String
-  email         String
-  emailVerified Boolean    @default(false)
-  image         String?
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  role          String?
-  banned        Boolean?   @default(false)
-  banReason     String?
-  banExpires    DateTime?
-  sessions      Session[]
-  accounts      Account[]
-  auditLogs     AuditLog[]
+  id               String            @id
+  name             String
+  email            String
+  emailVerified    Boolean           @default(false)
+  image            String?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  role             String?
+  banned           Boolean?          @default(false)
+  banReason        String?
+  banExpires       DateTime?
+  sessions         Session[]
+  accounts         Account[]
+  auditLogs        AuditLog[]
+  quotesOwned      Quote[]           @relation("QuoteOwner")
+  quotesCreated    Quote[]           @relation("QuoteCreator")
+  priceAdjustments PriceAdjustment[]
 
   @@unique([email])
   @@map("user")
@@ -111,14 +114,299 @@ model CompanySettings {
   offerValidityDays   Int      @default(30)
   defaultMarginPct    Decimal  @default(35) @db.Decimal(5, 2)
   travelOriginText    String   @default("Alcalá de Henares")
+  /// Numeración (spec 5.6): {AAAA} año, {N…} número con ceros a la izquierda, {RR} revisión.
+  numberPattern       String   @default("PR-{AAAA}{NNNNNN}-R{RR}")
+  numberYearlyReset   Boolean  @default(false)
+  numberStart         Int      @default(1)
   updatedAt           DateTime @updatedAt
 }
 
 /// Impuestos. No se borran: se desactivan. Como máximo uno por defecto.
 model Tax {
-  id        String  @id @default(cuid())
-  name      String  @unique
-  ratePct   Decimal @db.Decimal(5, 2)
-  isDefault Boolean @default(false)
-  active    Boolean @default(true)
+  id        String    @id @default(cuid())
+  name      String    @unique
+  ratePct   Decimal   @db.Decimal(5, 2)
+  isDefault Boolean   @default(false)
+  active    Boolean   @default(true)
+  concepts  Concept[]
+}
+
+/// Categorías del catálogo (Servicios, Personal, Material…). No se borran: se desactivan.
+model Category {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  active   Boolean   @default(true)
+  concepts Concept[]
+}
+
+/// Unidades de cobro (km, h, m, ud…). No se borran: se desactivan.
+model Unit {
+  id       String    @id @default(cuid())
+  name     String    @unique
+  active   Boolean   @default(true)
+  concepts Concept[]
+}
+
+/// Concepto del catálogo: todo lo que tiene precio. «Eliminar» borra si nada lo usa y, si no, desactiva.
+model Concept {
+  id           String           @id @default(cuid())
+  code         String           @unique
+  categoryId   String
+  category     Category         @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  description  String
+  unitId       String
+  unit         Unit             @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  salePrice    Decimal?         @db.Decimal(14, 4)
+  cost         Decimal?         @db.Decimal(14, 4)
+  taxId        String
+  tax          Tax              @relation(fields: [taxId], references: [id], onDelete: Restrict)
+  active       Boolean          @default(true)
+  validated    Boolean          @default(false)
+  notes        String           @default("") @db.Text
+  manufacturer String           @default("")
+  supplierRef  String           @default("")
+  supplier     String           @default("")
+  listPrice    Decimal?         @db.Decimal(14, 4)
+  discountPct  Decimal?         @db.Decimal(5, 2)
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  quoteLines   QuoteLine[]
+  required     RequiredConcept?
+
+  @@index([categoryId])
+  @@index([description])
+}
+
+/// Cliente. «Eliminar» borra si ningún presupuesto lo usa y, si no, desactiva.
+model Client {
+  id                String           @id @default(cuid())
+  legalName         String
+  tradeName         String           @default("")
+  taxId             String           @unique
+  fiscalAddress     String           @default("") @db.Text
+  notes             String           @default("") @db.Text
+  paymentTerms      String           @default("") @db.Text
+  exclusions        String           @default("") @db.Text
+  /// Sin valor, se usa la validez por defecto de la configuración.
+  offerValidityDays Int?
+  active            Boolean          @default(true)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  contacts          ClientContact[]
+  locations         ClientLocation[]
+  quotes            Quote[]
+
+  @@index([legalName])
+}
+
+model ClientContact {
+  id       String  @id @default(cuid())
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name     String
+  role     String  @default("")
+  email    String  @default("")
+  phone    String  @default("")
+  active   Boolean @default(true)
+  quotes   Quote[]
+
+  @@index([clientId])
+}
+
+model ClientLocation {
+  id       String  @id @default(cuid())
+  clientId String
+  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name     String
+  address  String  @default("")
+  city     String  @default("")
+  province String  @default("")
+  active   Boolean @default(true)
+  quotes   Quote[]
+
+  @@index([clientId])
+}
+
+/// Conjunto (plantilla de cálculo). La definición es JSON validado con Zod en src/modules/kits/definition.ts.
+/// No se borra: se desactiva. Las instancias insertadas en presupuestos guardan su propia copia.
+model KitTemplate {
+  id          String        @id @default(cuid())
+  name        String        @unique
+  description String        @default("") @db.Text
+  active      Boolean       @default(true)
+  definition  Json
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  instances   KitInstance[]
+}
+
+enum QuoteStatus {
+  DRAFT
+  ISSUED
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum SectionMode {
+  SUM
+  GLOBAL
+}
+
+/// Presupuesto. Solo un borrador (DRAFT) se edita; emitido, su contenido no cambia.
+/// Las revisiones comparten seqYear/seq y suben revision; el número completo (reference) se asigna al emitir.
+model Quote {
+  id             String          @id @default(cuid())
+  status         QuoteStatus     @default(DRAFT)
+  seqYear        Int?
+  seq            Int?
+  revision       Int             @default(0)
+  reference      String?         @unique
+  clientId       String
+  client         Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
+  locationId     String?
+  location       ClientLocation? @relation(fields: [locationId], references: [id], onDelete: Restrict)
+  contactId      String?
+  contact        ClientContact?  @relation(fields: [contactId], references: [id], onDelete: Restrict)
+  ownerId        String
+  owner          User            @relation("QuoteOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdById    String
+  createdBy      User            @relation("QuoteCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  date           DateTime        @db.Date
+  subject        String          @default("") @db.Text
+  paymentTerms   String          @default("") @db.Text
+  exclusions     String          @default("") @db.Text
+  validityDays   Int
+  travelNote     String          @default("") @db.Text
+  /// Conceptos obligatorios dejados a cero a propósito: { conceptId: motivo }.
+  waivers        Json            @default("{}")
+  /// Revisión de la que nace este borrador o emitido.
+  parentId       String?
+  parent         Quote?          @relation("Revisions", fields: [parentId], references: [id], onDelete: Restrict)
+  revisions      Quote[]         @relation("Revisions")
+  /// Se rellena cuando se emite la revisión siguiente.
+  supersededById String?         @unique
+  issuedAt       DateTime?
+  /// Copias del cálculo para el listado; se recalculan en cada guardado.
+  base           Decimal         @default(0) @db.Decimal(14, 2)
+  total          Decimal         @default(0) @db.Decimal(14, 2)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  sections       QuoteSection[]
+  issued         IssuedDocument?
+
+  @@unique([seqYear, seq, revision])
+  @@index([status])
+  @@index([date])
+  @@index([clientId])
+  @@index([ownerId])
+}
+
+/// Partida (parentId null) o subpartida. Las líneas cuelgan siempre de una subpartida.
+model QuoteSection {
+  id          String         @id @default(cuid())
+  quoteId     String
+  quote       Quote          @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  parentId    String?
+  parent      QuoteSection?  @relation("Subsections", fields: [parentId], references: [id], onDelete: Cascade)
+  children    QuoteSection[] @relation("Subsections")
+  position    Int
+  title       String         @default("")
+  mode        SectionMode    @default(SUM)
+  globalQty   Decimal?       @db.Decimal(14, 4)
+  globalPrice Decimal?       @db.Decimal(14, 4)
+  taxName     String?
+  taxRatePct  Decimal?       @db.Decimal(5, 2)
+  lines       QuoteLine[]
+  kits        KitInstance[]
+
+  @@index([quoteId])
+  @@index([parentId])
+}
+
+/// Línea: copia de un concepto del catálogo (conceptId), específica del presupuesto o generada por un conjunto.
+model QuoteLine {
+  id            String            @id @default(cuid())
+  sectionId     String
+  section       QuoteSection      @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  position      Int
+  conceptId     String?
+  concept       Concept?          @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+  description   String            @db.Text
+  unitName      String            @default("")
+  quantity      Decimal           @db.Decimal(14, 4)
+  /// null en una línea descriptiva (subpartida de precio global).
+  unitPrice     Decimal?          @db.Decimal(14, 4)
+  taxName       String?
+  taxRatePct    Decimal?          @db.Decimal(5, 2)
+  visible       Boolean           @default(true)
+  /// Línea generada por un conjunto: se rehace al cambiar el conjunto; a mano solo cambia su visibilidad o su precio (ajuste).
+  kitInstanceId String?
+  kitInstance   KitInstance?      @relation(fields: [kitInstanceId], references: [id], onDelete: Cascade)
+  kitSlot       String?
+  adjustments   PriceAdjustment[]
+
+  @@index([sectionId])
+  @@index([conceptId])
+  @@index([kitInstanceId])
+}
+
+/// Conjunto insertado en una subpartida. Guarda su propia copia de la definición: cambiar la plantilla no lo altera.
+model KitInstance {
+  id         String       @id @default(cuid())
+  sectionId  String
+  section    QuoteSection @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  templateId String?
+  template   KitTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  name       String
+  definition Json
+  quantity   Decimal      @db.Decimal(14, 4)
+  params     Json         @default("{}")
+  choices    Json         @default("{}")
+  /// Lo que falta para valorarlo (etiquetas de expandKit); vacío = completo.
+  missing    Json         @default("[]")
+  position   Int
+  lines      QuoteLine[]
+
+  @@index([sectionId])
+}
+
+/// Cambio manual del precio de una línea, con motivo obligatorio (spec 5.5).
+model PriceAdjustment {
+  id            String    @id @default(cuid())
+  lineId        String
+  line          QuoteLine @relation(fields: [lineId], references: [id], onDelete: Cascade)
+  originalPrice Decimal   @db.Decimal(14, 4)
+  newPrice      Decimal   @db.Decimal(14, 4)
+  reason        String
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  createdAt     DateTime  @default(now())
+
+  @@index([lineId])
+}
+
+/// Conceptos que todo presupuesto debe incluir para emitirse (o dejarse a cero con motivo).
+model RequiredConcept {
+  conceptId String  @id
+  concept   Concept @relation(fields: [conceptId], references: [id], onDelete: Restrict)
+}
+
+/// Contador de numeración: clave "global" o el año si hay reinicio anual.
+model NumberCounter {
+  key   String @id
+  value Int
+}
+
+/// Lo emitido no cambia: instantánea completa del documento al emitir (el PDF llega en el plan 4).
+model IssuedDocument {
+  id              String   @id @default(cuid())
+  quoteId         String   @unique
+  quote           Quote    @relation(fields: [quoteId], references: [id], onDelete: Restrict)
+  snapshot        Json
+  templateVersion String
+  pdfPath         String?
+  sha256          String?
+  createdAt       DateTime @default(now())
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, type ReactNode } from "react";
 import type { ActionResult } from "@/lib/action-result";
+import { saveCategoryAction, saveUnitAction, setCategoryActiveAction, setUnitActiveAction } from "@/modules/catalog/actions";
 import { saveLogoAction, saveTaxAction, setTaxActiveAction, updateSettingsAction } from "@/modules/settings/actions";
 
-type Field = { name: string; label: string; value: string; kind?: "text" | "textarea" | "email" | "decimal" | "days" };
+type Field = { name: string; label: string; value: string; kind?: "text" | "textarea" | "email" | "decimal" | "days" | "yesno" };
 
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
 const small = { minHeight: 34, padding: "4px 10px" } as const;
@@ -17,7 +18,7 @@ function Msg({ state, field }: { state: ActionResult | null; field?: string }) {
 }
 
 /** One settings section: saves only its own fields. */
-export function SettingsSection({ title, fields }: { title: string; fields: Field[] }) {
+export function SettingsSection({ title, fields, children }: { title: string; fields: Field[]; children?: ReactNode }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(updateSettingsAction, null);
   return (
     <section>
@@ -26,7 +27,13 @@ export function SettingsSection({ title, fields }: { title: string; fields: Fiel
         {fields.map((f) => (
           <label key={f.name} className="field">
             {f.label}
-            {f.kind === "textarea" ? (
+            {f.kind === "yesno" ? (
+              // key: after a save React resets the form, but never re-reads a mounted select's defaultValue
+              <select key={f.value} name={f.name} defaultValue={f.value}>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
+            ) : f.kind === "textarea" ? (
               <textarea name={f.name} defaultValue={f.value} rows={4} style={{ ...input, padding: "8px 10px", resize: "vertical" }} />
             ) : (
               <input
@@ -39,6 +46,7 @@ export function SettingsSection({ title, fields }: { title: string; fields: Fiel
             <Msg state={state} field={f.name} />
           </label>
         ))}
+        {children}
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <button className="btn pri" disabled={pending}>Guardar</button>
           <Msg state={state} />
@@ -127,6 +135,64 @@ export function TaxesTable({ taxes }: { taxes: TaxRow[] }) {
             </tr>
           ))}
           <tr><td colSpan={2}><TaxForm /></td></tr>
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+type Act = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
+export type ListRow = { id: string; name: string; active: boolean };
+const LIST_ACTIONS: Record<"category" | "unit", { save: Act; setActive: Act }> = {
+  category: { save: saveCategoryAction, setActive: setCategoryActiveAction },
+  unit: { save: saveUnitAction, setActive: setUnitActiveAction },
+};
+
+function ListNameForm({ kind, row }: { kind: "category" | "unit"; row?: ListRow }) {
+  const [state, action, pending] = useActionState<ActionResult | null, FormData>(LIST_ACTIONS[kind].save, null);
+  return (
+    <form action={action} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+      {row && <input type="hidden" name="id" value={row.id} />}
+      <input name="name" defaultValue={row?.name} aria-label="Nombre" placeholder="Nombre" required style={{ ...input, width: 180 }} />
+      <button className={row ? "btn" : "btn pri"} disabled={pending} style={small}>{row ? "Guardar" : "Añadir"}</button>
+      <Msg state={state} field="name" />
+      <Msg state={state} />
+    </form>
+  );
+}
+
+function ListActiveForm({ kind, row }: { kind: "category" | "unit"; row: ListRow }) {
+  const [state, action, pending] = useActionState<ActionResult | null, FormData>(LIST_ACTIONS[kind].setActive, null);
+  return (
+    <form action={action} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+      <input type="hidden" name="id" value={row.id} />
+      <input type="hidden" name="active" value={row.active ? "0" : "1"} />
+      <button className={row.active ? "btn warn" : "btn"} disabled={pending} style={small}>{row.active ? "Desactivar" : "Activar"}</button>
+      <Msg state={state} />
+    </form>
+  );
+}
+
+/** Categories or units: rename, add, deactivate. Nothing is deleted, so concepts keep their references. */
+export function ListTable({ kind, title, rows }: { kind: "category" | "unit"; title: string; rows: ListRow[] }) {
+  return (
+    <section>
+      <h2>{title}</h2>
+      <table>
+        <thead><tr><th>Nombre</th><th>Estado</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={`${r.id}-${r.active}`} style={r.active ? undefined : { opacity: 0.6 }}>
+              <td><ListNameForm kind={kind} row={r} /></td>
+              <td>
+                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  {!r.active && <span className="badge off">Desactivado</span>}
+                  <ListActiveForm kind={kind} row={r} />
+                </div>
+              </td>
+            </tr>
+          ))}
+          <tr><td colSpan={2}><ListNameForm kind={kind} /></td></tr>
         </tbody>
       </table>
     </section>
