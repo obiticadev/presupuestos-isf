@@ -10,9 +10,10 @@ import { getClient, listClientOptions } from "@/modules/clients/service";
 import { listKits } from "@/modules/kits/service";
 import { deleteDraftAction, updateHeaderAction } from "@/modules/quotes/actions";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
-import { getQuote, quoteLabel, type QuoteDetail } from "@/modules/quotes/service";
+import { getQuote, listRequiredConcepts, quoteLabel, type QuoteDetail } from "@/modules/quotes/service";
 import { getSettings, listTaxes } from "@/modules/settings/service";
 import { listActiveUserNames } from "@/modules/users/service";
+import { IssuePanel } from "./issue-panel";
 import { Subsection, SectionHead, AddSection, type EditorContext } from "./sections";
 
 export const metadata: Metadata = { title: "Presupuesto · ISF Presupuestos" };
@@ -37,8 +38,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
     );
   }
   const editable = q.status === "DRAFT";
-  const [client, clients, users, taxes, concepts, kits, settings] = await Promise.all([
-    getClient(q.clientId), listClientOptions(), listActiveUserNames(), listTaxes(), listConceptOptions(), listKits(), getSettings(),
+  const [client, clients, users, taxes, concepts, kits, settings, required] = await Promise.all([
+    getClient(q.clientId), listClientOptions(), listActiveUserNames(), listTaxes(), listConceptOptions(), listKits(), getSettings(), listRequiredConcepts(),
   ]);
   const ctx: EditorContext = {
     editable, quoteId: q.id, totals: q.totals,
@@ -153,6 +154,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
             </ActionForm>
           ) : text(q.travelNote)}
         </div>
+
+        {editable && <IssuePanel q={q} required={required} />}
 
         {editable && (
           <ActionForm action={deleteDraftAction}>

@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-06.
+Última actualización: 2026-11-09.
 
 ## Cronología
 
@@ -23,6 +23,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 4. **Plan 3, presupuestos.** Rama `plan-3-presupuestos`, creada desde la del plan 2; PR #3 contra `master`, que llevará a `master` los planes 2 y 3.
    - Tareas 1 a 5 terminadas y probadas en Chrome.
    - Tareas 6 y 7: servicios y pruebas hechos; falta la interfaz. Ver «Pendiente».
+5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Panel «Para emitir» terminado.
 
 ## Cómo retomar en otro equipo
 
@@ -72,10 +73,13 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 
 Los servicios ya existen y tienen pruebas: `issue.ts`, `numbering.ts`, `lifecycle.ts`, y `addRequiredConcept`/`removeRequiredConcept` en `service.ts`. Las Server Actions también: `issueAction`, `setStatusAction`, `refreshPricesAction`, `createRevisionAction`, `duplicateAction` y `add|removeRequiredConceptAction`. Falta:
 
-1. **Editor, panel «Para emitir»** (maqueta `docs/diseno/maquetas/editor.html`):
-   - la lista de `issueChecks(...)`, con enlaces a cada ancla (`#cabecera`, `#partidas`, `#obligatorios`, `#linea-<id>`, `#conjunto-<id>`, `#seccion-<id>`);
-   - cada concepto obligatorio con su cantidad, o el formulario «Marcar 0 con motivo» (`setWaiverAction`);
-   - «Emitir presupuesto», deshabilitado mientras haya problemas, con confirmación en la página (`ConfirmButton`).
+1. ~~**Editor, panel «Para emitir»**~~ **Hecho el 2026-11-09** (`src/app/(app)/presupuestos/[id]/issue-panel.tsx`) y probado en Chrome:
+   - cada obligatorio en verde con su cantidad («100,00 km»), o en ámbar con «Marcar 0 con motivo»; con renuncia muestra «A 0: motivo» y «Quitar el 0»;
+   - el resto de problemas de `issueChecks` enlazan a su ancla (comprobado `#linea-<id>`);
+   - «Emitir presupuesto» deshabilitado con «Faltan N datos…»; sin problemas, confirmación en la página;
+   - emitido PR-2026000001-R00: queda en solo lectura, y una pestaña antigua que intenta guardar recibe «El presupuesto ya está emitido…» sin cambios en la BD.
+   - Hallazgo: dentro del panel lateral (`overflow-y:auto`) la `.confirmbox` flotante quedaba cortada; en `.emit` va en línea (`position:static`).
+   - Sin comprobar todavía: el panel en móvil (≤ 900 px).
 2. **Editor de un presupuesto emitido:**
    - selector de estado (`setStatusAction`);
    - «Nueva revisión» y «Duplicar»;
