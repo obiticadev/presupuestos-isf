@@ -23,7 +23,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 4. **Plan 3, presupuestos.** Rama `plan-3-presupuestos`, creada desde la del plan 2; PR #3 contra `master`, que llevará a `master` los planes 2 y 3.
    - Tareas 1 a 5 terminadas y probadas en Chrome.
    - Tareas 6 y 7: servicios y pruebas hechos; falta la interfaz. Ver «Pendiente».
-5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Panel «Para emitir» terminado.
+5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos y los nombres del historial; quedan el listado, la configuración y el cierre.
 
 ## Cómo retomar en otro equipo
 
@@ -80,12 +80,14 @@ Los servicios ya existen y tienen pruebas: `issue.ts`, `numbering.ts`, `lifecycl
    - emitido PR-2026000001-R00: queda en solo lectura, y una pestaña antigua que intenta guardar recibe «El presupuesto ya está emitido…» sin cambios en la BD.
    - Hallazgo: dentro del panel lateral (`overflow-y:auto`) la `.confirmbox` flotante quedaba cortada; en `.emit` va en línea (`position:static`).
    - Sin comprobar todavía: el panel en móvil (≤ 900 px).
-2. **Editor de un presupuesto emitido:**
-   - selector de estado (`setStatusAction`);
-   - «Nueva revisión» y «Duplicar»;
-   - marca «Sustituido por R01», con enlace;
-   - en los borradores, los avisos de `priceWarnings` y el botón «Actualizar precios desde catálogo»;
-   - un `<details>` «Historial» con `listQuoteHistory`.
+2. ~~**Editor de un presupuesto emitido**~~ **Hecho el 2026-11-09** (`src/app/(app)/presupuestos/[id]/lifecycle-panel.tsx`) y probado en Chrome:
+   - selector de estado (Emitido → Enviado, queda en el historial); «Validez vencida» si `isExpired`;
+   - «Nueva revisión» crea R01 («Sustituye a R00»); si ya hay un borrador de revisión, el botón pasa a «Abrir el borrador R01»;
+   - al emitir R01, R00 muestra «Sustituido por R01: ya no cambia de estado» con enlace y sin selector;
+   - «Duplicar» (en emitidos y borradores) crea un borrador sin número;
+   - en los borradores, aviso de `priceWarnings` y «Actualizar precios desde catálogo» (probado: 0,30 → 0,35);
+   - `<details>` «Historial» al pie con `listQuoteHistory`.
+   - `getQuote` incluye ahora `parent` y `revisions` (también entran en la instantánea de emisión).
 3. **Listado en `/`** (maqueta `listado.html`), con `listQuotes`:
    - pestañas de estado con `counts`;
    - filtros GET: buscar, mes (este mes, mes anterior, desde/hasta), cliente y responsable;
@@ -95,7 +97,7 @@ Los servicios ya existen y tienen pruebas: `issue.ts`, `numbering.ts`, `lifecycl
 4. **Configuración** (`/admin/configuracion`):
    - sección «Numeración»: `numberPattern`, `numberYearlyReset` («si»/«no») y `numberStart`, con una vista previa hecha con `formatReference`;
    - sección «Conceptos obligatorios».
-5. **`/admin/historial`:** nombres en español de las acciones `issue`, `status`, `revision`, `adjust` y `duplicate`, y de la entidad `quote`.
+5. ~~**`/admin/historial`**~~ **Hecho el 2026-11-09:** entidad «Presupuestos» y acciones Emisión, Cambio de estado, Revisión, Ajuste de precio y Duplicado.
 6. **Cierre:**
    - `pnpm build`;
    - prueba en Chrome del criterio de éxito de la spec (crear, emitir, enviar, filtrar por mes y estado, revisar R01, duplicar);

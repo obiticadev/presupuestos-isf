@@ -137,7 +137,7 @@ export async function refreshPricesFromCatalog(actor: CurrentUser, id: string): 
       await tx.quoteLine.update({ where: { id: l.id }, data: { unitPrice: c.salePrice, description: c.description, unitName: c.unit.name, taxName: c.tax.name, taxRatePct: c.tax.ratePct } });
       n++;
     }
-    await logQuote(tx, actor, id, "update", `Precios actualizados desde el catálogo: ${n} líneas`);
+    await logQuote(tx, actor, id, "update", `Precios actualizados desde el catálogo: ${n} línea${n === 1 ? "" : "s"}`);
     return n;
   });
 }

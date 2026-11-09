@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "Historial · ISF Presupuestos" };
 
 const ENTITIES: Record<string, string> = {
   user: "Usuarios", settings: "Configuración", tax: "Impuestos",
-  concept: "Catálogo", category: "Categorías", unit: "Unidades", client: "Clientes", kit: "Conjuntos",
+  concept: "Catálogo", category: "Categorías", unit: "Unidades", client: "Clientes", kit: "Conjuntos", quote: "Presupuestos",
 };
 const ACTIONS: Record<string, string> = {
   create: "Alta",
@@ -19,6 +19,11 @@ const ACTIONS: Record<string, string> = {
   logo: "Logo",
   delete: "Baja",
   import: "Importación",
+  issue: "Emisión",
+  status: "Cambio de estado",
+  revision: "Revisión",
+  adjust: "Ajuste de precio",
+  duplicate: "Duplicado",
 };
 
 const fmt = new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" });

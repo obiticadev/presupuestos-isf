@@ -29,6 +29,8 @@ const SUB_INCLUDE = {
 } satisfies Prisma.QuoteSectionInclude;
 const DETAIL = {
   client: true, location: true, contact: true, owner: { select: { id: true, name: true } },
+  parent: { select: { id: true, revision: true } },
+  revisions: { select: { id: true, revision: true, status: true } },
   sections: {
     where: { parentId: null }, orderBy: { position: "asc" },
     include: { children: { orderBy: { position: "asc" }, include: SUB_INCLUDE } },

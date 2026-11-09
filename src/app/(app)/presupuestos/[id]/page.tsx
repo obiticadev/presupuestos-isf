@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ActionForm, ConfirmButton } from "@/components/action-form";
 import { formatDateEs } from "@/lib/dates";
 import { formatDecimalEs } from "@/lib/decimal";
+import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
 import { requireUser } from "@/modules/auth/session";
 import { listConceptOptions } from "@/modules/catalog/service";
@@ -10,10 +11,12 @@ import { getClient, listClientOptions } from "@/modules/clients/service";
 import { listKits } from "@/modules/kits/service";
 import { deleteDraftAction, updateHeaderAction } from "@/modules/quotes/actions";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
+import { listQuoteHistory, priceWarnings } from "@/modules/quotes/lifecycle";
 import { getQuote, listRequiredConcepts, quoteLabel, type QuoteDetail } from "@/modules/quotes/service";
 import { getSettings, listTaxes } from "@/modules/settings/service";
 import { listActiveUserNames } from "@/modules/users/service";
 import { IssuePanel } from "./issue-panel";
+import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory } from "./lifecycle-panel";
 import { Subsection, SectionHead, AddSection, type EditorContext } from "./sections";
 
 export const metadata: Metadata = { title: "Presupuesto · ISF Presupuestos" };
@@ -38,8 +41,9 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
     );
   }
   const editable = q.status === "DRAFT";
-  const [client, clients, users, taxes, concepts, kits, settings, required] = await Promise.all([
+  const [client, clients, users, taxes, concepts, kits, settings, required, history, warnings] = await Promise.all([
     getClient(q.clientId), listClientOptions(), listActiveUserNames(), listTaxes(), listConceptOptions(), listKits(), getSettings(), listRequiredConcepts(),
+    listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [],
   ]);
   const ctx: EditorContext = {
     editable, quoteId: q.id, totals: q.totals,
@@ -59,6 +63,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
           <h1>{q.reference ?? (q.seq !== null ? title : "Borrador · sin número")}</h1>
           <span className={`st ${STATUS_CLASS[q.status]}`}><i />{STATUS_LABEL[q.status]}</span>
         </div>
+        {q.parent && <p className="mut" style={{ marginTop: 4 }}>Sustituye a <Link href={`/presupuestos/${q.parent.id}`}>R{String(q.parent.revision).padStart(2, "0")}</Link></p>}
+        {editable && <div style={{ marginTop: 12 }}><PriceWarnings id={q.id} warnings={warnings} /></div>}
 
         <section id="cabecera" style={{ marginTop: 16 }}>
           {editable ? (
@@ -130,6 +136,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
           {q.sections.length === 0 && <p className="mut" style={{ padding: 12 }}>Sin partidas.</p>}
         </div>
         {editable && <AddSection quoteId={q.id} />}
+        <QuoteHistory entries={history} />
       </div>
 
       <aside className="panel sheet" style={{ display: "grid", gap: 18 }}>
@@ -155,7 +162,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
           ) : text(q.travelNote)}
         </div>
 
-        {editable && <IssuePanel q={q} required={required} />}
+        {editable ? <IssuePanel q={q} required={required} /> : <IssuedPanel q={q} />}
 
         {editable && (
           <ActionForm action={deleteDraftAction}>
@@ -163,6 +170,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
             <ConfirmButton label="Eliminar borrador" confirm="Se borra entero y no se puede recuperar." />
           </ActionForm>
         )}
+        {editable && <DuplicateButton id={q.id} />}
       </aside>
     </div>
   );

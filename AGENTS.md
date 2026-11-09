@@ -27,7 +27,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - `plan-3-presupuestos` (plan 3 en curso) lleva los planes 2 y 3; su PR #3 contra `master` es el que llevará ambos a `master`.
 - Plan 3:
   - Tareas 1 a 5 terminadas y probadas en Chrome: cálculo, conjuntos, borradores, conjuntos en el presupuesto, ajustes de precio y editor.
-  - Tareas 6 y 7 (emisión y numeración; estados, revisiones, duplicado y listado): servicios y pruebas hechos (174 pruebas en verde). Interfaz: el panel «Para emitir» ya está hecho; **falta el resto**, con la lista exacta en `progreso.md`, sección «Pendiente».
+  - Tareas 6 y 7 (emisión y numeración; estados, revisiones, duplicado y listado): servicios y pruebas hechos (174 pruebas en verde). Interfaz hecha: panel «Para emitir», editor de emitidos (estado, revisión, duplicado, historial) y nombres en `/admin/historial`. **Falta el listado en `/`, la configuración (numeración y obligatorios) y el cierre**, con la lista exacta en `progreso.md`, sección «Pendiente».
 - Siguiente paso: terminar la interfaz de las tareas 6 y 7 y cerrar el plan 3 (build, Chrome, revisión final). Después, escribir el plan 4 (PDF, Dokploy y copias).
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`.
 - Reglas aprendidas:
