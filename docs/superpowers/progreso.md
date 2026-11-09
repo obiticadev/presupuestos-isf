@@ -92,7 +92,7 @@ La interfaz de las tareas 6 y 7 está hecha y probada en Chrome (detalle en la c
 - **Queda de la revisión, aplazado:**
   - una prueba del reinicio anual a lo largo de dos años (necesita simular la fecha);
   - la instantánea guarda los importes sin ceros finales («1246.3»): el PDF del plan 4 debe formatearlos con `formatDecimalEs`.
-- **Falta:** subir la rama y pasar el PR #3 a definitivo.
+- **PR #3 definitivo** (2026-11-10): rama subida y título y descripción actualizados. Queda revisarlo y fusionarlo en `master`.
 
 ### Después
 

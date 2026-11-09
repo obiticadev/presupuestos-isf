@@ -25,7 +25,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - `master` ya tiene el plan 1 (PR #1 fusionado).
   - El plan 2 se fusionó en `plan-1-base` (PR #2), no en `master`.
   - `plan-3-presupuestos` (plan 3 en curso) lleva los planes 2 y 3; su PR #3 contra `master` es el que llevará ambos a `master`.
-- Plan 3: **terminado** (2026-11-10). Tareas 1 a 7 hechas y probadas en Chrome, criterio de éxito de la spec comprobado contra `pnpm start`, revisión final de la rama corregida, 180 pruebas en verde y `pnpm build` correcto. Falta subir la rama y pasar el PR #3 a definitivo.
+- Plan 3: **terminado** (2026-11-10). Tareas 1 a 7 hechas y probadas en Chrome, criterio de éxito de la spec comprobado contra `pnpm start`, revisión final de la rama corregida, 180 pruebas en verde y `pnpm build` correcto. PR #3 subido como definitivo; falta revisarlo y fusionarlo en `master`.
 - Siguiente paso: escribir el plan 4 (PDF con Playwright, Dokploy y copias de seguridad).
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).
 - Reglas aprendidas:
