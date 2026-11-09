@@ -23,7 +23,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 4. **Plan 3, presupuestos.** Rama `plan-3-presupuestos`, creada desde la del plan 2; PR #3 contra `master`, que llevará a `master` los planes 2 y 3.
    - Tareas 1 a 5 terminadas y probadas en Chrome.
    - Tareas 6 y 7: servicios y pruebas hechos; falta la interfaz. Ver «Pendiente».
-5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos, los nombres del historial y el listado; quedan la configuración y el cierre.
+5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos, los nombres del historial y el listado y la configuración; queda el cierre.
 
 ## Cómo retomar en otro equipo
 
@@ -93,9 +93,11 @@ Los servicios ya existen y tienen pruebas: `issue.ts`, `numbering.ts`, `lifecycl
    - título «Presupuestos · noviembre de 2026» o con el rango; «Enviado · N días»; «Validez vencida»; «Sustituye a R00»; pie con resultados y total filtrado;
    - comprobado: R00 sustituida no sale, mes anterior, todas las fechas (2 resultados, 78,65 €), borrador + búsqueda, desde/hasta;
    - móvil (iframe de 390 px): sin desbordamiento horizontal en el listado ni en el editor; la tabla y las pestañas se desplazan dentro de su caja.
-4. **Configuración** (`/admin/configuracion`):
-   - sección «Numeración»: `numberPattern`, `numberYearlyReset` («si»/«no») y `numberStart`, con una vista previa hecha con `formatReference`;
-   - sección «Conceptos obligatorios».
+4. ~~**Configuración**~~ **Hecho el 2026-11-09** (`/admin/configuracion`) y probado en Chrome:
+   - sección «Numeración»: patrón, reinicio anual (campo nuevo `yesno` de `SettingsSection`) y valor inicial, con un ejemplo hecho con `formatReference` sobre lo guardado y la advertencia de que el valor inicial solo cuenta mientras no existe el contador;
+   - sección «Conceptos obligatorios»: «Quitar» y un selector de conceptos activos para añadir;
+   - comprobado: patrón sin `{RR}` rechazado; guardar OF-{AAAA}-{NNNN}-R{RR}, sí, 100 → OF-2026-0100-R00; volver a los valores por defecto; añadir y quitar MAN-4X25.
+   - Hallazgo: tras guardar, React restablece el formulario pero no vuelve a leer el `defaultValue` de un `<select>` ya montado, que volvía a «No». Se arregla con `key={f.value}`.
 5. ~~**`/admin/historial`**~~ **Hecho el 2026-11-09:** entidad «Presupuestos» y acciones Emisión, Cambio de estado, Revisión, Ajuste de precio y Duplicado.
 6. **Cierre:**
    - `pnpm build`;

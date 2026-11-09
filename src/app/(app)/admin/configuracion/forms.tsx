@@ -1,11 +1,11 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, type ReactNode } from "react";
 import type { ActionResult } from "@/lib/action-result";
 import { saveCategoryAction, saveUnitAction, setCategoryActiveAction, setUnitActiveAction } from "@/modules/catalog/actions";
 import { saveLogoAction, saveTaxAction, setTaxActiveAction, updateSettingsAction } from "@/modules/settings/actions";
 
-type Field = { name: string; label: string; value: string; kind?: "text" | "textarea" | "email" | "decimal" | "days" };
+type Field = { name: string; label: string; value: string; kind?: "text" | "textarea" | "email" | "decimal" | "days" | "yesno" };
 
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
 const small = { minHeight: 34, padding: "4px 10px" } as const;
@@ -18,7 +18,7 @@ function Msg({ state, field }: { state: ActionResult | null; field?: string }) {
 }
 
 /** One settings section: saves only its own fields. */
-export function SettingsSection({ title, fields }: { title: string; fields: Field[] }) {
+export function SettingsSection({ title, fields, children }: { title: string; fields: Field[]; children?: ReactNode }) {
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(updateSettingsAction, null);
   return (
     <section>
@@ -27,7 +27,13 @@ export function SettingsSection({ title, fields }: { title: string; fields: Fiel
         {fields.map((f) => (
           <label key={f.name} className="field">
             {f.label}
-            {f.kind === "textarea" ? (
+            {f.kind === "yesno" ? (
+              // key: after a save React resets the form, but never re-reads a mounted select's defaultValue
+              <select key={f.value} name={f.name} defaultValue={f.value}>
+                <option value="no">No</option>
+                <option value="si">Sí</option>
+              </select>
+            ) : f.kind === "textarea" ? (
               <textarea name={f.name} defaultValue={f.value} rows={4} style={{ ...input, padding: "8px 10px", resize: "vertical" }} />
             ) : (
               <input
@@ -40,6 +46,7 @@ export function SettingsSection({ title, fields }: { title: string; fields: Fiel
             <Msg state={state} field={f.name} />
           </label>
         ))}
+        {children}
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
           <button className="btn pri" disabled={pending}>Guardar</button>
           <Msg state={state} />

@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
+import { ActionForm } from "@/components/action-form";
+import { todayMadrid } from "@/lib/dates";
 import { listCategories, listUnits } from "@/modules/catalog/lists";
+import { listConceptOptions } from "@/modules/catalog/service";
+import { addRequiredConceptAction, removeRequiredConceptAction } from "@/modules/quotes/actions";
+import { formatReference } from "@/modules/quotes/numbering";
+import { listRequiredConcepts } from "@/modules/quotes/service";
 import { getSettings, listTaxes } from "@/modules/settings/service";
 import { ListTable, LogoForm, SettingsSection, TaxesTable } from "./forms";
 
@@ -8,9 +14,12 @@ export const metadata: Metadata = { title: "Configuración · ISF Presupuestos" 
 const es = (d: { toFixed(n: number): string }) => d.toFixed(2).replace(".", ",");
 
 export default async function ConfiguracionPage() {
-  const [s, taxes, categories, units] = await Promise.all([
+  const [s, taxes, categories, units, required, concepts] = await Promise.all([
     getSettings(), listTaxes({ includeInactive: true }), listCategories({ includeInactive: true }), listUnits({ includeInactive: true }),
+    listRequiredConcepts(), listConceptOptions(),
   ]);
+  const year = todayMadrid().getUTCFullYear();
+  const addable = concepts.filter((c) => c.active && !required.some((r) => r.conceptId === c.id));
 
   return (
     <>
@@ -55,6 +64,42 @@ export default async function ConfiguracionPage() {
             { name: "offerValidityDays", label: "Validez de la oferta (días)", value: String(s.offerValidityDays), kind: "days" },
           ]}
         />
+        <SettingsSection
+          title="Numeración"
+          fields={[
+            { name: "numberPattern", label: "Patrón ({AAAA} año, {NNNNNN} número, {RR} revisión)", value: s.numberPattern },
+            { name: "numberYearlyReset", label: "Reiniciar la numeración cada año", value: s.numberYearlyReset ? "si" : "no", kind: "yesno" },
+            { name: "numberStart", label: "Valor inicial", value: String(s.numberStart), kind: "days" },
+          ]}
+        >
+          <p className="mut" style={{ fontSize: 13 }}>
+            Ejemplo con lo guardado: <b className="code">{formatReference(s.numberPattern, { year, seq: s.numberStart, revision: 0 })}</b>.
+            El valor inicial solo cuenta cuando aún no se ha emitido ningún presupuesto{s.numberYearlyReset ? " ese año" : ""}.
+          </p>
+        </SettingsSection>
+        <section>
+          <h2>Conceptos obligatorios</h2>
+          <div className="sheet" style={{ display: "grid", gap: 12 }}>
+            <p className="mut" style={{ fontSize: 13 }}>Todo presupuesto debe incluirlos con cantidad mayor que cero, o marcarlos a 0 con motivo, para poder emitirse.</p>
+            {required.length === 0 && <p className="mut">Ninguno.</p>}
+            {required.map((r) => (
+              <ActionForm key={r.conceptId} action={removeRequiredConceptAction} style={{ display: "flex", gap: 10, alignItems: "center", justifyContent: "space-between" }}>
+                <span><span className="code">{r.concept.code}</span> · {r.concept.description}</span>
+                <input type="hidden" name="conceptId" value={r.conceptId} />
+                <button className="btn">Quitar</button>
+              </ActionForm>
+            ))}
+            {addable.length > 0 && (
+              <ActionForm action={addRequiredConceptAction} reset style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+                <select name="conceptId" required defaultValue="" aria-label="Concepto obligatorio que añadir" style={{ flex: 1, minWidth: 0 }}>
+                  <option value="" disabled>Elige un concepto activo…</option>
+                  {addable.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.description}</option>)}
+                </select>
+                <button className="btn pri">Añadir</button>
+              </ActionForm>
+            )}
+          </div>
+        </section>
       </div>
       <TaxesTable
         taxes={taxes.map((t) => ({ id: t.id, name: t.name, rate: es(t.ratePct), isDefault: t.isDefault, active: t.active }))}
