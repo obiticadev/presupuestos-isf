@@ -31,6 +31,12 @@ export async function updateSettings(actor: CurrentUser, raw: SettingsInput): Pr
   assertAdmin(actor);
   const data = parseOrThrow(settingsInput, raw);
   await prisma.$transaction(async (tx) => {
+    if (data.numberYearlyReset !== undefined || data.numberPattern !== undefined) {
+      const current = await tx.companySettings.findUniqueOrThrow({ where: { id: 1 } });
+      // With a yearly reset the numbers repeat every year, so only the year keeps the references unique.
+      if ((data.numberYearlyReset ?? current.numberYearlyReset) && !(data.numberPattern ?? current.numberPattern).includes("{AAAA}"))
+        throw new ValidationError({ numberYearlyReset: "Para reiniciar cada año, el patrón debe llevar el año ({AAAA})" });
+    }
     await tx.companySettings.update({ where: { id: 1 }, data });
     await logAction(tx, {
       userId: actor.id, entity: "settings", entityId: "1", action: "update",

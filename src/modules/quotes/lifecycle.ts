@@ -13,8 +13,10 @@ type SettableStatus = Exclude<QuoteStatus, "DRAFT">;
 
 /** Manual status change of an issued quote (spec 5.5); a superseded revision no longer changes. */
 export async function setStatus(actor: CurrentUser, id: string, status: SettableStatus): Promise<void> {
-  if (!(status in STATUS_LABEL) || (status as string) === "DRAFT") throw new ValidationError({ status: "Estado no válido" });
+  if (!Object.hasOwn(STATUS_LABEL, status) || (status as string) === "DRAFT") throw new ValidationError({ status: "Estado no válido" });
   await prisma.$transaction(async (tx) => {
+    // Locked like issueQuote, so issuing the next revision cannot slip in between the supersede check and the update.
+    await tx.$queryRaw`SELECT id FROM "Quote" WHERE id = ${id} FOR UPDATE`;
     const q = await tx.quote.findUnique({ where: { id } });
     if (!q) throw new NotFoundError("El presupuesto no existe");
     if (q.status === "DRAFT") throw new ValidationError({ _: "Un borrador se emite; su estado no se cambia a mano" });

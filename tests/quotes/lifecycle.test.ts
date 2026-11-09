@@ -72,3 +72,10 @@ test("isExpired: emitido hace 31 días con validez 30 → caducado; aceptado nun
   expect(isExpired({ status: "SENT", issuedAt, validityDays: 30 }, new Date("2026-10-30T10:00:00Z"))).toBe(false);
   expect(isExpired({ status: "ACCEPTED", issuedAt, validityDays: 30 }, new Date("2027-01-01"))).toBe(false);
 });
+
+test("setStatus rechaza estados que no existen, aunque sean nombres heredados", async () => {
+  const { actor, quote } = await completeDraft();
+  await issueQuote(actor, quote.id);
+  for (const bad of ["constructor", "toString", "DRAFT", "x"])
+    await expect(setStatus(actor, quote.id, bad as never)).rejects.toThrow("Estado no válido");
+});

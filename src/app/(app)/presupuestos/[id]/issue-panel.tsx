@@ -15,7 +15,7 @@ export function IssuePanel({ q, required }: { q: QuoteDetail; required: (Require
       <div id="obligatorios">
         <h3>Para emitir</h3>
         <ul className="chk">
-          {required.map((r) => {
+          {required.filter((r) => r.concept.active).map((r) => {
             const own = lines.filter((l) => l.conceptId === r.conceptId);
             const qty = own.length ? own.slice(1).reduce((sum, l) => sum.plus(l.quantity), own[0].quantity) : null;
             const waiver = q.waivers[r.conceptId];

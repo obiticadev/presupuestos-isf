@@ -191,17 +191,21 @@ export async function updateHeader(actor: CurrentUser, id: string, raw: HeaderIn
     if (clientId !== quote.clientId) {
       const client = await tx.client.findUnique({ where: { id: clientId } });
       if (!client?.active) throw new ValidationError({ clientId: "Elige un cliente activo" });
-      // Location and contact belong to the previous client unless chosen again in the same save.
-      data.locationId = input.locationId ?? null;
-      data.contactId = input.contactId ?? null;
+      // The form also sends the previous client's location and contact: keep them only if they are the new client's.
+      const [loc, contact] = await Promise.all([
+        input.locationId ? tx.clientLocation.findUnique({ where: { id: input.locationId } }) : null,
+        input.contactId ? tx.clientContact.findUnique({ where: { id: input.contactId } }) : null,
+      ]);
+      data.locationId = loc?.clientId === clientId && loc.active ? loc.id : null;
+      data.contactId = contact?.clientId === clientId && contact.active ? contact.id : null;
     }
-    const locationId = input.locationId;
-    if (locationId && locationId !== quote.locationId) {
+    const locationId = data.locationId as string | null | undefined;
+    if (clientId === quote.clientId && locationId && locationId !== quote.locationId) {
       const loc = await tx.clientLocation.findUnique({ where: { id: locationId } });
       if (!loc || loc.clientId !== clientId || !loc.active) throw new ValidationError({ locationId: "Elige una ubicación de este cliente" });
     }
-    const contactId = input.contactId;
-    if (contactId && contactId !== quote.contactId) {
+    const contactId = data.contactId as string | null | undefined;
+    if (clientId === quote.clientId && contactId && contactId !== quote.contactId) {
       const c = await tx.clientContact.findUnique({ where: { id: contactId } });
       if (!c || c.clientId !== clientId || !c.active) throw new ValidationError({ contactId: "Elige un contacto de este cliente" });
     }

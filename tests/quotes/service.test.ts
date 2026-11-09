@@ -139,6 +139,21 @@ test("cabecera: una ubicación de otro cliente se rechaza; cambiar de cliente li
   expect([q.clientId, q.locationId, q.contactId, q.subject, q.date.toISOString().slice(0, 10)]).toEqual([other.client.id, null, null, "Grupo de bombeo", "2026-10-20"]);
 });
 
+test("cabecera: cambiar de cliente con el formulario completo descarta la ubicación y el contacto del anterior", async () => {
+  const { actor, quote, location, contact } = await makeDraft();
+  expect([(await getQuote(quote.id)).locationId, (await getQuote(quote.id)).contactId]).toEqual([location.id, contact.id]);
+  const other = await makeClient(actor);
+  // The form sends every header field, so the old client's location and contact arrive along with the new client.
+  await updateHeader(actor, quote.id, { clientId: other.client.id, locationId: location.id, contactId: contact.id });
+  const q = await getQuote(quote.id);
+  expect([q.clientId, q.locationId, q.contactId]).toEqual([other.client.id, null, null]);
+  // Choosing the new client's own location and contact in the same save keeps them.
+  const third = await makeClient(actor);
+  await updateHeader(actor, quote.id, { clientId: third.client.id, locationId: third.location.id, contactId: third.contact.id });
+  const r = await getQuote(quote.id);
+  expect([r.clientId, r.locationId, r.contactId]).toEqual([third.client.id, third.location.id, third.contact.id]);
+});
+
 test("conceptos obligatorios: la semilla trae desplazamiento y horas; la renuncia exige motivo", async () => {
   const { actor, quote } = await makeDraft();
   expect((await listRequiredConcepts()).map((r) => r.conceptId)).toEqual(["concept-ser-despl", "concept-ser-prog"]);

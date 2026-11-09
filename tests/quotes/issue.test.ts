@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
+import { todayMadrid } from "@/lib/dates";
 import { ValidationError } from "@/lib/errors";
-import { getConcept, updateConcept } from "@/modules/catalog/service";
+import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { updateSettings } from "@/modules/settings/service";
 import { addKitInstance } from "@/modules/quotes/kit-instances";
 import { issueChecks, issueQuote } from "@/modules/quotes/issue";
@@ -11,7 +12,7 @@ import {
 import { conceptFields, completeDraft, makeDraft } from "../helpers/quotes";
 import { makeUser } from "../helpers/users";
 
-const year = new Date().getUTCFullYear();
+const year = todayMadrid().getUTCFullYear(); // the issue year is Madrid's, as in issueQuote
 
 test("formatReference con el patrón por defecto y otros anchos", () => {
   expect(formatReference("PR-{AAAA}{NNNNNN}-R{RR}", { year: 2026, seq: 1029, revision: 0 })).toBe("PR-2026001029-R00");
@@ -43,6 +44,37 @@ test("valor inicial, patrón y reinicio anual configurables; un patrón sin núm
   const { actor, quote } = await completeDraft();
   expect((await issueQuote(actor, quote.id)).reference).toBe(`P-${year}-1029/00`);
   expect(await prisma.numberCounter.findUnique({ where: { key: String(year) } })).toMatchObject({ value: 1029 });
+});
+
+test("cambiar el reinicio anual con presupuestos ya emitidos no repite números ni bloquea la emisión", async () => {
+  const admin = await makeUser("admin");
+  const issue = async () => { const { actor, quote } = await completeDraft(); return (await issueQuote(actor, quote.id)).seq; };
+  expect(await issue()).toBe(1);
+  await updateSettings(admin, { numberYearlyReset: "si" });
+  expect(await issue()).toBe(2); // the year's new counter starts after what was already issued that year
+  await updateSettings(admin, { numberYearlyReset: "no" });
+  expect(await issue()).toBe(3); // and the stale global counter catches up too
+});
+
+test("el reinicio anual exige el año en el patrón", async () => {
+  const admin = await makeUser("admin");
+  await expect(updateSettings(admin, { numberYearlyReset: "si", numberPattern: "PR-{NNNNNN}-R{RR}" })).rejects.toThrow(ValidationError);
+  await updateSettings(admin, { numberPattern: "PR-{NNNNNN}-R{RR}" });
+  await expect(updateSettings(admin, { numberYearlyReset: "si" })).rejects.toThrow(ValidationError);
+});
+
+test("una ubicación desactivada después de elegirla impide emitir", async () => {
+  const { quote, location } = await completeDraft();
+  await prisma.clientLocation.update({ where: { id: location.id }, data: { active: false } });
+  expect(issueChecks(await getQuote(quote.id), await listRequiredConcepts()).map((p) => p.code)).toEqual(["location"]);
+});
+
+test("un concepto obligatorio desactivado deja de exigirse", async () => {
+  const admin = await makeUser("admin");
+  const { quote } = await makeDraft();
+  await setConceptActive(admin, "concept-ser-prog", false);
+  const codes = issueChecks(await getQuote(quote.id), await listRequiredConcepts()).filter((p) => p.code === "required").map((p) => p.message);
+  expect(codes).toEqual(["Falta Desplazamiento (o márcalo a 0 con motivo)"]);
 });
 
 test("issueChecks lista cada problema con su ancla y no deja emitir", async () => {

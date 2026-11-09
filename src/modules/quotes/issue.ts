@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { todayMadrid } from "@/lib/dates";
 import { ValidationError } from "@/lib/errors";
-import type { Concept, Prisma, Quote, RequiredConcept } from "@/generated/prisma/client";
+import { Prisma, type Concept, type Quote, type RequiredConcept } from "@/generated/prisma/client";
 import type { CurrentUser } from "@/modules/auth/session";
 import { formatReference, nextNumber } from "./numbering";
 import { LOCKED } from "./schema";
@@ -16,10 +16,12 @@ export function issueChecks(q: QuoteDetail, required: (RequiredConcept & { conce
   const subs = q.sections.flatMap((s) => s.children);
   const lines = subs.flatMap((s) => s.lines.map((l) => ({ ...l, mode: s.mode })));
   if (!q.locationId) out.push({ code: "location", message: "Falta la ubicación de trabajo", anchor: "#cabecera" });
+  else if (!q.location?.active || q.location.clientId !== q.clientId)
+    out.push({ code: "location", message: "La ubicación de trabajo ya no está activa en el cliente: elige otra", anchor: "#cabecera" });
   if (!q.paymentTerms.trim()) out.push({ code: "paymentTerms", message: "Falta la forma de pago", anchor: "#cabecera" });
   const priced = lines.some((l) => l.mode === "SUM" && l.unitPrice !== null) || subs.some((s) => s.mode === "GLOBAL"); // an unpriced global one is reported below
   if (!priced) out.push({ code: "empty", message: "El presupuesto no tiene ninguna línea con precio", anchor: "#partidas" });
-  for (const r of required) {
+  for (const r of required.filter((x) => x.concept.active)) { // a deactivated concept can no longer be added, so it is not demanded
     const qty = lines.filter((l) => l.conceptId === r.conceptId).some((l) => l.quantity.gt(0));
     if (!qty && !q.waivers[r.conceptId])
       out.push({ code: "required", message: `Falta ${r.concept.description} (o márcalo a 0 con motivo)`, anchor: "#obligatorios" });
@@ -44,6 +46,16 @@ export function issueChecks(q: QuoteDetail, required: (RequiredConcept & { conce
 
 /** Issues a draft: checks, number, reference, supersedes the previous revision and stores the frozen snapshot. */
 export async function issueQuote(actor: CurrentUser, id: string): Promise<Quote> {
+  try {
+    return await issueInTx(actor, id);
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")
+      throw new ValidationError({ _: "Ese número de presupuesto ya existe: revisa la numeración en Configuración" });
+    throw e;
+  }
+}
+
+function issueInTx(actor: CurrentUser, id: string): Promise<Quote> {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Quote" WHERE id = ${id} FOR UPDATE`;
     const q = await getQuote(id, tx);

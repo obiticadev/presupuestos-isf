@@ -29,7 +29,8 @@ export default async function PresupuestosPage({ searchParams }: PageProps<"/">)
   await requireUser();
   const sp = await searchParams;
   const q = one(sp.q), cliente = one(sp.cliente), responsable = one(sp.responsable);
-  const desde = one(sp.desde), hasta = one(sp.hasta);
+  const isoDate = (v: string) => (/^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v)) ? v : ""); // a hand-typed URL may carry anything
+  const desde = isoDate(one(sp.desde)), hasta = isoDate(one(sp.hasta));
   const mes = desde || hasta ? "" : one(sp.mes) || "este"; // own dates win over the month shortcut
   const status = BY_SLUG[one(sp.estado)];
   const page = Math.max(1, Number(one(sp.pagina)) || 1);
