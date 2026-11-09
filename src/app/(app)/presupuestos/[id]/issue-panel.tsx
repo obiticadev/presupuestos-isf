@@ -62,7 +62,7 @@ export function IssuePanel({ q, required }: { q: QuoteDetail; required: (Require
         {problems.length > 0 ? (
           <>
             <button className="btn pri" disabled>Emitir presupuesto</button>
-            <p>Faltan {problems.length} dato{problems.length > 1 ? "s" : ""} para poder emitir.</p>
+            <p>{problems.length === 1 ? "Falta 1 dato" : `Faltan ${problems.length} datos`} para poder emitir.</p>
           </>
         ) : (
           <ActionForm action={issueAction}>
