@@ -13,7 +13,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   1. `docs/superpowers/plans/2026-11-06-plan-1-base.md`: proyecto, BD, autenticación, usuarios, historial, configuración y Docker.
   2. `docs/superpowers/plans/2026-11-06-plan-2-catalogo-clientes.md`: categorías, unidades, conceptos, Excel y clientes.
   3. `docs/superpowers/plans/2026-11-06-plan-3-presupuestos.md`: cálculo, conjuntos, editor, emisión, revisiones y listado.
-  4. PDF, Dokploy y copias de seguridad (por escribir).
+  4. `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`: PDF, Dokploy y copias de seguridad (pendiente de revisión). Su diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`.
 - Diseño visual elegido («Esquema unifilar»): `docs/diseno/README.md` y `docs/diseno/maquetas/`. El contrato de dirección está en `.impeccable/surfaces/src-app.md`.
 - Contexto de producto: `PRODUCT.md`.
 
@@ -22,11 +22,14 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 **El detalle completo (cronología, cómo retomar en otro equipo, decisiones tomadas y pendientes) está en `docs/superpowers/progreso.md`. Léelo antes de seguir.**
 
 - Ramas:
-  - `master` ya tiene el plan 1 (PR #1 fusionado).
-  - El plan 2 se fusionó en `plan-1-base` (PR #2), no en `master`.
-  - `plan-3-presupuestos` (plan 3 en curso) lleva los planes 2 y 3; su PR #3 contra `master` es el que llevará ambos a `master`.
-- Plan 3: **terminado** (2026-11-10). Tareas 1 a 7 hechas y probadas en Chrome, criterio de éxito de la spec comprobado contra `pnpm start`, revisión final de la rama corregida, 180 pruebas en verde y `pnpm build` correcto. PR #3 subido como definitivo; falta revisarlo y fusionarlo en `master`.
-- Siguiente paso: escribir el plan 4 (PDF con Playwright, Dokploy y copias de seguridad).
+  - `master` tiene los planes 1, 2 y 3 (PR #3 fusionado el 2026-11-10).
+  - `plan-4-pdf-despliegue`, desde `master`: diseño, maqueta y plan del plan 4, todavía sin código.
+- Plan 3: **terminado y fusionado** (2026-11-10). 180 pruebas en verde y `pnpm build` correcto.
+- Plan 4 (PDF, Dokploy y copias): **diseño y plan escritos, pendientes de que el usuario los revise.**
+  - Diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`; su sección 7 tiene las decisiones a confirmar y la pregunta sobre el alcance del despliegue.
+  - Maqueta: `docs/diseno/maquetas/pdf.html`.
+  - Plan: `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas.
+- Siguiente paso: que el usuario revise el diseño y el plan, responda la sección 7 y elija cómo ejecutarlo. **No empezar a programar el plan 4 sin esa revisión.**
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).
 - Reglas aprendidas:
   - Ningún rol tiene permisos del plugin admin de Better Auth: todo pasa por los servicios.

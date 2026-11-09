@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-10.
+Última actualización: 2026-11-10 (diseño y plan 4).
 
 ## Cronología
 
@@ -92,14 +92,41 @@ La interfaz de las tareas 6 y 7 está hecha y probada en Chrome (detalle en la c
 - **Queda de la revisión, aplazado:**
   - una prueba del reinicio anual a lo largo de dos años (necesita simular la fecha);
   - la instantánea guarda los importes sin ceros finales («1246.3»): el PDF del plan 4 debe formatearlos con `formatDecimalEs`.
-- **PR #3 definitivo** (2026-11-10): rama subida y título y descripción actualizados. Queda revisarlo y fusionarlo en `master`.
+- **PR #3 fusionado en `master`** (2026-11-10, commit `1b60c6d`). `master` tiene los planes 1, 2 y 3; su árbol es idéntico al de `plan-3-presupuestos`.
+
+### Plan 4: diseño y plan escritos, pendientes de revisión (rama `plan-4-pdf-despliegue`)
+
+Escritos el 2026-11-10 con superpowers (brainstorming → comprobación del constructor → writing-plans) mientras el usuario estaba ausente. **No hay código todavía.** Antes de ejecutar:
+
+1. Leer el diseño, `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`, y sobre todo su sección 7, «Para confirmar». Hay 11 decisiones mías y una pregunta abierta: si el plan incluye **ejecutar** el despliegue en el servidor o termina en la imagen probada en local y la documentación. Para ejecutarlo hace falta saber:
+   - versión de Dokploy (las copias de un Compose piden 0.22 o posterior);
+   - si habrá acceso al servidor;
+   - DNS interno;
+   - si hay destino S3.
+2. Ver la maqueta del documento: `docs/diseno/maquetas/pdf.html`, con la carta, las partidas, la continuación con la cabecera repetida y el borrador con marca de agua.
+3. Revisar el plan, `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas, y elegir cómo ejecutarlo: con subagentes o en la misma sesión.
+
+**Hallazgos del diseño:**
+
+- **El logo** se sobrescribía siempre en `uploads/logo.png`. Para que el PDF regenerado de un emitido conserve su logo, pasa a guardarse por contenido (Tarea 4).
+- **Comprobación del constructor:** guardar el SHA-256 y dar error si no coincidía fallaba en casos normales:
+  - dos descargas a la vez generan PDF distintos, porque Chromium no da bytes idénticos;
+  - las copias de base de datos y de volumen se hacen a horas distintas.
+
+  Ahora se serializa por presupuesto y se regenera desde la instantánea.
+- **El PDF de referencia** `PR-2026001029-R00.pdf` no está en el equipo Linux: la comparación visual se hace en el equipo original.
+- **Dokploy (documentación consultada el 2026-11-10):**
+  - el dominio de un Compose añade solo Traefik y `dokploy-network` al servicio elegido;
+  - las copias de base de datos y de volúmenes van a destinos S3, con un cron;
+  - la copia de volúmenes puede parar el contenedor («Container OFF»);
+  - la restauración se hace desde la interfaz y exige que el volumen no exista.
+- **Versiones elegidas**, con al menos tres semanas por la edad mínima de pnpm: `playwright-core` 1.64.1, `@fontsource-variable/archivo` 5.3.0 y `unpdf` 1.9.1.
 
 ### Después
 
-- **Plan 4, por escribir:** PDF con Playwright (plantilla en `src/pdf/templates/`), Dokploy y copias de seguridad. La emisión ya guarda la instantánea con `templateVersion: "v1"`; `IssuedDocument.pdfPath` y `sha256` están a `null` hasta ese plan.
-- **Integración.** `master` solo tiene el plan 1. El PR #3 lleva los planes 2 y 3.
+- **Empresa:** confirmar la numeración (por defecto `PR-{AAAA}{NNNNNN}-R{RR}`, sin reinicio anual, desde 1), el destino S3 y la retención de copias, y el logo y los textos definitivos.
+- **Docker.** La imagen no se ha vuelto a construir desde que se añadió `exceljs` (plan 2). Se hace en la Tarea 7 del plan 4.
 - **`pnpm start` avisa** de que no encaja con `output: standalone`; sirve para probar en local, pero en producción se usa `node .next/standalone/server.js` (Docker ya lo hace).
-- **Docker.** La imagen no se ha vuelto a construir desde que se añadió `exceljs` (plan 2).
 
 ## Decisiones tomadas por el camino
 
