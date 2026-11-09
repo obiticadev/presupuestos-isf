@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-09.
+Última actualización: 2026-11-10.
 
 ## Cronología
 
@@ -22,7 +22,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
      - una fórmula de Excel con error dejaba el precio vacío; ahora es un error de fila.
 4. **Plan 3, presupuestos.** Rama `plan-3-presupuestos`, creada desde la del plan 2; PR #3 contra `master`, que llevará a `master` los planes 2 y 3.
    - Tareas 1 a 5 terminadas y probadas en Chrome.
-   - Tareas 6 y 7: servicios y pruebas hechos; falta la interfaz. Ver «Pendiente».
+   - Tareas 6 y 7: servicios y pruebas hechos; la interfaz se terminó en el nuevo equipo (punto 5).
 5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos, los nombres del historial y el listado y la configuración; queda el cierre.
 
 ## Cómo retomar en otro equipo
@@ -69,47 +69,36 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 
 ## Pendiente
 
-### Plan 3: terminar las tareas 6 y 7 (rama `plan-3-presupuestos`)
+### Plan 3: terminado el 2026-11-10 (rama `plan-3-presupuestos`)
 
-Los servicios ya existen y tienen pruebas: `issue.ts`, `numbering.ts`, `lifecycle.ts`, y `addRequiredConcept`/`removeRequiredConcept` en `service.ts`. Las Server Actions también: `issueAction`, `setStatusAction`, `refreshPricesAction`, `createRevisionAction`, `duplicateAction` y `add|removeRequiredConceptAction`. Falta:
+La interfaz de las tareas 6 y 7 está hecha y probada en Chrome (detalle en la cronología, punto 5). Cierre:
 
-1. ~~**Editor, panel «Para emitir»**~~ **Hecho el 2026-11-09** (`src/app/(app)/presupuestos/[id]/issue-panel.tsx`) y probado en Chrome:
-   - cada obligatorio en verde con su cantidad («100,00 km»), o en ámbar con «Marcar 0 con motivo»; con renuncia muestra «A 0: motivo» y «Quitar el 0»;
-   - el resto de problemas de `issueChecks` enlazan a su ancla (comprobado `#linea-<id>`);
-   - «Emitir presupuesto» deshabilitado con «Faltan N datos…»; sin problemas, confirmación en la página;
-   - emitido PR-2026000001-R00: queda en solo lectura, y una pestaña antigua que intenta guardar recibe «El presupuesto ya está emitido…» sin cambios en la BD.
-   - Hallazgo: dentro del panel lateral (`overflow-y:auto`) la `.confirmbox` flotante quedaba cortada; en `.emit` va en línea (`position:static`).
-   - Sin comprobar todavía: el panel en móvil (≤ 900 px).
-2. ~~**Editor de un presupuesto emitido**~~ **Hecho el 2026-11-09** (`src/app/(app)/presupuestos/[id]/lifecycle-panel.tsx`) y probado en Chrome:
-   - selector de estado (Emitido → Enviado, queda en el historial); «Validez vencida» si `isExpired`;
-   - «Nueva revisión» crea R01 («Sustituye a R00»); si ya hay un borrador de revisión, el botón pasa a «Abrir el borrador R01»;
-   - al emitir R01, R00 muestra «Sustituido por R01: ya no cambia de estado» con enlace y sin selector;
-   - «Duplicar» (en emitidos y borradores) crea un borrador sin número;
-   - en los borradores, aviso de `priceWarnings` y «Actualizar precios desde catálogo» (probado: 0,30 → 0,35);
-   - `<details>` «Historial» al pie con `listQuoteHistory`.
-   - `getQuote` incluye ahora `parent` y `revisions` (también entran en la instantánea de emisión).
-3. ~~**Listado en `/`**~~ **Hecho el 2026-11-09** (`src/app/(app)/page.tsx`) y probado en Chrome:
-   - pestañas de estado con `counts`; filtros GET `q`, `mes` (`este` por defecto, `anterior`, `todos`), `desde`/`hasta` (mandan sobre el mes), `cliente`, `responsable`, `estado` (slug en español) y `pagina`;
-   - título «Presupuestos · noviembre de 2026» o con el rango; «Enviado · N días»; «Validez vencida»; «Sustituye a R00»; pie con resultados y total filtrado;
-   - comprobado: R00 sustituida no sale, mes anterior, todas las fechas (2 resultados, 78,65 €), borrador + búsqueda, desde/hasta;
-   - móvil (iframe de 390 px): sin desbordamiento horizontal en el listado ni en el editor; la tabla y las pestañas se desplazan dentro de su caja.
-4. ~~**Configuración**~~ **Hecho el 2026-11-09** (`/admin/configuracion`) y probado en Chrome:
-   - sección «Numeración»: patrón, reinicio anual (campo nuevo `yesno` de `SettingsSection`) y valor inicial, con un ejemplo hecho con `formatReference` sobre lo guardado y la advertencia de que el valor inicial solo cuenta mientras no existe el contador;
-   - sección «Conceptos obligatorios»: «Quitar» y un selector de conceptos activos para añadir;
-   - comprobado: patrón sin `{RR}` rechazado; guardar OF-{AAAA}-{NNNN}-R{RR}, sí, 100 → OF-2026-0100-R00; volver a los valores por defecto; añadir y quitar MAN-4X25.
-   - Hallazgo: tras guardar, React restablece el formulario pero no vuelve a leer el `defaultValue` de un `<select>` ya montado, que volvía a «No». Se arregla con `key={f.value}`.
-5. ~~**`/admin/historial`**~~ **Hecho el 2026-11-09:** entidad «Presupuestos» y acciones Emisión, Cambio de estado, Revisión, Ajuste de precio y Duplicado.
-6. **Cierre:**
-   - `pnpm build`;
-   - prueba en Chrome del criterio de éxito de la spec (crear, emitir, enviar, filtrar por mes y estado, revisar R01, duplicar);
-   - revisión final de toda la rama;
-   - actualizar `AGENTS.md` y `README.md`;
-   - cambiar el PR #3 a definitivo.
+- **Verificación:** `tsc` sin errores, lint sin errores (13 avisos antiguos), **180 pruebas** en verde y `pnpm build` correcto.
+- **Criterio de éxito de la spec, en Chrome contra la versión de producción (`pnpm start`):**
+  1. cliente «Conservas Ribera, S.A.» con ubicación;
+  2. presupuesto desde «Nuevo presupuesto» con el conjunto de bombas (2 ud × 102,00 + 40 m × 10,00 = 604,00 €), 100 km y 8 h;
+  3. validados los conceptos como admin y emitido como PR-2026000002-R00 (1.257,19 €);
+  4. pasado a «Enviado»;
+  5. filtrado «Este mes» + «Enviado»;
+  6. R01 con 10 h, emitida: el listado solo muestra R01 y R00 dice «Sustituido por R01»;
+  7. duplicado tras subir MAN-4X25 a 12,00: aviso «MAN-4X25: catálogo 12,00, presupuesto 10,00»; «Actualizar precios» recalcula también el conjunto.
+- **Hallazgos del recorrido, corregidos:**
+  - entre 900 y ~1.300 px la tabla de partidas no cabía junto al panel de 380 px y las columnas se solapaban: hasta 1.360 px el panel va debajo (comprobado con iframes de 1.000 a 1.920 px);
+  - «Faltan 1 dato» → «Falta 1 dato».
+- **Revisión final de la rama** (revisor independiente, `160b462..731a4e1`): sin críticos, dos importantes y varios menores, corregidos con pruebas que antes fallaban:
+  - cambiar de cliente guardaba la ubicación y el contacto del anterior, porque el formulario los reenvía;
+  - cambiar el reinicio anual después de emitir repetía un número y bloqueaba toda emisión: el contador ya no baja de lo emitido en su ámbito, el reinicio anual exige `{AAAA}` y un número repetido da un error claro;
+  - menores: ubicación desactivada al emitir, obligatorio desactivado, `setStatus` con nombres heredados y sin bloqueo de fila, fechas mal escritas en la URL del listado, año de Madrid en las pruebas.
+- **Queda de la revisión, aplazado:**
+  - una prueba del reinicio anual a lo largo de dos años (necesita simular la fecha);
+  - la instantánea guarda los importes sin ceros finales («1246.3»): el PDF del plan 4 debe formatearlos con `formatDecimalEs`.
+- **Falta:** subir la rama y pasar el PR #3 a definitivo.
 
 ### Después
 
 - **Plan 4, por escribir:** PDF con Playwright (plantilla en `src/pdf/templates/`), Dokploy y copias de seguridad. La emisión ya guarda la instantánea con `templateVersion: "v1"`; `IssuedDocument.pdfPath` y `sha256` están a `null` hasta ese plan.
-- **Integración.** `master` solo tiene el plan 1. El PR #3 llevará los planes 2 y 3 cuando el plan 3 esté terminado.
+- **Integración.** `master` solo tiene el plan 1. El PR #3 lleva los planes 2 y 3.
+- **`pnpm start` avisa** de que no encaja con `output: standalone`; sirve para probar en local, pero en producción se usa `node .next/standalone/server.js` (Docker ya lo hace).
 - **Docker.** La imagen no se ha vuelto a construir desde que se añadió `exceljs` (plan 2).
 
 ## Decisiones tomadas por el camino
