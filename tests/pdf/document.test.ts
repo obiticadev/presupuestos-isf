@@ -1,0 +1,79 @@
+import { describe, expect, it } from "vitest";
+import { buildDocument, toPdfSource, type PdfSource } from "@/pdf/document";
+
+const src = (): PdfSource => ({
+  company: {
+    legalName: "ISF", taxId: "B1", address: "Calle 1", phone: "1", email: "a@b.c", registryText: "", logoPath: null,
+    letterGreeting: "Muy Sres. Nuestros:", letterIntro: "Agradeciendo la confianza, presentamos oferta en referencia a",
+    letterClosing: "Esperando.\n\nSaludos.\n\nAtentamente.", letterPlace: "Alcalá de Henares",
+  },
+  quote: {
+    reference: "PR-2026000001-R00", date: "2026-11-09T00:00:00.000Z", subject: "ampliación del grupo de bombeo",
+    paymentTerms: "30 días", exclusions: "Obra civil", validityDays: 30,
+    client: { legalName: "Acme S.L.", fiscalAddress: "Calle Mayor 1\n28001 Madrid" },
+    location: { name: "Planta", address: "Ctra. de Toledo, km 4", city: "28300 Aranjuez", province: "Madrid" },
+    contact: { name: "Ana López" },
+    sections: [{
+      id: "s1", title: "Grupo de bombeo",
+      children: [
+        { id: "c1", title: "Equipos", mode: "SUM", lines: [
+          { description: "Bomba", quantity: "2", unitName: "ud", visible: true },
+          { description: "Manguera", quantity: "40", unitName: "m", visible: true },
+          { description: "Oculta", quantity: "1", unitName: "", visible: false },
+        ] },
+        { id: "c2", title: "Montaje", mode: "GLOBAL", lines: [] },
+      ],
+    }],
+    totals: {
+      sections: { s1: "639" }, subsections: { c1: "604", c2: "35" }, base: "1219", total: "1474.99",
+      taxes: [{ name: "IVA", ratePct: "21", amount: "255.99" }],
+    },
+  },
+});
+
+describe("buildDocument", () => {
+  it("builds rows, totals, dates, recipient and letter", () => {
+    const d = buildDocument(src(), { draft: false });
+    expect(d.rows).toEqual([
+      { kind: "part", number: "1", title: "Grupo de bombeo", total: "639,00 €" },
+      { kind: "sub", number: "1.1", title: "Equipos", total: "604,00 €" },
+      { kind: "line", text: "Bomba", quantity: "2 ud" },
+      { kind: "line", text: "Manguera", quantity: "40 m" },
+      { kind: "sub", number: "1.2", title: "Montaje", total: "35,00 €" },
+    ]);
+    expect(d.totals).toEqual({ base: "1.219,00 €", taxes: [{ label: "IVA 21 %", amount: "255,99 €" }], total: "1.474,99 €" });
+    expect([d.shortDate, d.longDate, d.place]).toEqual(["9/11/2026", "9 de noviembre de 2026", "Alcalá de Henares a 9 de noviembre de 2026"]);
+    expect(d.letter.intro.endsWith(" ampliación del grupo de bombeo.")).toBe(true);
+    expect(d.letter.closing).toEqual(["Esperando.", "Saludos.", "Atentamente."]);
+    expect(d.conditions.validity).toBe("30 días");
+    expect(d.reference).toBe("PR-2026000001-R00");
+    expect(d.recipient.attention).toBe("A la atención de Ana López");
+    expect(d.recipient.address).toEqual(["Ctra. de Toledo, km 4", "28300 Aranjuez (Madrid)"]);
+  });
+
+  it("formats quantities with and without unit", () => {
+    const s = src();
+    s.quote.sections[0].children[0].lines = [
+      { description: "A", quantity: "1.5", unitName: "h", visible: true },
+      { description: "B", quantity: "1.5", unitName: "", visible: true },
+    ];
+    const qty = buildDocument(s, { draft: false }).rows.flatMap((r) => (r.kind === "line" ? [r.quantity] : []));
+    expect(qty).toEqual(["1,5 h", "1,5"]);
+  });
+
+  it("falls back to the fiscal address, draft reference and untitled parts", () => {
+    const s = src();
+    s.quote.location = null;
+    s.quote.contact = null;
+    s.quote.sections[0].title = " ";
+    const d = buildDocument(s, { draft: true });
+    expect(d.recipient.address).toEqual(["Calle Mayor 1", "28001 Madrid"]);
+    expect(d.recipient.attention).toBeNull();
+    expect(d.reference).toBe("BORRADOR");
+    expect(d.rows[0]).toMatchObject({ title: "Sin título" });
+  });
+
+  it("toPdfSource round-trips through JSON", () => {
+    expect(toPdfSource({ d: new Date("2026-01-01T00:00:00Z") }, { q: 2 })).toEqual({ company: { d: "2026-01-01T00:00:00.000Z" }, quote: { q: 2 } });
+  });
+});
