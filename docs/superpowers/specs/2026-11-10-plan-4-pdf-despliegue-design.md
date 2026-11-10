@@ -172,6 +172,32 @@ La maqueta `docs/diseno/maquetas/pdf.html` es la referencia visual.
 - **Fuente: Archivo**, la de la interfaz, incrustada en el CSS como `@font-face` con datos base64 desde `@fontsource-variable/archivo`. **Decisión mía:** sin fuentes del sistema, el documento es igual en cualquier máquina.
 - **Importes y cantidades:** siempre llegan ya formateados desde `buildDocument`. La plantilla no formatea.
 
+### 5.3.1 Densidades de la hoja de partidas (añadido el 2026-11-10 a petición del usuario)
+
+**Lo que pidió el usuario:** que la parte del presupuesto (hoja 2) quepa en una sola hoja y lleve ya el total, en lugar de partirse entre dos. La carta (hoja 1) no cuenta. No quiere otro aspecto, sino más formas del estilo actual que admitan más elementos, reordenándolos si hace falta.
+
+**Maqueta:** `docs/diseno/maquetas/pdf-densidades.html`. Pinta el mismo presupuesto (4 partidas, 8 subpartidas y 19 líneas visibles, 31 filas en la tabla) de cuatro formas y mide en el navegador si cabe.
+
+**Límite que se respeta:** la spec principal (1 y 5.7) prohíbe encoger la letra para que el contenido quepa. Todas las variantes mantienen el cuerpo a 10 pt y compactan con espacios, orden y agrupación. Si se quisiera bajar a 9 pt, sería un cambio de la spec principal que tiene que decidir el usuario; no está en ninguna variante.
+
+| Variante | Qué cambia respecto a la estándar | Capacidad medida en una hoja (cabecera y cierre incluidos) |
+|---|---|---|
+| **A · Estándar** | La de `pdf.html`: cabecera de 30 mm, filas de unos 8,5 mm y el cierre apilado. | Unas 15 filas. El ejemplo de 31 filas no cabe: sobran 128 mm y los totales pasan a la hoja 3. |
+| **B · Compacta** | El mismo orden. Cabecera baja (18 mm, logo de 10 mm) y pie de 11 mm en todo el documento; total presupuesto junto al título; filas de unos 6 mm (interlineado 1,2); cierre en dos columnas: condiciones como «rótulo \| texto» a la izquierda y totales a la derecha. | Unas 31 filas. |
+| **C · Resumen arriba** | Como B, pero primero va un cuadro económico (cada partida con su importe, al lado importe, IVA y total) y debajo el desglose de subpartidas y líneas, sin columna de importe. Las condiciones van al pie en tres columnas. | Unas 31 filas de desglose con 4 partidas. Cada partida más resta una fila, porque también ocupa sitio en el cuadro. |
+| **D · Agrupada** | Como B, pero las líneas de cada subpartida van seguidas en una sola fila («Bomba… 2 ud · Manguera… 40 m») y desaparece la columna de cantidad. | Unas 29 filas de tabla, que con este ejemplo son unas 12 subpartidas y unas 28 líneas (depende de lo largas que sean). En el ejemplo sobran 63 mm. |
+
+**Cabecera baja en todo el documento:** Chromium aplica una sola `headerTemplate` y los mismos márgenes a todas las hojas, así que en B, C y D la cabecera de 18 mm y el pie de 11 mm también salen en la carta. A la carta le sobra sitio, así que no pierde nada. Las hojas de continuación de cualquier variante siguen las reglas de 5.3: la cabecera de tabla se repite y ninguna fila se parte.
+
+**Cómo se elige (decisión mía, para revisar en la sección 7):**
+
+- **Automática, sin nada que configurar:** la plantilla prueba en orden B → D y usa la primera con la que todo el cuerpo (tabla, totales y condiciones) cabe en una hoja. Si ninguna cabe, usa B con hojas de continuación, porque mantiene las cantidades en columna.
+- Para saber si cabe no hace falta generar el PDF dos veces: antes de `page.pdf()`, `page.evaluate()` mide la altura del cuerpo en el DOM y la compara con la altura útil de la hoja (297 mm menos márgenes, cabecera y pie de esa variante).
+- A deja de usarse en el documento final. Se queda en la maqueta como referencia, porque su holgura no aporta nada que B no tenga.
+- C no entra en el orden automático: cambia el orden de lectura, así que solo tiene sentido si la empresa la prefiere como estilo fijo. En ese caso sustituye a B en el orden (C → D).
+- **El resultado es reproducible:** la elección depende solo de la instantánea y de la versión de plantilla, así que un emitido regenerado (5.5) sale igual. No hace falta guardar la variante en la base de datos.
+- **Sin selector por presupuesto** (YAGNI). Si un día hiciera falta forzar una variante, iría en la instantánea, para que el emitido no cambie.
+
 **Riesgo a comprobar en la primera tarea:** que la fuente incrustada en el documento también se use en `headerTemplate` y `footerTemplate`. Chromium los dibuja aparte. Si no la usa, la cabecera y el pie llevan su propio `@font-face` dentro de la plantilla, que también es HTML.
 
 ### 5.4 Chromium (`src/pdf/browser.ts` y `render.ts`)
@@ -362,6 +388,12 @@ Las pruebas de Chromium necesitan el navegador instalado (`pnpm exec playwright-
 - **Decisión mía provisional:** el plan deja todo listo y probado en local (imagen, Compose, PDF dentro del contenedor, persistencia tras reinicio y redespliegue) y la parte del servidor queda como lista de pasos en `docs/despliegue.md`, que se hará con el usuario.
 - **Sin destino S3** no se cumple el éxito (copia fuera del servidor más restauración probada): en ese caso se construye el plan B, el contenedor `backup`, como tarea añadida.
 
+**Densidades de la hoja de partidas (5.3.1), para que elija el usuario:**
+
+- ¿Vale la elección automática B → D, o preferís C (resumen arriba) en lugar de B?
+- ¿Se descarta la A (estándar)?
+- ¿Mantenemos el cuerpo a 10 pt? Bajar a 9 pt cambiaría la regla de la spec principal (nunca reducir la letra).
+
 **Decisiones mías, para revisar:**
 
 1. Ruta `/api/presupuestos/[id]/pdf` y descarga `inline`.
@@ -375,6 +407,7 @@ Las pruebas de Chromium necesitan el navegador instalado (`pnpm exec playwright-
 9. HTTPS con una CA interna (alternativa: Let's Encrypt con DNS-01).
 10. Copias de Dokploy a S3, con el contenedor propio como plan B, y 30 copias diarias.
 11. El puerto 3000 deja de publicarse en `compose.yaml`.
+12. Densidad de la hoja de partidas elegida automáticamente (B → D, y B con continuación si ninguna cabe), sin guardarla aparte (5.3.1).
 
 **Pendiente de la empresa** (spec 7): destino S3 y retención (7.6), logo y textos definitivos (7.3), y la comparación con el PDF real.
 

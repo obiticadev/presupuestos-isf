@@ -196,6 +196,7 @@ test("tres PDF a la vez terminan todos", async () => {
   - `TEMPLATES: Record<"v1", Template>`.
   - `renderDocument(version: string, doc: PdfDocument, logo: { mime: string; base64: string } | null): Promise<Uint8Array>`: lanza `Error("Plantilla desconocida: …")` si la versión no existe.
 - La maqueta `docs/diseno/maquetas/pdf.html` es la referencia visual: márgenes, filetes, banda de partida, marca de agua al 7 % y en diagonal.
+- **Densidades (diseño 5.3.1):** `type Density = "compact" | "grouped"` (B y D de `docs/diseno/maquetas/pdf-densidades.html`, que es su referencia visual). `Template.body(doc, density)` y `Template.header(doc, logo, density)`, porque la cabecera baja también cambia. `renderDocument` mide el cuerpo con `page.evaluate()` antes de `page.pdf()` y elige `compact`, luego `grouped`. Si ninguna cabe, usa `compact` con continuación. Para eso `renderPdf` (Tarea 1) admite un `choose?: (page) => Promise<{ header: string; footer: string; margin }>` que se ejecuta tras `setContent`. **Pendiente de la respuesta del usuario (diseño, sección 7):** si elige C en lugar de B, `compact` pasa a ser `summary`.
 
 - [ ] **Step 1: Escribir las pruebas de la plantilla (texto, sin Chromium)**
   - `TEMPLATES.v1.body(doc)` con `title` `'<script>alert(1)</script> & "x"'` contiene `&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;x&quot;` y no `<script>`.
@@ -208,11 +209,14 @@ test("tres PDF a la vez terminan todos", async () => {
 ```ts
 test("PDF corto: todo el texto visible aparece y nada oculto", async () => { /* doc de la Tarea 2 → renderDocument("v1", doc, null) → extractText: contiene cada row.text y row.title, "1.474,99 €", "Transferencia a 60 días", "Asunto: PR-2026000002-R00"; no contiene la descripción oculta */ });
 test("PDF largo: 45 líneas con descripciones largas, ninguna se pierde y hay al menos 3 páginas", async () => { /* 3 partidas × 15 líneas «Línea 01 … texto de 120 caracteres» → todas presentes; pages >= 3; "Denominación" en cada página a partir de la 2 */ });
+test("densidad: el ejemplo de pdf-densidades (4 partidas, 8 subpartidas, 19 líneas) sale en 2 páginas, con el total en la 2", async () => { /* pages === 2; el texto de la página 2 contiene "9.727,19 €" */ });
+test("densidad: con 12 subpartidas de 2 líneas cortas se usa la agrupada y sigue en 2 páginas", async () => { /* pages === 2 */ });
+test("densidad: el largo de 45 líneas sigue en compacta con continuación y no pierde nada", async () => { /* pages >= 3; todas las líneas presentes; "Cantidad" en la cabecera de la tabla de cada página desde la 2 */ });
 test("borrador: BORRADOR en la cabecera y como marca de agua", async () => { /* draft: true → el texto contiene "BORRADOR" al menos una vez por página */ });
 ```
 
 - [ ] **Step 3: Ejecutar y comprobar que fallan.** Run: `pnpm test tests/pdf/template.test.ts tests/pdf/pdf-content.test.ts`. Expected: FAIL.
-- [ ] **Step 4: Implementar `html.ts`, `fonts.ts`, `styles.ts`, `v1/index.ts` y `templates/index.ts`.** Hoja 1, la carta, con `break-after: page`. Hoja 2 y siguientes como en la maqueta. Cabecera y pie con estilos en línea y tamaños explícitos, como exige Chromium. Si la Tarea 1, Step 6, vio que la fuente no llega a la cabecera, se repite `archivoFontFace()` dentro de `header` y `footer`.
+- [ ] **Step 4: Implementar `html.ts`, `fonts.ts`, `styles.ts`, `v1/index.ts` y `templates/index.ts`.** Hoja 1, la carta, con `break-after: page`. Hoja 2 y siguientes como en `pdf-densidades.html` (B y D), con la cabecera baja y sus márgenes en todo el documento. Cabecera y pie con estilos en línea y tamaños explícitos, como exige Chromium. Si la Tarea 1, Step 6, vio que la fuente no llega a la cabecera, se repite `archivoFontFace()` dentro de `header` y `footer`.
 - [ ] **Step 5: Ejecutar y comprobar que pasan.** Run: `pnpm test tests/pdf`. Expected: PASS.
 - [ ] **Step 6: Revisión visual.** Guardar el PDF corto y el largo en `.superpowers/` y compararlos con la maqueta en Chrome: logo, lema en una línea, banda de partidas, cabecera de tabla repetida y ninguna fila cortada.
 - [ ] **Step 7: Commit** — `git commit -m "feat(pdf): plantilla v1 con carta, partidas, totales y condiciones, fuente incrustada y marca de agua"`

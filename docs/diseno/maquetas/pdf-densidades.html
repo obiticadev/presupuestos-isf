@@ -1,0 +1,200 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Densidades del PDF · ISF</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<!--
+  Maqueta estática (plan 4): cuatro densidades de la hoja de partidas con el MISMO presupuesto
+  (4 partidas, 8 subpartidas, 19 líneas visibles). La carta (hoja 1) no cambia: es la de pdf.html.
+  Mismo estilo que pdf.html: Archivo, tinta #0f1f1d, verde ISF #004742, filetes finos, banda de partida.
+  Letra del cuerpo a 10 pt en todas (la spec prohíbe encogerla para que quepa); se compacta con
+  espacios, orden y agrupación. Las filas se pintan desde DATA con un script pequeño para que las
+  cuatro usen exactamente los mismos datos. El script también mide si la hoja desborda y lo escribe
+  en la etiqueta. No es código de producción.
+-->
+<style>
+:root{--ink:#0f1f1d;--green:#004742;--rule:#c9d1cb;--mut:#56645f;--band:#eef1ee;--amber:#9a5c00}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9ddd9;font-family:Archivo,sans-serif;color:var(--ink);font-size:10pt;line-height:1.4;font-variant-numeric:tabular-nums;padding:24px 0}
+.note{max-width:210mm;margin:0 auto 16px;font-size:13px;color:#33413d;background:#fff;padding:12px 16px;border-left:4px solid var(--green);line-height:1.5}
+.note b{font-weight:700}.note ul{margin:6px 0 0 18px}
+.label{max-width:210mm;margin:24px auto 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#33413d;font-weight:700;display:flex;justify-content:space-between;gap:12px}
+.label .fit{letter-spacing:.04em}
+.label .fit.ok{color:var(--green)}.label .fit.ko{color:#a3201a}
+.desc{max-width:210mm;margin:0 auto 8px;font-size:12.5px;color:#33413d;line-height:1.5}
+.page{width:210mm;height:297mm;margin:0 auto;background:#fff;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;flex-direction:column;padding:0 18mm;overflow:hidden}
+.page.cut::after{content:"";position:absolute;left:0;right:0;bottom:0;height:6mm;background:repeating-linear-gradient(-45deg,#a3201a 0 2mm,transparent 2mm 4mm);opacity:.5}
+
+/* Cabecera y pie comunes (como pdf.html). Las variantes compactas usan una cabecera baja en la hoja 2. */
+.hdr{height:30mm;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5pt solid var(--green);gap:12mm;flex:none}
+.hdr img{height:16mm;width:auto}
+.hdr .tag{font-size:7pt;font-weight:700;letter-spacing:.12em;white-space:nowrap;color:var(--green);font-stretch:110%;text-align:center;flex:1}
+.hdr .ref{font-size:9pt;font-weight:700;font-stretch:88%;text-align:right;white-space:nowrap}
+.hdr .ref small{display:block;font-weight:400;color:var(--mut);font-size:7pt;letter-spacing:.1em}
+.hdr.low{height:18mm}.hdr.low img{height:10mm}
+.body{flex:1;overflow:hidden;padding-top:8mm}
+.ftr{height:16mm;border-top:.75pt solid var(--rule);display:flex;justify-content:space-between;align-items:center;font-size:7pt;color:var(--mut);gap:8mm;flex:none}
+.ftr.low{height:11mm}
+.ftr .reg{flex:1}
+
+h1{font-size:14pt;font-weight:800;font-stretch:88%;line-height:1.2}
+.client{color:var(--mut);font-size:9pt}
+table{width:100%;border-collapse:collapse}
+thead th{font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;text-align:left;border-bottom:1.5pt solid var(--ink);padding:2mm 1.5mm;font-weight:700}
+td{padding:1.6mm 1.5mm;border-bottom:.5pt solid var(--rule);vertical-align:top}
+.n{text-align:right;white-space:nowrap}
+.p{width:14mm;font-weight:700}
+.qty{width:30mm}.tot{width:30mm}
+tr.part td{background:var(--band);font-weight:800;text-transform:uppercase;font-size:9.5pt}
+tr.sub td{font-weight:700}
+tr.line td:nth-child(2){padding-left:6mm}
+.totals div{display:flex;justify-content:space-between;padding:1.4mm 0;border-bottom:.5pt solid var(--rule)}
+.totals .big{font-size:12pt;font-weight:800;border-bottom:none;border-top:1.5pt solid var(--ink);margin-top:1mm;padding-top:2mm}
+.cond h2{font-size:8pt;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.cond p{white-space:pre-line}
+
+/* A · Estándar (la de pdf.html, para comparar). */
+.v-a table{margin-top:6mm}
+.v-a .totals{margin:6mm 0 0 auto;width:85mm}
+.v-a .cond{margin-top:7mm}.v-a .cond h2{margin-top:4mm}.v-a .cond p{margin-top:1mm}
+
+/* B · Compacta: cabecera baja, título y total en una franja, filas más bajas, cierre en dos columnas. */
+.v-b .body,.v-c .body,.v-d .body{padding-top:4mm}
+.titlebar{display:flex;justify-content:space-between;align-items:flex-end;gap:8mm;padding-bottom:2.5mm;border-bottom:.75pt solid var(--rule)}
+.titlebar .grand{text-align:right;white-space:nowrap}
+.titlebar .grand small{display:block;font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.titlebar .grand b{font-size:14pt;font-weight:800;font-stretch:88%;color:var(--green)}
+.v-b table,.v-d table{margin-top:3mm}
+.v-b td,.v-d td{padding:.7mm 1.5mm;line-height:1.2}
+.v-b thead th,.v-c thead th,.v-d thead th{padding:1.4mm 1.5mm}
+.v-b tr.part td,.v-d tr.part td{padding-top:1.1mm;padding-bottom:1.1mm}
+.close{display:grid;grid-template-columns:1fr 78mm;gap:8mm;margin-top:4mm;align-items:start}
+/* Condiciones como tabla de dos columnas: rótulo | texto. */
+.close .cond{display:grid;grid-template-columns:36mm 1fr;column-gap:3mm;row-gap:1.4mm}
+.close .cond h2{padding-top:.5mm}.close .cond p{line-height:1.3}
+.close .place{margin-top:2.5mm;color:var(--mut)}
+.close .totals div{padding:1mm 0}
+
+/* C · Resumen arriba: cuadro económico por partida y total; debajo, el desglose sin columna de importe. */
+.summary{display:grid;grid-template-columns:1fr 70mm;gap:8mm;margin-top:3mm;align-items:start}
+.summary table td{padding:.7mm 1.5mm;line-height:1.2}
+.summary table td.p{width:10mm}
+.summary .totals div{padding:1mm 0}
+.v-c h3{font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-top:3.5mm;color:var(--mut)}
+.v-c .detail{margin-top:3mm}
+.v-c .detail td{padding:.6mm 1.5mm;line-height:1.2}
+.v-c .detail tr.part td{font-size:9pt;padding-top:1mm;padding-bottom:1mm}
+.conds3{display:grid;grid-template-columns:1.6fr 1fr 1fr;gap:6mm;margin-top:2.5mm;padding-top:2mm;border-top:.75pt solid var(--rule)}
+.conds3 p{margin-top:.5mm;line-height:1.3}
+.v-c .place{margin-top:1.5mm;color:var(--mut)}
+
+/* D · Agrupada: las líneas de cada subpartida van seguidas en una sola celda, separadas por «·». */
+.v-d tr.sub td{padding-bottom:.4mm;border-bottom:none}
+.v-d tr.items td{padding-top:0;padding-bottom:1.4mm;color:var(--ink)}
+.v-d tr.items td:nth-child(2){padding-left:6mm}
+.v-d .it{white-space:nowrap}
+.v-d .it i{font-style:normal;color:var(--mut)}
+.v-d .sep{color:var(--rule);padding:0 1.2mm}
+</style></head><body>
+
+<div class="note">
+  <b>Densidades de la hoja de partidas (plan 4).</b> El mismo presupuesto (4 partidas, 8 subpartidas, 19 líneas visibles, 31 filas en la versión estándar) pintado de cuatro formas, todas con el estilo de <code>pdf.html</code> y la letra del cuerpo a 10&nbsp;pt.
+  La hoja 1, la carta, no cambia. Lo que se busca es que la hoja 2 ya lleve el total.
+  <ul>
+    <li><b>A · Estándar:</b> la de <code>pdf.html</code>. Aquí no cabe y los totales pasan a la hoja 3.</li>
+    <li><b>B · Compacta:</b> el mismo orden, con la cabecera más baja, el total también arriba, las filas más bajas y el cierre (condiciones y totales) en dos columnas.</li>
+    <li><b>C · Resumen arriba:</b> primero el cuadro económico (partidas, importe, IVA y total) y debajo el desglose de subpartidas y líneas sin columna de importe.</li>
+    <li><b>D · Agrupada:</b> como B, pero las líneas de cada subpartida van seguidas en una sola fila, separadas por «·».</li>
+  </ul>
+  La etiqueta de cada hoja dice si el contenido cabe, medido en este navegador. La capacidad aproximada de cada una está en el diseño (sección 5.3.1).
+</div>
+
+<template id="hdr"><header class="hdr"><img src="../../logos/photo_2026-05-18_10-48-03.jpg" alt="ISF"><div class="tag">INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL</div><div class="ref"><small>REFERENCIA</small>PR-2026000002-R00</div></header></template>
+<template id="ftr"><footer class="ftr"><span>9/11/2026</span><span class="reg">Inscrita en el Registro Mercantil de Madrid, tomo 00000, folio 000, hoja M-000000 · CIF B00000000</span><span>Página 2 de 2</span></footer></template>
+
+<div class="label"><span>A · Estándar (pdf.html)</span><span class="fit"></span></div>
+<p class="desc">Referencia: lo que ya está en el diseño. Cabecera de 30 mm, filas holgadas y el cierre apilado al final.</p>
+<section class="page v-a" data-v="a"><div class="body">
+  <div class="client">Conservas Ribera, S.A.</div><h1>Ampliación del grupo de bombeo</h1>
+  <table><thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead><tbody data-rows="full"></tbody></table>
+  <div class="totals" data-totals></div>
+  <div class="cond" data-cond></div>
+</div></section>
+
+<div class="label"><span>B · Compacta</span><span class="fit"></span></div>
+<p class="desc">Mismo orden que A. Gana sitio con la cabecera baja (18 mm, también en la carta, porque Chromium usa la misma cabecera en todas las hojas), filas más bajas y el cierre en dos columnas: condiciones a la izquierda y totales a la derecha. El total también aparece junto al título.</p>
+<section class="page v-b" data-v="b" data-low><div class="body">
+  <div class="titlebar"><div><div class="client">Conservas Ribera, S.A.</div><h1>Ampliación del grupo de bombeo</h1></div><div class="grand" data-grand></div></div>
+  <table><thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead><tbody data-rows="full"></tbody></table>
+  <div class="close"><div><div class="cond" data-cond></div><div class="place">Alcalá de Henares a 9 de noviembre de 2026</div></div><div class="totals" data-totals></div></div>
+</div></section>
+
+<div class="label"><span>C · Resumen arriba</span><span class="fit"></span></div>
+<p class="desc">Lo económico primero: un cuadro con cada partida y su importe, y al lado el importe, el IVA y el total. Debajo va el desglose con subpartidas y líneas, sin columna de importe, y la denominación gana ancho. Las condiciones quedan al pie en tres columnas.</p>
+<section class="page v-c" data-v="c" data-low><div class="body">
+  <div class="titlebar"><div><div class="client">Conservas Ribera, S.A.</div><h1>Ampliación del grupo de bombeo</h1></div></div>
+  <div class="summary">
+    <table><thead><tr><th class="p">P</th><th>Partida</th><th class="n tot">Importe</th></tr></thead><tbody data-rows="parts"></tbody></table>
+    <div class="totals" data-totals></div>
+  </div>
+  <table class="detail"><thead><tr><th class="p">P</th><th>Desglose</th><th class="n qty">Cantidad</th></tr></thead><tbody data-rows="detail"></tbody></table>
+  <div class="conds3" data-cond3></div>
+</div></section>
+
+<div class="label"><span>D · Agrupada</span><span class="fit"></span></div>
+<p class="desc">Como B, pero cada subpartida lleva sus líneas en una sola fila («Bomba… <i>2 ud</i> · Manguera… <i>40 m</i>»), con la columna de cantidad vacía. Es la que más cabe; a cambio, las cantidades no quedan en columna.</p>
+<section class="page v-d" data-v="d" data-low><div class="body">
+  <div class="titlebar"><div><div class="client">Conservas Ribera, S.A.</div><h1>Ampliación del grupo de bombeo</h1></div><div class="grand" data-grand></div></div>
+  <table><thead><tr><th class="p">P</th><th>Denominación</th><th class="n tot">Total</th></tr></thead><tbody data-rows="grouped"></tbody></table>
+  <div class="close"><div><div class="cond" data-cond></div><div class="place">Alcalá de Henares a 9 de noviembre de 2026</div></div><div class="totals" data-totals></div></div>
+</div></section>
+
+<script>
+// Datos ficticios. Las líneas ocultas no aparecen (ya suman en su subpartida).
+const DATA=[["1","Grupo de bombeo","3.639,00 €",[
+  ["1.1","Suministro e instalación de bombas","3.104,00 €",[["Bomba de potencia mayor que 7,5 kW","2 ud"],["Manguera 4 hilos x 2,5 mm²","40 m"],["Variador de frecuencia 11 kW","2 ud"],["Prensaestopas y terminales para cable de 2,5 mm² (bolsa de 50 unidades)","2 ud"]]],
+  ["1.2","Desplazamiento y puesta en marcha","535,00 €",[["Desplazamiento a obra","2 ud"],["Hora de oficial electricista","8 h"]]]]],
+ ["2","Cuadro eléctrico","2.180,00 €",[
+  ["2.1","Adecuación del cuadro existente","1.380,00 €",[["Interruptor automático 4P 32 A","2 ud"],["Contactor 3P 25 A con bobina 230 V","2 ud"],["Material auxiliar de conexionado","1 ud"]]],
+  ["2.2","Canalización y cableado","800,00 €",[["Bandeja perforada 300 x 60 mm","25 m"],["Cable RZ1-K 5G6 mm²","60 m"],["Hora de oficial electricista","6 h"]]]]],
+ ["3","Programación","1.500,00 €",[
+  ["3.1","Programación del PLC del grupo","1.000,00 €",[["Hora de programador","20 h"]]],
+  ["3.2","Pantalla de operador","500,00 €",[["Pantalla táctil de 7 pulgadas","1 ud"],["Hora de programador","4 h"]]]]],
+ ["4","Pruebas y documentación","720,00 €",[
+  ["4.1","Pruebas de funcionamiento","420,00 €",[["Hora de oficial electricista","4 h"],["Hora de programador","2 h"]]],
+  ["4.2","Documentación","300,00 €",[["Esquemas eléctricos actualizados","1 ud"],["Manual de operación","1 ud"]]]]]];
+const TOT={base:"8.039,00 €",tax:"1.688,19 €",total:"9.727,19 €"};
+const COND=[["Exclusiones","Obra civil, ayudas de albañilería y legalizaciones.\nCualquier trabajo no indicado expresamente en esta oferta."],["Forma de pago","Transferencia a 60 días."],["Validez de la oferta","30 días."]];
+
+const rows={
+  full:()=>DATA.map(([n,t,v,subs])=>`<tr class="part"><td class="p">${n}</td><td>${t}</td><td></td><td class="n">${v}</td></tr>`+subs.map(([sn,st,sv,ls])=>`<tr class="sub"><td class="p">${sn}</td><td>${st}</td><td></td><td class="n">${sv}</td></tr>`+ls.map(([d,q])=>`<tr class="line"><td></td><td>${d}</td><td class="n">${q}</td><td></td></tr>`).join("")).join("")).join(""),
+  parts:()=>DATA.map(([n,t,v])=>`<tr class="sub"><td class="p">${n}</td><td>${t}</td><td class="n">${v}</td></tr>`).join(""),
+  detail:()=>DATA.map(([n,t,v,subs])=>`<tr class="part"><td class="p">${n}</td><td colspan="2">${t}</td></tr>`+subs.map(([sn,st,sv,ls])=>`<tr class="sub"><td class="p">${sn}</td><td colspan="2">${st}</td></tr>`+ls.map(([d,q])=>`<tr class="line"><td></td><td>${d}</td><td class="n">${q}</td></tr>`).join("")).join("")).join(""),
+  grouped:()=>DATA.map(([n,t,v,subs])=>`<tr class="part"><td class="p">${n}</td><td>${t}</td><td class="n">${v}</td></tr>`+subs.map(([sn,st,sv,ls])=>`<tr class="sub"><td class="p">${sn}</td><td>${st}</td><td class="n">${sv}</td></tr><tr class="items"><td></td><td colspan="2">`+ls.map(([d,q])=>`<span class="it">${d} <i>${q}</i></span>`).join('<span class="sep">·</span> ')+`</td></tr>`).join("")).join(""),
+};
+const totals=`<div><span>Importe del presupuesto</span><span>${TOT.base}</span></div><div><span>IVA 21 %</span><span>${TOT.tax}</span></div><div class="big"><span>Total presupuesto</span><span>${TOT.total}</span></div>`;
+const cond=COND.map(([h,p])=>`<h2>${h}</h2><p>${p}</p>`).join("");
+const hdr=document.getElementById("hdr").content, ftr=document.getElementById("ftr").content;
+
+document.querySelectorAll(".page").forEach(pg=>{
+  const low=pg.hasAttribute("data-low");
+  const h=hdr.cloneNode(true).firstElementChild, f=ftr.cloneNode(true).firstElementChild;
+  if(low){h.classList.add("low");f.classList.add("low")}
+  pg.prepend(h);pg.append(f);
+  pg.querySelectorAll("[data-rows]").forEach(tb=>tb.innerHTML=rows[tb.dataset.rows]());
+  pg.querySelectorAll("[data-totals]").forEach(e=>e.innerHTML=totals);
+  pg.querySelectorAll("[data-cond]").forEach(e=>e.innerHTML=cond);
+  pg.querySelectorAll("[data-cond3]").forEach(e=>e.innerHTML=COND.map(([h,p],i)=>`<div class="cond"><h2>${h}</h2><p>${p}</p>${i===COND.length-1?'<p class="place">Alcalá de Henares a 9 de noviembre de 2026</p>':''}</div>`).join(""));
+  pg.querySelectorAll("[data-grand]").forEach(e=>e.innerHTML=`<small>Total presupuesto</small><b>${TOT.total}</b>`);
+});
+
+// Mide cada hoja cuando la fuente ya ha cargado: si el cuerpo desborda, lo marca.
+document.fonts.ready.then(()=>document.querySelectorAll(".page").forEach(pg=>{
+  const b=pg.querySelector(".body"), fit=pg.previousElementSibling.previousElementSibling.querySelector(".fit");
+  const end=Math.max(...[...b.children].map(c=>c.getBoundingClientRect().bottom));
+  const free=b.getBoundingClientRect().bottom-end, mm=v=>Math.round(v*25.4/96);
+  // Capacidad: cuántas líneas más cabrían, con la altura media de una línea de esta variante.
+  const ls=[...b.querySelectorAll("tr.line,tr.items")], lh=ls.reduce((a,t)=>a+t.getBoundingClientRect().height,0)/ls.length;
+  if(free<0){fit.textContent=`No cabe: sobran ${mm(-free)} mm → hoja 3`;fit.className="fit ko";pg.classList.add("cut")}
+  else{fit.textContent=`Cabe en una hoja · libres ${mm(free)} mm (≈${Math.floor(free/lh)} filas más)`;fit.className="fit ok"}
+  pg.dataset.free=mm(free);
+}));
+</script>
+</body></html>

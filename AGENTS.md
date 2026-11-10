@@ -27,7 +27,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 - Plan 3: **terminado y fusionado** (2026-11-10). 180 pruebas en verde y `pnpm build` correcto.
 - Plan 4 (PDF, Dokploy y copias): **diseño y plan escritos, pendientes de que el usuario los revise.**
   - Diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`; su sección 7 tiene las decisiones a confirmar y la pregunta sobre el alcance del despliegue.
-  - Maqueta: `docs/diseno/maquetas/pdf.html`.
+  - Maquetas: `docs/diseno/maquetas/pdf.html` y `docs/diseno/maquetas/pdf-densidades.html` (cuatro densidades de la hoja de partidas para que quepa en una hoja con el total, diseño 5.3.1).
   - Plan: `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas.
 - Siguiente paso: que el usuario revise el diseño y el plan, responda la sección 7 y elija cómo ejecutarlo. **No empezar a programar el plan 4 sin esa revisión.**
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).

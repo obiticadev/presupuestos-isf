@@ -98,13 +98,16 @@ La interfaz de las tareas 6 y 7 está hecha y probada en Chrome (detalle en la c
 
 Escritos el 2026-11-10 con superpowers (brainstorming → comprobación del constructor → writing-plans) mientras el usuario estaba ausente. **No hay código todavía.** Antes de ejecutar:
 
-1. Leer el diseño, `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`, y sobre todo su sección 7, «Para confirmar». Hay 11 decisiones mías y una pregunta abierta: si el plan incluye **ejecutar** el despliegue en el servidor o termina en la imagen probada en local y la documentación. Para ejecutarlo hace falta saber:
+1. Leer el diseño, `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`, y sobre todo su sección 7, «Para confirmar». Hay 12 decisiones mías y una pregunta abierta: si el plan incluye **ejecutar** el despliegue en el servidor o termina en la imagen probada en local y la documentación. Para ejecutarlo hace falta saber:
    - versión de Dokploy (las copias de un Compose piden 0.22 o posterior);
    - si habrá acceso al servidor;
    - DNS interno;
    - si hay destino S3.
 2. Ver la maqueta del documento: `docs/diseno/maquetas/pdf.html`, con la carta, las partidas, la continuación con la cabecera repetida y el borrador con marca de agua.
 3. Revisar el plan, `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas, y elegir cómo ejecutarlo: con subagentes o en la misma sesión.
+2b. **Densidades de la hoja de partidas** (pedido del usuario el 2026-11-10: que el presupuesto quepa en una hoja con el total, la carta aparte): ver `docs/diseno/maquetas/pdf-densidades.html` y el diseño 5.3.1.
+   - Cuatro variantes con el mismo presupuesto de 31 filas y la letra a 10 pt: A estándar (no cabe, unas 15 filas), B compacta (unas 31), C resumen arriba (unas 31 de desglose) y D agrupada (la que más cabe: sobran 63 mm).
+   - Propuesta: elección automática B → D, y si ninguna cabe, B con continuación. Se responde en la sección 7 del diseño (B o C, descartar A, 10 pt o 9 pt).
 
 **Hallazgos del diseño:**
 
