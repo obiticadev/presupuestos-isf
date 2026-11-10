@@ -35,6 +35,19 @@ test("cabecera y pie", () => {
   for (const s of ['class="pageNumber"', 'class="totalPages"', d.company.registryText, d.company.taxId]) expect(footer).toContain(s);
 });
 
+test("los datos de empresa vacíos no dejan rótulos ni separadores sueltos", () => {
+  const d = doc();
+  d.company = { ...d.company, taxId: "", address: "", phone: " ", email: "", registryText: "" };
+  const from = TEMPLATES.v1.body(d).match(/<div class="from">(.*?)<\/div>/)![1];
+  expect(from).toBe(`<b>${d.company.legalName}</b>`);
+  d.company.email = "a@b.c";
+  expect(TEMPLATES.v1.body(d)).toContain(`<div class="from"><b>${d.company.legalName}</b><br>a@b.c</div>`);
+  const registry = TEMPLATES.v1.footer({ ...d, company: { ...d.company, email: "" } }).match(/<span style="flex:1">(.*?)<\/span>/)![1];
+  expect(registry).toBe("");
+  for (const s of [from, registry]) { expect(s).not.toContain("CIF"); expect(s).not.toMatch(/·\s*·|^\s*·|·\s*$/); }
+  expect(TEMPLATES.v1.footer({ ...d, company: { ...d.company, taxId: "B1" } })).toContain('<span style="flex:1">CIF B1</span>');
+});
+
 test("plantilla desconocida", async () => {
   await expect(renderDocument("v9", doc(), null)).rejects.toThrow("Plantilla desconocida: v9");
   await expect(renderDocument("toString", doc(), null)).rejects.toThrow("Plantilla desconocida: toString");

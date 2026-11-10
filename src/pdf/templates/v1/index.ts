@@ -13,6 +13,9 @@ export const SHEET_PX = mmToPx(297 - 22 - 15); // A4 minus the top and bottom ma
 // header at 18 mm from the top and the one of the footer at 11 mm from the bottom, as in the mockup.
 const FRAME = "box-sizing:border-box;width:calc(100% - 36mm);margin:0 18mm;font-family:Archivo,sans-serif;color:#0f1f1d;-webkit-print-color-adjust:exact";
 
+/** Joins the non-empty pieces with « · », so empty company data leaves no label or separator behind. */
+const joinDot = (parts: string[]) => parts.map((p) => p.trim()).filter(Boolean).join(" · ");
+
 const row = (r: PdfRow) =>
   r.kind === "line"
     ? html`<tr class="line"><td></td><td>${r.text}</td><td class="n">${r.quantity}</td><td></td></tr>`
@@ -28,7 +31,7 @@ function body(d: PdfDocument): string {
   return html`<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${safe(archivoFontFace() + STYLES)}</style></head><body>
 ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
 <section class="letter">
-  <div class="from"><b>${c.legalName}</b><br>${c.address}<br>CIF ${c.taxId} · ${c.phone} · ${c.email}</div>
+  <div class="from"><b>${c.legalName}</b>${[c.address, joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
   <div class="to"><b>${d.recipient.name}</b>${[d.recipient.place, ...d.recipient.address, d.recipient.attention ?? ""].filter(Boolean).map((l) => html`<br>${l}`)}</div>
   <div class="place">${d.letter.place} a ${d.longDate}</div>
   <div class="subject">Asunto: ${d.reference}</div>
@@ -70,7 +73,7 @@ function header(d: PdfDocument, logo: { mime: string; base64: string } | null): 
 }
 
 function footer(d: PdfDocument): string {
-  const registry = [d.company.registryText, `CIF ${d.company.taxId}`].filter(Boolean).join(" · ");
+  const registry = joinDot([d.company.registryText, d.company.taxId.trim() && `CIF ${d.company.taxId.trim()}`]);
   return html`<style>${safe(archivoFontFace())}</style>
 <div style="${FRAME};height:7mm;display:flex;align-items:center;justify-content:space-between;gap:8mm;border-top:.75pt solid #c9d1cb;font-size:7pt;color:#56645f">
   <span>${d.shortDate}</span>

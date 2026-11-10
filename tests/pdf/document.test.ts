@@ -73,6 +73,12 @@ describe("buildDocument", () => {
     expect(d.rows[0]).toMatchObject({ title: "Sin título" });
   });
 
+  it("the tax label is the name when it already carries the rate", () => {
+    const s = src();
+    s.quote.totals.taxes = [{ name: "IVA 21 %", ratePct: "21", amount: "1" }, { name: "IVA 10 % prueba", ratePct: "10", amount: "1" }, { name: "IGIC", ratePct: "7", amount: "1" }];
+    expect(buildDocument(s, { draft: false }).totals.taxes.map((t) => t.label)).toEqual(["IVA 21 %", "IVA 10 % prueba", "IGIC 7 %"]);
+  });
+
   it("toPdfSource round-trips through JSON", () => {
     expect(toPdfSource({ d: new Date("2026-01-01T00:00:00Z") }, { q: 2 })).toEqual({ company: { d: "2026-01-01T00:00:00.000Z" }, quote: { q: 2 } });
   });

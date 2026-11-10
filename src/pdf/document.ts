@@ -82,7 +82,7 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
     rows,
     totals: {
       base: money(q.totals.base),
-      taxes: q.totals.taxes.map((t) => ({ label: `${t.name} ${formatDecimalEs(t.ratePct, { min: 0, max: 2 })} %`, amount: money(t.amount) })),
+      taxes: q.totals.taxes.map((t) => ({ label: t.name.includes("%") ? t.name : `${t.name} ${formatDecimalEs(t.ratePct, { min: 0, max: 2 })} %`, amount: money(t.amount) })),
       total: money(q.totals.total),
     },
     conditions: { exclusions: q.exclusions, paymentTerms: q.paymentTerms, validity: `${q.validityDays} días` },
