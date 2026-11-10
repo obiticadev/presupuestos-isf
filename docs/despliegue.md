@@ -31,6 +31,8 @@ cd /etc/dokploy/compose/presupuestos-isf-app-oy9un2/code
 alias dc='docker compose -p presupuestos-isf-app-oy9un2 -f compose.yaml'
 ```
 
+Se entra por SSH con `ssh -i ~/.ssh/isf_dokploy isf@192.168.105.83`. Para usar `docker` sin `sudo`, el usuario `isf` tiene que estar en el grupo `docker` (`sudo usermod -aG docker isf`, y volver a entrar). Ese grupo equivale a ser root en el servidor.
+
 Al desplegar, `migrate` aplica las migraciones (`prisma migrate deploy`) y termina con código 0. Después arranca `app`. Si `migrate` falla, la app no arranca.
 
 ## 3. Variables
@@ -95,6 +97,8 @@ Quedan en **`/srv/presupuestos-backups/{db,appdata}`** del servidor, solo legibl
 docker logs presupuestos-isf-app-oy9un2-backup-1
 ```
 
+Si un despliegue cambia `scripts/backup.sh` o `scripts/restore.sh`, el contenedor `backup` puede seguir con la versión anterior, porque Compose no lo recrea si su configuración no cambia. Después de desplegar: `dc up -d --force-recreate backup`.
+
 **Copia en el momento** (obligatoria antes de desplegar una versión con migraciones):
 
 ```sh
@@ -109,11 +113,13 @@ Restaura la base de datos y `appdata` de una misma copia. La app tiene que estar
 
 ```sh
 cd /etc/dokploy/compose/presupuestos-isf-app-oy9un2/code
-ls /srv/presupuestos-backups/db                               # elegir la fecha AAAAMMDD-HHMM
+sudo ls /srv/presupuestos-backups/db                          # elegir la fecha AAAAMMDD-HHMM
 dc stop app
 dc -f compose.restore.yaml run --rm backup /scripts/restore.sh AAAAMMDD-HHMM
-dc start app
+dc up -d                                                      # migrate antes que app; inocuo si no hay nada pendiente
 ```
+
+La copia tiene que corresponder al código desplegado. Si se restaura una copia de antes de una actualización con migraciones, primero se despliega el commit anterior (ver «Revertir» en `docs/operacion.md`).
 
 `compose.restore.yaml` solo cambia el montaje de `appdata` a escritura para esa orden. **Se usa con `run`, nunca con `up`, y siempre con el mismo `-p` que la app** (si no, restauraría otro volumen).
 
@@ -131,18 +137,21 @@ Antes de dar el sistema por operativo, y de vez en cuando, se restaura una copia
 
 ```sh
 cd /etc/dokploy/compose/presupuestos-isf-app-oy9un2/code
-P='docker compose -p presupuestos-restore -f compose.yaml'
-export POSTGRES_PASSWORD=$(openssl rand -hex 24) BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
-  BETTER_AUTH_URL=http://192.168.105.83:3199 APP_PORT=3199 BACKUP_DIR=/srv/presupuestos-backups
-$P up -d db && $P run --rm migrate
-$P -f compose.restore.yaml run --rm --no-deps backup /scripts/restore.sh AAAAMMDD-HHMM
-$P up -d app
-curl http://192.168.105.83:3199/api/health
-$P exec app sha256sum /data/pdf/AAAA/PR-…-R00.pdf    # igual que en producción
-$P down -v                                            # retirar la prueba
+# Entre paréntesis: las variables de la prueba no quedan en la sesión (si no, `dc` llevaría producción a ellas).
+(
+  P='docker compose -p presupuestos-restore -f compose.yaml'
+  export POSTGRES_PASSWORD=$(openssl rand -hex 24) BETTER_AUTH_SECRET=$(openssl rand -hex 32) \
+    BETTER_AUTH_URL=http://192.168.105.83:3199 APP_PORT=3199 BACKUP_DIR=/srv/presupuestos-backups
+  $P up -d db && $P run --rm --build migrate
+  $P -f compose.restore.yaml run --rm --no-deps backup /scripts/restore.sh AAAAMMDD-HHMM
+  $P up -d --build app
+  sleep 20; curl http://192.168.105.83:3199/api/health
+  $P exec app sha256sum /data/pdf/AAAA/PR-…-R00.pdf    # igual que en producción
+  $P down -v --rmi local                                # retirar la prueba y sus imágenes
+)
 ```
 
-Usa la misma carpeta de copias que producción, pero no arranca su `backup`, así que no escribe ni borra copias.
+Usa la misma carpeta de copias que producción, pero no arranca su `backup`, así que no escribe ni borra copias. Es un proyecto Compose aparte creado por consola, no un proyecto de Dokploy: así no aparece en el panel ni se despliega por error.
 
 | Fecha | Copia usada | Último PDF y SHA-256 | Resultado | Quién |
 |---|---|---|---|---|
