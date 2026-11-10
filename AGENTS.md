@@ -13,7 +13,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   1. `docs/superpowers/plans/2026-11-06-plan-1-base.md`: proyecto, BD, autenticación, usuarios, historial, configuración y Docker.
   2. `docs/superpowers/plans/2026-11-06-plan-2-catalogo-clientes.md`: categorías, unidades, conceptos, Excel y clientes.
   3. `docs/superpowers/plans/2026-11-06-plan-3-presupuestos.md`: cálculo, conjuntos, editor, emisión, revisiones y listado.
-  4. `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`: PDF, Dokploy y copias de seguridad (pendiente de revisión). Su diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`.
+  4. `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`: PDF, Dokploy y copias de seguridad (terminado y desplegado). Su diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`.
 - Diseño visual elegido («Esquema unifilar»): `docs/diseno/README.md` y `docs/diseno/maquetas/`. El contrato de dirección está en `.impeccable/surfaces/src-app.md`.
 - Contexto de producto: `PRODUCT.md`.
 
@@ -24,6 +24,8 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 - Ramas:
   - `master` tiene los planes 1 a 4 (PR #4 fusionado el 2026-11-10).
 - Plan 4 (PDF, Dokploy y copias): **terminado y desplegado** en `http://192.168.105.83:3100` (2026-11-10). Quedan comprobaciones en el servidor y errores por revisar.
+  - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, `appName presupuestos-isf-app-oy9un2`, `composePath ./compose.yaml`. API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio. SSH: `ssh -i ~/.ssh/isf_dokploy isf@192.168.105.83`.
+  - **Fusionar en `master` y desplegar en Dokploy exige el visto bueno explícito del usuario.**
 - **Para un chat nuevo: empieza por `docs/superpowers/progreso.md`, sección «Pendiente tras el despliegue (revisar)».** Resumen:
   - interfaz: en el editor, entre ~1360 y ~1600 px de ancho, los nombres de partida y subpartida y las descripciones de línea se ven cortados;
   - prueba intermitente en `tests/quotes/kit-instances.test.ts`;
@@ -31,10 +33,6 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - en el servidor: emisión de prueba, reinicio y redespliegue, estado del contenedor `backup` y prueba de restauración (el usuario SSH `isf` aún no está en el grupo `docker`);
   - seguridad: rotar las credenciales que se pegaron en el chat;
   - manual de usuario: decidir si sus scripts van al repositorio y retirar la instancia local `presupuestos-manual`.
-  - Diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md` (5.3.1 hoja de partidas B con cierre al pie y «Firma y sello»; 5.11 despliegue por IP y puerto y copias en el propio servidor).
-  - Plan: `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, 8 tareas.
-  - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, `appName presupuestos-isf-app-oy9un2`, `composePath ./compose.yaml`. API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio. SSH: `ssh -i ~/.ssh/isf_dokploy isf@192.168.105.83`.
-  - **Fusionar en `master` y desplegar en Dokploy exige el visto bueno explícito del usuario.**
 - Siguiente paso: revisar y corregir lo de «Pendiente tras el despliegue». Despliegue, copias y restauración: `docs/despliegue.md`. Para restaurar, usar `-f compose.yaml -f compose.restore.yaml` y el mismo proyecto `-p`: el override habilita escritura en el volumen correcto; nunca se usa para `up`.
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).
 - Reglas aprendidas:
