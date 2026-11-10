@@ -1,0 +1,41 @@
+import { buildDocument } from "@/pdf/document";
+import { TEMPLATES, renderDocument } from "@/pdf/templates";
+import { html, safe } from "@/pdf/templates/v1/html";
+import { pdfSource } from "./fixture";
+
+const doc = (draft = false) => buildDocument(pdfSource(), { draft });
+
+test("html escapa los valores salvo SafeHtml", () => {
+  expect(html`<p>${`<a href="x">'&'</a>`}</p>`.__html).toBe("<p>&lt;a href=&quot;x&quot;&gt;&#39;&amp;&#39;&lt;/a&gt;</p>");
+  expect(html`${safe("<b>")}${[safe("<i>"), safe("</i>")]}${null}`.__html).toBe("<b><i></i>");
+});
+
+test("el cuerpo escapa el asunto y lleva thead y break-inside: avoid", () => {
+  const d = { ...doc(), title: '<script>alert(1)</script> & "x"' };
+  const body = TEMPLATES.v1.body(d);
+  expect(body).toContain("&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;x&quot;");
+  expect(body).not.toContain("<script>");
+  expect(body).toContain("<thead>");
+  expect(body).toContain("break-inside:avoid");
+});
+
+test("la marca de agua solo en el borrador", () => {
+  expect(TEMPLATES.v1.body(doc(false))).not.toContain('class="wm"');
+  expect(TEMPLATES.v1.body(doc(true))).toContain('class="wm"');
+});
+
+test("cabecera y pie", () => {
+  const d = doc();
+  const header = TEMPLATES.v1.header(d, null);
+  expect(header).toContain("INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL");
+  expect(header).toContain("PR-2026000002-R00");
+  expect(header).not.toContain("<img");
+  expect(TEMPLATES.v1.header(d, { mime: "image/png", base64: "AAAA" })).toContain('src="data:image/png;base64,AAAA"');
+  const footer = TEMPLATES.v1.footer(d);
+  for (const s of ['class="pageNumber"', 'class="totalPages"', d.company.registryText, d.company.taxId]) expect(footer).toContain(s);
+});
+
+test("plantilla desconocida", async () => {
+  await expect(renderDocument("v9", doc(), null)).rejects.toThrow("Plantilla desconocida: v9");
+  await expect(renderDocument("toString", doc(), null)).rejects.toThrow("Plantilla desconocida: toString");
+});
