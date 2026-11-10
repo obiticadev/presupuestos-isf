@@ -21,7 +21,9 @@ RUN pnpm build && pnpm build:admin
 
 # Imagen final: solo la salida standalone de Next y el CLI de administración empaquetado.
 FROM base AS runtime
-ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 DATA_DIR=/data
+ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0 DATA_DIR=/data PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+# Navegador del PDF y sus bibliotecas del sistema, como root; la misma versión que playwright-core de package.json.
+RUN npx -y playwright-core@1.64.1 install --with-deps chromium-headless-shell   && chmod -R a+rX /ms-playwright && rm -rf /root/.npm
 COPY --from=build --chown=node:node /app/.next/standalone ./
 COPY --from=build --chown=node:node /app/.next/static ./.next/static
 COPY --from=build --chown=node:node /app/public ./public

@@ -23,15 +23,13 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 
 - Ramas:
   - `master` tiene los planes 1, 2 y 3 (PR #3 fusionado el 2026-11-10).
-  - `plan-4-pdf-despliegue`, desde `master`: diseño, maqueta y plan del plan 4, todavía sin código.
-- Plan 3: **terminado y fusionado** (2026-11-10). 180 pruebas en verde y `pnpm build` correcto.
-- Plan 4 (PDF, Dokploy y copias): **diseño y plan escritos, pendientes de que el usuario los revise.**
-  - Diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`; su sección 7 tiene las decisiones a confirmar y la pregunta sobre el alcance del despliegue.
-  - Maquetas: `docs/diseno/maquetas/pdf.html` y `docs/diseno/maquetas/pdf-densidades.html` (cuatro densidades de la hoja de partidas). **Elegida la B** el 2026-11-10: sin total junto al título, cierre pegado al pie y hueco de «Firma y sello» (diseño 5.3.1).
-  - Dokploy v0.31.0 está en `192.168.105.83:3000`, con un servicio Compose «Presupuestos» que apunta a `./docker-compose.yml`. El repositorio usa `compose.yaml`: hay que cambiar esa ruta antes de desplegar.
-  - Despliegue decidido (diseño 5.11): lo hace el agente por la API de Dokploy (token en `~/.dokploy-token`, fuera del repositorio), acceso en `http://192.168.105.83:3100` sin HTTPS, y copias diarias con un contenedor `backup` en `/srv/presupuestos-backups` del propio servidor.
-  - Plan: `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas.
-- Siguiente paso: que el usuario revise el diseño y el plan, responda la sección 7 y elija cómo ejecutarlo. **No empezar a programar el plan 4 sin esa revisión.**
+  - `plan-4-pdf-despliegue`, desde `master`: plan 4 **en ejecución**.
+- Plan 4 (PDF, Dokploy y copias): **tareas 1 a 6 hechas y revisadas; la 7 a medias; falta la 8.** El traspaso completo está en `docs/superpowers/progreso.md`, sección «Plan 4: en ejecución». Léela antes de tocar nada.
+  - Diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md` (5.3.1 hoja de partidas B con cierre al pie y «Firma y sello»; 5.11 despliegue por IP y puerto y copias en el propio servidor).
+  - Plan: `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, 8 tareas.
+  - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, que todavía apunta a `./docker-compose.yml` (hay que cambiarlo a `./compose.yaml`). API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio.
+  - **Fusionar en `master` y desplegar en Dokploy exige el visto bueno explícito del usuario.**
+- Siguiente paso: terminar la Tarea 7 (imagen Docker con Chromium, puerto 3100 y contenedor `backup`), después la Tarea 8 (documentación, verificación completa, revisión final de la rama y PR) y, con el visto bueno del usuario, el despliegue.
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).
 - Reglas aprendidas:
   - Ningún rol tiene permisos del plugin admin de Better Auth: todo pasa por los servicios.

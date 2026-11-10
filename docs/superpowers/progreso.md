@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-10 (diseño y plan 4).
+Última actualización: 2026-11-10 (plan 4 en ejecución, traspaso tras la Tarea 6).
 
 ## Cronología
 
@@ -93,6 +93,48 @@ La interfaz de las tareas 6 y 7 está hecha y probada en Chrome (detalle en la c
   - una prueba del reinicio anual a lo largo de dos años (necesita simular la fecha);
   - la instantánea guarda los importes sin ceros finales («1246.3»): el PDF del plan 4 debe formatearlos con `formatDecimalEs`.
 - **PR #3 fusionado en `master`** (2026-11-10, commit `1b60c6d`). `master` tiene los planes 1, 2 y 3; su árbol es idéntico al de `plan-3-presupuestos`.
+
+### Plan 4: en ejecución (rama `plan-4-pdf-despliegue`) — traspaso del 2026-11-10
+
+Ejecutado con superpowers:subagent-driven-development (un implementador por tarea, una revisión por tarea). El usuario pidió seguir con otro asistente a partir de aquí.
+
+**Hecho y revisado** (pruebas: 214+ en verde; `tests/pdf` 23/23; `tsc` y `lint` limpios):
+
+| Tarea | Commits | Notas |
+|---|---|---|
+| 1. Chromium y `renderPdf` | `da2f332` | `page.evaluate()` funciona con JS desactivado. La cabecera y el pie de Chromium no heredan el `@font-face`: la plantilla lo repite en ellos. Navegador: `pnpm exec playwright-core install chromium-headless-shell`. |
+| 2. Modelo `buildDocument` | `fb34b9d` (+ `0a37d26`) | Etiqueta de impuesto: el nombre solo si ya contiene «%» (los nombres reales son «IVA 21 %»). |
+| 3. Plantilla v1 y `paginate` | `f8942cf`, `cb37423`, `45830b7`, `0a37d26` | Variante B con cierre al pie y «Firma y sello». Arreglos: subpartidas sin líneas al paginar; la fuente se lee de `process.cwd()/node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2` y `next.config.ts` la incluye en standalone (`outputFileTracingIncludes`); datos de empresa vacíos sin separadores. |
+| 4. Logo por contenido | `54347b3` | `uploads/logo-<sha12>.<ext>`; `readLogo(path)` con respaldo al logo actual. |
+| 5. PDF del emitido y del borrador | `3cf0caf` | `src/modules/quotes/pdf.ts`: `ensureIssuedPdf` con `FOR UPDATE`, hash y regeneración; `draftPdf`; `pdfResponse`. |
+| 6. Descarga e interfaz | `04098b5` | `GET /api/presupuestos/[id]/pdf`; «Descargar PDF», «Vista previa (PDF)», enlace «PDF» en listado y ficha de cliente; historial «Descarga» y «PDF». |
+
+**Probado en navegador** (Chrome sin interfaz por CDP contra `pnpm build` + `pnpm start`, porque la extensión Claude in Chrome no estaba conectada): vista previa del borrador, emisión, descarga del emitido (archivo en `data/pdf/2026/`), historial y enlace del listado. Sin probar en la interfaz: el cambio de logo tras emitir (lo cubren las pruebas de las tareas 4 y 5). Sin sesión, la ruta del PDF responde 307 a `/login` por `src/proxy.ts`; se aceptó (el 401 de `pdfResponse` queda como segunda defensa).
+
+**Datos cambiados en la BD de desarrollo** (puerto 5433, solo desarrollo): administrador `pdf-check@isf.local`; conceptos BOM-MAYOR75, MAN-4X25, MAN-12X075, SER-DESPL y SER-PROG marcados como validados; el borrador de Talleres Henares quedó **emitido** como `PR-2026000001-R00`.
+
+**Tarea 7, a medias y SIN PROBAR** (cambios sin probar en el commit «wip» de la rama): `Dockerfile` (Chromium en `runtime`), `compose.yaml` (puerto `${APP_PORT:-3100}:3000` y servicio `backup`), `scripts/backup.sh`, `scripts/restore.sh`, `.gitignore` y `.dockerignore`. Falta todo lo de la tarea a partir del Step 2: construir, PDF dentro del contenedor, persistencia, copia y restauración en local, puertos. Reglas para hacerlo:
+- Probar con un proyecto aparte y solo el archivo de producción, para no tocar la BD de desarrollo: `docker compose -p presupuestos-t7 -f compose.yaml …` con `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=http://localhost:3100` y `BACKUP_DIR=./.backups`.
+- Comprobar dentro de la imagen que existen la fuente (`node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2`, puede ser un enlace de pnpm) y `playwright-core` en el `node_modules` de standalone.
+- Al terminar: `docker compose -p presupuestos-t7 -f compose.yaml down -v` y borrar `./.backups`.
+
+**Tarea 8:** `docs/despliegue.md`, `docs/operacion.md`, verificación completa (`pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`), revisión final de toda la rama, README/AGENTS/progreso y PR contra `master`. El despliegue real (Alcance de la Tarea 8) solo con el visto bueno del usuario.
+
+**Decisiones tomadas durante la ejecución:**
+- Las comprobaciones de interfaz se hicieron con Chrome sin interfaz por CDP y curl.
+- La Tarea 7 se prueba con `-p presupuestos-t7 -f compose.yaml` (lo que ejecuta Dokploy, sin `compose.override.yaml`).
+- Si la fuente cambiaba el número de páginas de las pruebas, mandaba la regla de `paginate` (al final coincidieron: 2 y 3 páginas).
+- Ruta del PDF sin sesión: 307 a `/login`, aceptado.
+- Etiqueta del impuesto: el nombre solo si contiene «%».
+
+**Menores aplazados, para la revisión final:**
+- `browser.ts`: el evento `disconnected` pone `browser = null` sin comparar la instancia; el límite de 30 s cuenta el tiempo en cola y no cancela el render; las pruebas de «sin red» y del límite de 2 son indirectas.
+- `document.ts`: `?? "0"` silencioso si falta un total; referencia vacía en un emitido sin referencia; faltan pruebas de líneas en subpartida GLOBAL y de «Sin título» en subpartida.
+- `paginate.ts`: el cierre que no cabe puede dejar una partida o subpartida al pie de la hoja anterior; los atajos (fila más alta que una hoja) cortan sin avisar.
+- Plantilla: el título colapsa los saltos de línea del asunto; el tipo del logo se repite tres veces; `v1/index.ts` y `paginate.ts` tienen saltos de línea CRLF y el resto LF.
+- `settings`: `logoPath` de la instantánea va directo a `path.join` (comprobar el prefijo `uploads/logo-`).
+- `quotes/pdf.ts`: el `.tmp` no se borra si fallan `writeFile` o `rename`; `seqYear` nulo daría `pdf/null/…`; el render dentro de la transacción ocupa una conexión del pool, así que varias descargas distintas a la vez pueden agotarlo (500).
+- La salida de las pruebas tiene un `DeprecationWarning` de pg que ya estaba antes.
 
 ### Plan 4: diseño y plan escritos, pendientes de revisión (rama `plan-4-pdf-despliegue`)
 
