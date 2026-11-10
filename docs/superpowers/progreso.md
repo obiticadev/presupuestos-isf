@@ -140,7 +140,13 @@ Verificación local con **solo el archivo de producción** y un proyecto aislado
 
 Observación menor, sin corregir: en la hoja de partidas el título es el asunto tal cual, que empieza en minúscula («la sustitución de…») porque el campo está pensado para continuar «…en referencia a». Decidir en la Tarea 8 si se pone en mayúscula inicial.
 
-Siguiente: Tarea 8 y su revisión final de toda la rama.
+**Tarea 8 (2026-11-10), antes del despliegue:**
+- Título de la hoja de partidas con mayúscula inicial (`d53dff7`, con prueba).
+- `docs/despliegue.md` nuevo y `docs/operacion.md` ampliado con «Actualizar la versión», «Revertir» y «Navegador del PDF» (`38fdc7c`).
+- Verificación completa: `tsc` limpio, lint sin errores (17 avisos antiguos), `pnpm build` correcto y **217/217** pruebas. En la primera ejecución falló una vez `tests/quotes/kit-instances.test.ts` («sin manguera el conjunto queda incompleto…»); no se reprodujo ni sola ni repitiendo la suite: queda como prueba intermitente que vigilar.
+- Revisión final de toda la rama (`1b60c6d..38fdc7c`, revisor independiente): sin críticos. Los dos importantes estaban en `docs/despliegue.md` y están corregidos en `4466407`: la prueba de restauración va en una subshell para que sus variables no lleguen a producción, y tras restaurar se usa `up -d` (corre `migrate`) en lugar de `start app`. También se documentan `--build`/`--rmi local` en la prueba, recrear `backup` si cambian sus scripts y el acceso SSH.
+- Menores aplazados: el aviso «El PDF se generará al descargarlo» de la spec 5.5.1 no se muestra al emitir si falla el PDF (solo queda en el log); al recolocar el cierre, un encabezado de partida o subpartida puede quedar solo al pie de la hoja (`paginate.ts`); un cierre más alto que una hoja se corta sin aviso; `tar` falla la copia entera si un archivo cambia mientras se lee; la versión de Playwright está en `Dockerfile` y en `package.json`.
+- **Servidor:** la API de Dokploy funciona. SSH entra como `isf` con `~/.ssh/isf_dokploy`, pero `isf` no está en el grupo `docker` y `sudo` pide contraseña: hace falta `sudo usermod -aG docker isf` (lo hace el usuario) para crear el administrador y probar la restauración por SSH.
 
 **Cierre de sesión:** avances técnicos guardados en `63a1213`. Se arrancó temporalmente `pnpm dev --hostname 127.0.0.1` para que el usuario consultara la app en `http://localhost:3000` (`/api/health`: 200, `status: ok`). Servidor detenido a petición del usuario antes de subir los avances al remoto. Esta consulta no sustituye la revisión pendiente con Claude in Chrome. La BD local existente se mantiene sin detener ni borrar; no se ha fusionado en `master` ni desplegado en Dokploy.
 
