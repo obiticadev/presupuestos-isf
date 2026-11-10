@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Que el presupuestador descargue el PDF corporativo de un presupuesto (el mismo siempre para un emitido, con marca de agua para un borrador) y que la aplicación quede desplegada en Dokploy con HTTPS, copias fuera del servidor y una restauración probada.
+**Goal:** Que el presupuestador descargue el PDF corporativo de un presupuesto (el mismo siempre para un emitido, con marca de agua para un borrador) y que la aplicación quede desplegada en Dokploy en `http://192.168.105.83:3100`, con copias diarias en el propio servidor y una restauración probada (diseño 5.11).
 
 **Architecture:** El PDF se genera con Chromium (`playwright-core`) a partir de una plantilla HTML/CSS versionada (`src/pdf/templates/v1`) y de un modelo plano ya formateado (`buildDocument`), construido desde la instantánea del emitido o desde los datos vivos del borrador. El PDF del emitido se genera justo después de emitir, se guarda en `DATA_DIR/pdf` con su SHA-256 y se regenera desde la instantánea si falta. El despliegue usa el `compose.yaml` actual con Chromium en la imagen, y la documentación de operación cubre Dokploy, HTTPS, copias y restauración.
 
@@ -73,7 +73,7 @@ src/app/api/presupuestos/[id]/pdf/route.ts
 src/app/(app)/presupuestos/[id]/lifecycle-panel.tsx, issue-panel.tsx   botones de PDF
 src/app/(app)/page.tsx, clientes/[id]/page.tsx                         enlace «PDF» por fila
 src/app/(app)/admin/historial/page.tsx                                 acciones download y pdf
-Dockerfile, compose.yaml, compose.local.yaml (nuevo)
+Dockerfile, compose.yaml (puerto 3100 y servicio backup), scripts/backup.sh y scripts/restore.sh (nuevos)
 docs/despliegue.md (nuevo), docs/operacion.md, README.md, AGENTS.md, docs/superpowers/progreso.md
 tests/pdf/*.test.ts, tests/quotes/pdf.test.ts, tests/settings/logo.test.ts
 ```
@@ -333,19 +333,28 @@ test("borrador: BORRADOR en la cabecera y como marca de agua", async () => { /* 
 ### Task 7: Imagen Docker con Chromium y Compose para Dokploy
 
 **Files:**
-- Modify: `Dockerfile` (etapa `runtime`), `compose.yaml` (quitar `ports` de `app` y añadir un `mem_limit` comentado)
-- Create: `compose.local.yaml` (publica `3000:3000` en `app`)
-- Test: prueba manual de la imagen
+- Modify: `Dockerfile` (etapa `runtime`), `compose.yaml` (`app` publica `${APP_PORT:-3100}:3000`; servicio `backup` nuevo; `mem_limit` comentado)
+- Create: `scripts/backup.sh`, `scripts/restore.sh`
+- Test: prueba manual de la imagen y de una copia con restauración en local
 
 **Interfaces:**
-- Produces: imagen `runtime` con `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` y el *headless shell* de Chromium 1.64.1 instalado con `--with-deps`, como root y antes de `USER node`, con permisos de lectura para `node`.
+- Produces:
+  - imagen `runtime` con `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` y el *headless shell* de Chromium 1.64.1 instalado con `--with-deps`, como root y antes de `USER node`, con permisos de lectura para `node`;
+  - servicio `backup` (diseño 5.11): `image: postgres:17`, `TZ=Europe/Madrid`, `PGHOST=db` y la contraseña de la base de datos por variable, `appdata` montado en `/data:ro`, `${BACKUP_DIR:-/srv/presupuestos-backups}` en `/backups`, los dos scripts montados o copiados y `command: /scripts/backup.sh loop`;
+  - `backup.sh loop|now`: en modo `loop`, espera hasta las 02:00 y repite cada día. Cada copia escribe `db/presupuestos-AAAAMMDD-HHMM.dump` (`pg_dump -Fc`) y `appdata/appdata-AAAAMMDD-HHMM.tar.gz`, primero en un archivo `.tmp` y después con `mv`, para que nunca quede una copia a medias con nombre válido. Conserva las 30 más recientes de cada tipo. Con `set -eu`, y un fallo se escribe en el log del contenedor sin pararlo;
+  - `restore.sh <AAAAMMDD-HHMM>`: exige que `app` esté parada, hace `pg_restore --clean --if-exists` y vacía y extrae `appdata`.
 
-- [ ] **Step 1: Cambiar el `Dockerfile`, `compose.yaml` y `compose.local.yaml`.** Comprobar que `.next/standalone/node_modules` incluye `playwright-core`. Si no, copiarlo en la etapa `runtime` desde la `build`.
-- [ ] **Step 2: Construir y arrancar.** Run: `docker compose -f compose.yaml -f compose.local.yaml up -d --build`. Expected: `migrate` termina con «Exited (0)», `app` queda «healthy» y `curl localhost:3000/api/health` devuelve `{"status":"ok"}`.
+- [ ] **Step 1: Cambiar el `Dockerfile` y `compose.yaml`, y escribir los dos scripts.** Comprobar que `.next/standalone/node_modules` incluye `playwright-core`. Si no, copiarlo en la etapa `runtime` desde la `build`.
+- [ ] **Step 2: Construir y arrancar.** Run: `BACKUP_DIR=./.backups docker compose up -d --build`. Expected: `migrate` termina con «Exited (0)», `app` queda «healthy», `backup` está «running» y `curl localhost:3100/api/health` devuelve `{"status":"ok"}`.
 - [ ] **Step 3: PDF dentro del contenedor.** Crear un administrador con `docker compose exec -e ADMIN_PASSWORD=… app node scripts/admin.mjs create …`. En Chrome, emitir un presupuesto y descargar su PDF. Comprobar que `docker compose exec app ls /data/pdf/<año>` lo muestra.
-- [ ] **Step 4: Persistencia.** Ejecutar `docker compose -f compose.yaml -f compose.local.yaml down` (sin `-v`), volver a levantarlo y comprobar que el presupuesto y su PDF siguen. Después, un `up -d --build` de nuevo, que simula un redespliegue, y la misma comprobación.
-- [ ] **Step 5: Comprobar que `compose.yaml` solo no publica nada:** `docker compose -f compose.yaml config` no tiene `ports` en `app` ni en `db`.
-- [ ] **Step 6: Commit** — `git commit -m "build: Chromium en la imagen, el compose de producción deja de publicar el 3000 y compose.local.yaml para probar"`
+- [ ] **Step 4: Persistencia.** Ejecutar `docker compose down` (sin `-v`), volver a levantarlo y comprobar que el presupuesto y su PDF siguen. Después, un `up -d --build` de nuevo, que simula un redespliegue, y la misma comprobación.
+- [ ] **Step 5: Copia y restauración en local.**
+  - `docker compose exec backup /scripts/backup.sh now` deja un `.dump` y un `.tar.gz` en `./.backups`.
+  - Emitir otro presupuesto, parar `app` y ejecutar `docker compose run --rm backup /scripts/restore.sh <fecha>`.
+  - Arrancar `app` y comprobar que el segundo presupuesto ya no está y que el primero descarga su PDF con el mismo SHA-256.
+  - Con 31 copias falsas en `./.backups/db`, una copia más deja 30.
+- [ ] **Step 6: Comprobar los puertos:** `docker compose config` publica solo `3100:3000` en `app`; `db` y `backup` no publican nada.
+- [ ] **Step 7: Commit** — `git commit -m "build: Chromium en la imagen, app en el puerto 3100 y contenedor de copias diarias con restauración"`
 
 ---
 
@@ -355,24 +364,24 @@ test("borrador: BORRADOR en la cabecera y como marca de agua", async () => { /* 
 - Create: `docs/despliegue.md`
 - Modify: `docs/operacion.md`, `README.md`, `AGENTS.md`, `docs/superpowers/progreso.md`
 
-**Alcance (decisión provisional, pendiente del usuario; diseño, sección 7):** esta tarea deja el despliegue **documentado y la imagen probada en local**. La configuración en el servidor (Dokploy, dominio, HTTPS, copias, prueba de restauración y comparación con el PDF real) es una **lista de pasos manual** que se hace con el usuario y el acceso al servidor. Si al confirmarlo resulta que no hay destino S3, se añade una tarea para construir el contenedor `backup` del plan B antes de cerrar.
+**Alcance (decidido por el usuario, diseño 5.11):** el agente **despliega de verdad** con la API de Dokploy, después de fusionar el PR en `master`.
+
+Pasos en el servidor, todos por la API (`x-api-key` desde `~/.dokploy-token`):
+1. `compose.update` del servicio `F5SwbOFCyMb7tDSn0xQZk`: `composePath: "./compose.yaml"` y las variables `POSTGRES_PASSWORD` y `BETTER_AUTH_SECRET` (aleatorias, generadas en el momento y que no se escriben en ningún archivo del repositorio), `BETTER_AUTH_URL=http://192.168.105.83:3100` y `BACKUP_DIR=/srv/presupuestos-backups`.
+2. `compose.deploy` y seguir el despliegue hasta que termine. `curl http://192.168.105.83:3100/api/health` devuelve `{"status":"ok"}`.
+3. Primer administrador. Con SSH: `docker exec` en el contenedor `app`. Sin SSH: una tarea puntual en la pestaña Schedules de Dokploy. Se le da al usuario la contraseña inicial y se le pide que la cambie.
+4. Emisión de prueba en Chrome, desde un equipo de la oficina, y descarga del PDF.
+5. Reinicio del servicio y redespliegue sin pérdida de datos.
+6. Copia en el momento y **prueba de restauración** en un proyecto aparte, «presupuestos-restore». Necesita SSH al servidor, con la clave `~/.ssh/isf_dokploy` autorizada. Sin SSH, este paso queda pendiente y se dice así al cerrar.
 
 **Contenido de `docs/despliegue.md`**, según el diseño, sección 5.8 a 5.10, en este orden y con órdenes copiables:
 
 1. **Requisitos del servidor:** Dokploy 0.22 o posterior, y unos 2 GB de RAM libres para la app con Chromium.
 2. **Aplicación Compose** desde GitHub: `master` y `compose.yaml`.
-3. **Variables:** `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET` y `BETTER_AUTH_URL=https://…`.
-4. **Dominio en el servicio `app`, puerto 3000, y volver a desplegar.** Comprobar que `db` no publica puertos.
-5. **HTTPS:**
-   - CA interna: crear la CA, emitir el certificado para el nombre interno, subirlo en Certificates, usar «Certificate: custom» e instalar el certificado raíz en los equipos;
-   - alternativa: Let's Encrypt con DNS-01.
-6. **Primer administrador** dentro del contenedor.
-7. **Copias:**
-   - destino S3 con «Test»;
-   - base de datos del servicio `db` a las 02:00;
-   - volumen `appdata` a las 02:30 en «Container OFF»;
-   - retención de 30;
-   - **plan B** si no hay S3: el contenedor `backup` con `pg_dump` y `tar` hacia una carpeta del NAS. Se describe y no se construye.
+3. **Variables:** `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=http://192.168.105.83:3100`, `BACKUP_DIR` y, si hace falta, `APP_PORT`.
+4. **Acceso** por `http://192.168.105.83:3100`, sin dominio. Cómo pasar más adelante a un dominio con HTTPS (CA interna o Let's Encrypt DNS-01), quitando el puerto publicado.
+5. **Primer administrador** dentro del contenedor.
+6. **Copias:** el contenedor `backup`, dónde quedan (`/srv/presupuestos-backups/{db,appdata}`), cómo hacer una copia en el momento y la retención de 30. El riesgo de tenerlas en el mismo disco, y cómo copiar la carpeta a un NAS o a un disco externo.
 8. **Restauración paso a paso** (base de datos, después volumen, después comprobación del SHA-256 del último PDF) y **prueba de restauración** en un proyecto aparte, con una tabla para apuntar fecha, copia usada y resultado.
 9. **Comprobaciones de aceptación** (spec 6): reinicio del servidor, redespliegue, restauración y comparación del PDF con `PR-2026001029-R00.pdf`.
 
@@ -381,5 +390,6 @@ test("borrador: BORRADOR en la cabecera y como marca de agua", async () => { /* 
 - [ ] **Step 1: Escribir `docs/despliegue.md` y actualizar `docs/operacion.md`.**
 - [ ] **Step 2: Verificación completa.** Run: `pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`. Expected: todo limpio.
 - [ ] **Step 3: Revisión final de la rama** con un revisor independiente (superpowers:requesting-code-review). Corregir lo crítico y lo importante.
-- [ ] **Step 4: Actualizar** `README.md` (estado, estructura `src/pdf/` y enlace a `docs/despliegue.md`), `AGENTS.md` y `progreso.md`, y dejar claro qué falta hacer **en el servidor**: Dokploy, HTTPS, copias, prueba de restauración y comparación con el PDF real. Eso no se puede hacer desde este equipo.
+- [ ] **Step 4: Actualizar** `README.md` (estado, estructura `src/pdf/` y enlace a `docs/despliegue.md`), `AGENTS.md` y `progreso.md`.
 - [ ] **Step 5: Commit, push y PR** contra `master` — `git commit -m "docs: despliegue en Dokploy, copias, restauración y cierre del plan 4"`
+- [ ] **Step 6: Con el PR fusionado y el visto bueno del usuario, desplegar** siguiendo los pasos del Alcance y apuntar el resultado (y lo que quede pendiente, como la comparación con el PDF real) en `progreso.md`.

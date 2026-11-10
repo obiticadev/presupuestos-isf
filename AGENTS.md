@@ -29,6 +29,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - Diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`; su sección 7 tiene las decisiones a confirmar y la pregunta sobre el alcance del despliegue.
   - Maquetas: `docs/diseno/maquetas/pdf.html` y `docs/diseno/maquetas/pdf-densidades.html` (cuatro densidades de la hoja de partidas). **Elegida la B** el 2026-11-10: sin total junto al título, cierre pegado al pie y hueco de «Firma y sello» (diseño 5.3.1).
   - Dokploy v0.31.0 está en `192.168.105.83:3000`, con un servicio Compose «Presupuestos» que apunta a `./docker-compose.yml`. El repositorio usa `compose.yaml`: hay que cambiar esa ruta antes de desplegar.
+  - Despliegue decidido (diseño 5.11): lo hace el agente por la API de Dokploy (token en `~/.dokploy-token`, fuera del repositorio), acceso en `http://192.168.105.83:3100` sin HTTPS, y copias diarias con un contenedor `backup` en `/srv/presupuestos-backups` del propio servidor.
   - Plan: `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas.
 - Siguiente paso: que el usuario revise el diseño y el plan, responda la sección 7 y elija cómo ejecutarlo. **No empezar a programar el plan 4 sin esa revisión.**
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).

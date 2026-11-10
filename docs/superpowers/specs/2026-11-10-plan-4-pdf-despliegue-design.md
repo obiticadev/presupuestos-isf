@@ -28,8 +28,8 @@ Y que la aplicación quede instalada en el servidor de la oficina con Dokploy, c
 2. PDF del emitido generado una vez, guardado en el volumen persistente con su hash y servido siempre igual.
 3. Vista previa del borrador con marca de agua, sin guardarla.
 4. Descarga con sesión y registrada en el historial.
-5. Imagen Docker con Chromium y despliegue en Dokploy con HTTPS interno.
-6. Copias programadas de la base de datos y del volumen de archivos, a un destino fuera del servidor, con la restauración documentada y probada.
+5. Imagen Docker con Chromium y despliegue en Dokploy, accesible en `http://192.168.105.83:3100` (5.11).
+6. Copias programadas de la base de datos y del volumen de archivos, en una carpeta del propio servidor (5.11), con la restauración documentada y probada.
 7. Documentación de operación: actualizar, restaurar y revertir.
 
 **No objetivos:**
@@ -44,7 +44,7 @@ Y que la aplicación quede instalada en el servidor de la oficina con Dokploy, c
 - que el PDF de un emitido cambie al regenerarse con datos actuales: el catálogo, el logo o los textos de hoy;
 - que una fila o una partida se corte, o que se encoja la letra para que quepa (spec 1 y 5.7);
 - que una caída de Chromium impida emitir o deje un presupuesto a medio emitir;
-- que el puerto de la app quede abierto en HTTP en el servidor, saltándose el HTTPS;
+- ~~que el puerto de la app quede abierto en HTTP en el servidor, saltándose el HTTPS~~ (anulado por el usuario: acceso por IP y puerto en HTTP, 5.11);
 - copias que nadie ha restaurado nunca.
 
 ## 3. Restricciones
@@ -271,8 +271,8 @@ La maqueta `docs/diseno/maquetas/pdf.html` es la referencia visual.
 - **Etapa `build`:** sin cambios. `playwright-core` se queda como dependencia externa y la copia `standalone` lo incluye. Si no lo incluye, se copia de `node_modules`.
 - **`.dockerignore`:** sin cambios.
 - **`compose.yaml`:**
-  - El servicio `app` **deja de publicar el 3000**: en Dokploy entra por Traefik con HTTPS (antiobjetivo 4).
-  - Un archivo nuevo, `compose.local.yaml`, lo publica para probar la imagen en un equipo: `docker compose -f compose.yaml -f compose.local.yaml up -d --build`.
+  - El servicio `app` publica `${APP_PORT:-3100}:3000` y se añade el servicio `backup` (decisión del usuario, 5.11).
+  - ~~`compose.local.yaml`~~: ya no hace falta, porque `compose.yaml` publica el puerto (5.11).
   - Los volúmenes siguen siendo con nombre (`pgdata` y `appdata`), que es lo que piden las copias de volúmenes de Dokploy.
   - `mem_limit` sugerido de 1 GB para `app`, comentado y sin activar: lo decide quien despliega.
 
@@ -337,6 +337,28 @@ Documentación nueva en `docs/despliegue.md`, paso a paso:
 
 **Prueba de restauración:** en el mismo servidor, en un proyecto de Dokploy aparte («presupuestos-restore»), para no tocar producción, y apuntando el resultado en `progreso.md`.
 
+### 5.11 Decisiones del usuario sobre el despliegue (2026-11-10)
+
+Sustituyen a lo que digan 5.7, 5.8 y 5.9 en contra.
+
+- **Quien despliega es el agente**, con la API de Dokploy (`http://192.168.105.83:3000/api`, cabecera `x-api-key`). El token está en `~/.dokploy-token` del equipo del usuario y nunca en el repositorio. Para la prueba de restauración hace falta además SSH al servidor (clave `~/.ssh/isf_dokploy`).
+- **Estado encontrado en Dokploy v0.31.0:** proyecto «Presupuestos ISF», entorno `production`, Compose «Presupuestos» (`composeId F5SwbOFCyMb7tDSn0xQZk`). Apunta a la rama `master` con la ruta `./docker-compose.yml`, que hay que cambiar a `./compose.yaml`. No tiene variables y nunca se ha desplegado.
+- **Acceso por IP y puerto, sin dominio ni HTTPS:** `http://192.168.105.83:3100`.
+  - `compose.yaml` publica `${APP_PORT:-3100}:3000` en `app`. El 3000 lo usa el panel de Dokploy, y el 80 y el 443 los usa Traefik.
+  - `BETTER_AUTH_URL=http://192.168.105.83:3100`.
+  - Sin dominio en Dokploy ni Traefik delante de la app.
+  - Ya no hace falta `compose.local.yaml`.
+  - **Coste:** las contraseñas viajan sin cifrar por la red de la oficina. Si un día hay nombre interno, se pasa a un dominio con HTTPS (5.8) sin tocar el código.
+- **Copias en el propio servidor:** se construye el enfoque B de 5.9, un contenedor `backup` en el Compose, porque las copias de Dokploy solo van a S3.
+  - Imagen `postgres:17`, que ya trae `pg_dump`, con `scripts/backup.sh`:
+    - un bucle que cada día a las 02:00 (`TZ=Europe/Madrid`) hace `pg_dump -Fc` de la base de datos y un `tar.gz` de `appdata`, montado en solo lectura;
+    - lo deja en la carpeta del servidor `${BACKUP_DIR:-/srv/presupuestos-backups}`, en `db/` y `appdata/`, con nombres por fecha;
+    - conserva las 30 copias más recientes de cada tipo.
+  - `backup.sh now` hace una copia en el momento, para usarla antes de cada actualización con migraciones.
+  - `scripts/restore.sh <fecha>` restaura la base de datos (`pg_restore --clean --if-exists`) y `appdata`, con la app parada.
+  - Prueba de restauración: en un proyecto aparte de Dokploy («presupuestos-restore»), con la copia de producción, comparando el SHA-256 del último PDF emitido.
+  - **Riesgo aceptado por el usuario:** si se pierde el disco o el servidor, se pierden también las copias. Se recomienda copiar de vez en cuando la carpeta a otro sitio (un NAS o un disco externo), y `docs/despliegue.md` dice cómo hacerlo.
+
 ### 5.10 Documentación de operación
 
 - **`docs/despliegue.md`** (nuevo): Dokploy, dominio y certificado, variables, primer administrador, copias, restauración y prueba de restauración.
@@ -387,7 +409,9 @@ Las pruebas de Chromium necesitan el navegador instalado (`pnpm exec playwright-
 
 ## 7. Para confirmar (decisiones mías y pendientes de la empresa)
 
-**Pregunta para el usuario (la más importante, de la comprobación del constructor):** ¿el plan 4 incluye **ejecutar** el despliegue en el servidor de la oficina, o termina con la imagen probada en local y `docs/despliegue.md`?
+**Respondido el 2026-11-10 (5.11):** despliega el agente con la API de Dokploy; acceso por IP y puerto (`192.168.105.83:3100`) sin HTTPS, y copias en una carpeta del propio servidor con un contenedor `backup`.
+
+**Pregunta original:** ¿el plan 4 incluye **ejecutar** el despliegue en el servidor de la oficina, o termina con la imagen probada en local y `docs/despliegue.md`?
 
 - Para ejecutarlo hace falta saber:
   - si Dokploy ya está instalado y en qué versión (las copias de base de datos y de volúmenes de un Compose piden **0.22 o posterior**);
