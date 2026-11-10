@@ -34,7 +34,7 @@ Y que la aplicación quede instalada en el servidor de la oficina con Dokploy, c
 
 **No objetivos:**
 
-- envío por correo, firma o sello (spec 2);
+- envío por correo y firma digital (spec 2). Sí hay un hueco en blanco para firmar y sellar a mano (5.3.1);
 - editor visual de plantillas (spec 2);
 - un PDF «calcado» del Word: basta con el contenido del ejemplo (spec 5.7);
 - PDF de otros documentos (listados, catálogo).
@@ -153,20 +153,18 @@ Recibe una fuente con la forma de la instantánea, `{ company, quote }`. Para un
 
 La maqueta `docs/diseno/maquetas/pdf.html` es la referencia visual.
 
-- **Página A4**, márgenes de 18 mm a los lados, cabecera de 30 mm y pie de 16 mm.
+- **Página A4**, márgenes de 18 mm a los lados, cabecera de 18 mm y pie de 11 mm (la cabecera baja de la variante B, 5.3.1).
 - **Cabecera de cada hoja** (`headerTemplate` de Chromium): logo, «INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL» y la referencia (o «BORRADOR»). El logo va como `data:` URI, porque las cabeceras de Chromium no cargan recursos externos.
 - **Pie de cada hoja** (`footerTemplate`): fecha, datos registrales, CIF y «Página X de Y» (clases `pageNumber` y `totalPages` de Chromium).
 - **Hoja 1, la carta:** empresa, destinatario, lugar y fecha, «Asunto: {referencia}», saludo, introducción y despedida. Después, salto de página.
 - **Hoja 2 y siguientes:**
   - cliente y título;
   - tabla `P | Denominación | Cantidad | Total`;
-  - totales;
-  - exclusiones, forma de pago y validez;
-  - lugar y fecha.
+  - el cierre, pegado al pie de la última hoja: exclusiones, forma de pago, validez, lugar y fecha a la izquierda; totales y el hueco de firma y sello a la derecha (5.3.1).
 - **Reglas de paginación** (spec 5.7):
-  - `thead` se repite en cada hoja (Chromium lo hace solo con `display: table-header-group`);
+  - `thead` se repite en cada hoja (la paginación propia de 5.3.1 lo copia en cada hoja);
   - `tr { break-inside: avoid }`;
-  - totales y condiciones con `break-inside: avoid`;
+  - el cierre no se parte nunca y no se queda solo en una hoja (5.3.1);
   - **nada de reducir la letra**: tamaño fijo de 10 pt, y si no cabe, hoja nueva.
 - **Borrador:** una capa `position: fixed` con «BORRADOR» en diagonal y al 7 % de opacidad. Chromium repite los elementos fijos en cada hoja impresa.
 - **Fuente: Archivo**, la de la interfaz, incrustada en el CSS como `@font-face` con datos base64 desde `@fontsource-variable/archivo`. **Decisión mía:** sin fuentes del sistema, el documento es igual en cualquier máquina.
@@ -189,14 +187,25 @@ La maqueta `docs/diseno/maquetas/pdf.html` es la referencia visual.
 
 **Cabecera baja en todo el documento:** Chromium aplica una sola `headerTemplate` y los mismos márgenes a todas las hojas, así que en B, C y D la cabecera de 18 mm y el pie de 11 mm también salen en la carta. A la carta le sobra sitio, así que no pierde nada. Las hojas de continuación de cualquier variante siguen las reglas de 5.3: la cabecera de tabla se repite y ninguna fila se parte.
 
-**Cómo se elige (decisión mía, para revisar en la sección 7):**
+**Elección del usuario (2026-11-10): la B, con estos cambios.** Ya no hay elección automática entre variantes: A, C y D se quedan en la maqueta solo como referencia.
 
-- **Automática, sin nada que configurar:** la plantilla prueba en orden B → D y usa la primera con la que todo el cuerpo (tabla, totales y condiciones) cabe en una hoja. Si ninguna cabe, usa B con hojas de continuación, porque mantiene las cantidades en columna.
-- Para saber si cabe no hace falta generar el PDF dos veces: antes de `page.pdf()`, `page.evaluate()` mide la altura del cuerpo en el DOM y la compara con la altura útil de la hoja (297 mm menos márgenes, cabecera y pie de esa variante).
-- A deja de usarse en el documento final. Se queda en la maqueta como referencia, porque su holgura no aporta nada que B no tenga.
-- C no entra en el orden automático: cambia el orden de lectura, así que solo tiene sentido si la empresa la prefiere como estilo fijo. En ese caso sustituye a B en el orden (C → D).
-- **El resultado es reproducible:** la elección depende solo de la instantánea y de la versión de plantilla, así que un emitido regenerado (5.5) sale igual. No hace falta guardar la variante en la base de datos.
-- **Sin selector por presupuesto** (YAGNI). Si un día hiciera falta forzar una variante, iría en la instantánea, para que el emitido no cambie.
+- **Sin total junto al título.** El total sale solo en el cierre.
+- **Cierre al pie.** El bloque de cierre va siempre pegado al pie de la última hoja de partidas, con su separación normal (4 mm) sobre el pie de página. Si hay pocas filas, el hueco queda entre la tabla y el cierre, nunca debajo del cierre.
+- **Composición del cierre**, en dos columnas:
+  - izquierda: exclusiones, forma de pago y validez como «rótulo | texto», y debajo, alineados abajo, lugar y fecha;
+  - derecha: los totales (importe, IVA y total presupuesto) y, debajo, el **hueco de firma y sello**: un recuadro de filete fino, del mismo alto que los totales (unos 22 mm), con el rótulo pequeño «Firma y sello». La firma va sobre el sello, así que es un solo hueco.
+- **Si el cierre no cabe**, pasa a la hoja siguiente junto con la última subpartida (y su partida, si va justo antes), para que el total nunca quede solo en una hoja. La tabla continúa en esa hoja con su cabecera repetida.
+- **Una partida o subpartida no se queda sola al final de una hoja:** pasa a la siguiente con su primera línea.
+- **Letra a 10 pt** sin cambios: no se encoge nunca.
+- **Coste:** con el hueco de firma, el ejemplo de la maqueta (31 filas) ya no cabe en una hoja con el cierre. Ocupa dos: 28 filas en la primera y la última subpartida con el cierre en la segunda.
+
+**Cómo se consigue en Chromium: paginación propia.** Las reglas de impresión de Chromium no permiten pegar un bloque al pie de la última hoja. Por eso la hoja de partidas se pagina en el propio documento, antes de `page.pdf()`:
+
+- `page.evaluate(paginate, alturaÚtil)` reparte las filas en hojas `.sheet` de altura fija (297 mm menos los márgenes de la cabecera y el pie de B), cada una con su `thead` copiado y `break-after: page`.
+- La última hoja es una columna flex y el cierre lleva `margin-top: auto`, así que queda al pie.
+- Las reglas anteriores (fila que no cabe, cabecera huérfana y cierre que no cabe) se aplican midiendo con `scrollHeight`, igual que en `docs/diseno/maquetas/pdf-densidades.html`, que hace exactamente este reparto.
+- **El resultado es reproducible:** depende solo de la instantánea, la plantilla y la fuente incrustada, así que un emitido regenerado (5.5) sale igual.
+- **Riesgo a comprobar en la Tarea 1:** que `page.evaluate()` funcione en un contexto con `javaScriptEnabled: false`. Playwright evalúa en un mundo aislado, así que debería. Si no funciona, se activa JavaScript solo para ese paso, porque la red sigue abortada y la plantilla escapa todo el contenido.
 
 **Riesgo a comprobar en la primera tarea:** que la fuente incrustada en el documento también se use en `headerTemplate` y `footerTemplate`. Chromium los dibuja aparte. Si no la usa, la cabecera y el pie llevan su propio `@font-face` dentro de la plantilla, que también es HTML.
 
@@ -390,9 +399,7 @@ Las pruebas de Chromium necesitan el navegador instalado (`pnpm exec playwright-
 
 **Densidades de la hoja de partidas (5.3.1), para que elija el usuario:**
 
-- ¿Vale la elección automática B → D, o preferís C (resumen arriba) en lugar de B?
-- ¿Se descarta la A (estándar)?
-- ¿Mantenemos el cuerpo a 10 pt? Bajar a 9 pt cambiaría la regla de la spec principal (nunca reducir la letra).
+- **Respondido el 2026-11-10:** la B, sin total arriba, con el cierre pegado al pie y con hueco de firma y sello. A, C y D se descartan y la letra se queda en 10 pt (5.3.1).
 
 **Decisiones mías, para revisar:**
 
@@ -407,7 +414,7 @@ Las pruebas de Chromium necesitan el navegador instalado (`pnpm exec playwright-
 9. HTTPS con una CA interna (alternativa: Let's Encrypt con DNS-01).
 10. Copias de Dokploy a S3, con el contenedor propio como plan B, y 30 copias diarias.
 11. El puerto 3000 deja de publicarse en `compose.yaml`.
-12. Densidad de la hoja de partidas elegida automáticamente (B → D, y B con continuación si ninguna cabe), sin guardarla aparte (5.3.1).
+12. ~~Densidad elegida automáticamente~~ Sustituida por la elección del usuario: solo la B, con paginación propia (5.3.1).
 
 **Pendiente de la empresa** (spec 7): destino S3 y retención (7.6), logo y textos definitivos (7.3), y la comparación con el PDF real.
 

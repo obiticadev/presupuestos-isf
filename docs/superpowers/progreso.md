@@ -107,7 +107,13 @@ Escritos el 2026-11-10 con superpowers (brainstorming → comprobación del cons
 3. Revisar el plan, `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas, y elegir cómo ejecutarlo: con subagentes o en la misma sesión.
 2b. **Densidades de la hoja de partidas** (pedido del usuario el 2026-11-10: que el presupuesto quepa en una hoja con el total, la carta aparte): ver `docs/diseno/maquetas/pdf-densidades.html` y el diseño 5.3.1.
    - Cuatro variantes con el mismo presupuesto de 31 filas y la letra a 10 pt: A estándar (no cabe, unas 15 filas), B compacta (unas 31), C resumen arriba (unas 31 de desglose) y D agrupada (la que más cabe: sobran 63 mm).
-   - Propuesta: elección automática B → D, y si ninguna cabe, B con continuación. Se responde en la sección 7 del diseño (B o C, descartar A, 10 pt o 9 pt).
+   - **Respondido el 2026-11-10: la B**, con estos cambios:
+     - sin total junto al título;
+     - cierre (condiciones, fecha y totales) siempre pegado al pie de la última hoja;
+     - hueco de «Firma y sello» a la derecha, bajo los totales y de su mismo alto;
+     - si el cierre no cabe, pasa a la hoja siguiente con la última subpartida.
+   - Se hace con paginación propia antes de `page.pdf()` (diseño 5.3.1). La maqueta ya la tiene, con tres casos.
+   - Letra a 10 pt; A, C y D descartadas. El diseño y el plan (tareas 1 y 3) están actualizados.
 
 **Hallazgos del diseño:**
 

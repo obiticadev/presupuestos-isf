@@ -71,6 +71,14 @@ tr.line td:nth-child(2){padding-left:6mm}
 .close .cond h2{padding-top:.5mm}.close .cond p{line-height:1.3}
 .close .place{margin-top:2.5mm;color:var(--mut)}
 .close .totals div{padding:1mm 0}
+/* B elegida (2026-11-10): sin total arriba; el cierre va siempre pegado al pie de la última hoja,
+   con la fecha a la izquierda y el hueco de firma y sello a su derecha, del alto de los totales. */
+.v-b .body{display:flex;flex-direction:column}
+.v-b .close{margin-top:auto;padding-top:4mm;align-items:stretch}
+.v-b .close .left,.v-b .close .right{display:flex;flex-direction:column;gap:3mm}
+.v-b .close .place{margin-top:auto}
+.stamp{height:22mm;border:.75pt solid var(--rule);padding:1.2mm 2mm}
+.stamp small{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700}
 
 /* C · Resumen arriba: cuadro económico por partida y total; debajo, el desglose sin columna de importe. */
 .summary{display:grid;grid-template-columns:1fr 70mm;gap:8mm;margin-top:3mm;align-items:start}
@@ -99,7 +107,7 @@ tr.line td:nth-child(2){padding-left:6mm}
   La hoja 1, la carta, no cambia. Lo que se busca es que la hoja 2 ya lleve el total.
   <ul>
     <li><b>A · Estándar:</b> la de <code>pdf.html</code>. Aquí no cabe y los totales pasan a la hoja 3.</li>
-    <li><b>B · Compacta:</b> el mismo orden, con la cabecera más baja, el total también arriba, las filas más bajas y el cierre (condiciones y totales) en dos columnas.</li>
+    <li><b>B · Compacta (elegida):</b> el mismo orden, con la cabecera más baja, las filas más bajas y el cierre al pie en dos columnas: condiciones y fecha a la izquierda, totales y firma y sello a la derecha.</li>
     <li><b>C · Resumen arriba:</b> primero el cuadro económico (partidas, importe, IVA y total) y debajo el desglose de subpartidas y líneas sin columna de importe.</li>
     <li><b>D · Agrupada:</b> como B, pero las líneas de cada subpartida van seguidas en una sola fila, separadas por «·».</li>
   </ul>
@@ -118,13 +126,10 @@ tr.line td:nth-child(2){padding-left:6mm}
   <div class="cond" data-cond></div>
 </div></section>
 
-<div class="label"><span>B · Compacta</span><span class="fit"></span></div>
-<p class="desc">Mismo orden que A. Gana sitio con la cabecera baja (18 mm, también en la carta, porque Chromium usa la misma cabecera en todas las hojas), filas más bajas y el cierre en dos columnas: condiciones a la izquierda y totales a la derecha. El total también aparece junto al título.</p>
-<section class="page v-b" data-v="b" data-low><div class="body">
-  <div class="titlebar"><div><div class="client">Conservas Ribera, S.A.</div><h1>Ampliación del grupo de bombeo</h1></div><div class="grand" data-grand></div></div>
-  <table><thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead><tbody data-rows="full"></tbody></table>
-  <div class="close"><div><div class="cond" data-cond></div><div class="place">Alcalá de Henares a 9 de noviembre de 2026</div></div><div class="totals" data-totals></div></div>
-</div></section>
+<p class="desc" style="margin-top:24px"><b>B · Compacta, la elegida.</b> Mismo orden que A, con cabecera baja, filas más bajas y sin total junto al título. El cierre (condiciones, totales, fecha y hueco de firma y sello) va siempre pegado al pie de la última hoja. Si no cabe, pasa a la hoja siguiente con la última subpartida, para que nunca quede solo. Se ve con tres presupuestos:</p>
+<div data-b="example" data-title="B · el ejemplo (4 partidas, 19 líneas)"></div>
+<div data-b="short" data-title="B · con pocos elementos: el cierre sigue al pie"></div>
+<div data-b="long" data-title="B · con más elementos: continúa en otra hoja"></div>
 
 <div class="label"><span>C · Resumen arriba</span><span class="fit"></span></div>
 <p class="desc">Lo económico primero: un cuadro con cada partida y su importe, y al lado el importe, el IVA y el total. Debajo va el desglose con subpartidas y líneas, sin columna de importe, y la denominación gana ancho. Las condiciones quedan al pie en tres columnas.</p>
@@ -164,7 +169,7 @@ const TOT={base:"8.039,00 €",tax:"1.688,19 €",total:"9.727,19 €"};
 const COND=[["Exclusiones","Obra civil, ayudas de albañilería y legalizaciones.\nCualquier trabajo no indicado expresamente en esta oferta."],["Forma de pago","Transferencia a 60 días."],["Validez de la oferta","30 días."]];
 
 const rows={
-  full:()=>DATA.map(([n,t,v,subs])=>`<tr class="part"><td class="p">${n}</td><td>${t}</td><td></td><td class="n">${v}</td></tr>`+subs.map(([sn,st,sv,ls])=>`<tr class="sub"><td class="p">${sn}</td><td>${st}</td><td></td><td class="n">${sv}</td></tr>`+ls.map(([d,q])=>`<tr class="line"><td></td><td>${d}</td><td class="n">${q}</td><td></td></tr>`).join("")).join("")).join(""),
+  full:(D=DATA)=>D.map(([n,t,v,subs])=>`<tr class="part"><td class="p">${n}</td><td>${t}</td><td></td><td class="n">${v}</td></tr>`+subs.map(([sn,st,sv,ls])=>`<tr class="sub"><td class="p">${sn}</td><td>${st}</td><td></td><td class="n">${sv}</td></tr>`+ls.map(([d,q])=>`<tr class="line"><td></td><td>${d}</td><td class="n">${q}</td><td></td></tr>`).join("")).join("")).join(""),
   parts:()=>DATA.map(([n,t,v])=>`<tr class="sub"><td class="p">${n}</td><td>${t}</td><td class="n">${v}</td></tr>`).join(""),
   detail:()=>DATA.map(([n,t,v,subs])=>`<tr class="part"><td class="p">${n}</td><td colspan="2">${t}</td></tr>`+subs.map(([sn,st,sv,ls])=>`<tr class="sub"><td class="p">${sn}</td><td colspan="2">${st}</td></tr>`+ls.map(([d,q])=>`<tr class="line"><td></td><td>${d}</td><td class="n">${q}</td></tr>`).join("")).join("")).join(""),
   grouped:()=>DATA.map(([n,t,v,subs])=>`<tr class="part"><td class="p">${n}</td><td>${t}</td><td class="n">${v}</td></tr>`+subs.map(([sn,st,sv,ls])=>`<tr class="sub"><td class="p">${sn}</td><td>${st}</td><td class="n">${sv}</td></tr><tr class="items"><td></td><td colspan="2">`+ls.map(([d,q])=>`<span class="it">${d} <i>${q}</i></span>`).join('<span class="sep">·</span> ')+`</td></tr>`).join("")).join(""),
@@ -173,7 +178,52 @@ const totals=`<div><span>Importe del presupuesto</span><span>${TOT.base}</span><
 const cond=COND.map(([h,p])=>`<h2>${h}</h2><p>${p}</p>`).join("");
 const hdr=document.getElementById("hdr").content, ftr=document.getElementById("ftr").content;
 
-document.querySelectorAll(".page").forEach(pg=>{
+// B: paginación propia, como la hará la plantilla en page.evaluate() antes de page.pdf().
+const SETS={example:[DATA,TOT],
+  short:[DATA.slice(0,1),{base:"3.639,00 €",tax:"764,19 €",total:"4.403,19 €"}],
+  long:[[...DATA,["5","Ampliación del cuadro secundario",DATA[1][2],DATA[1][3].map(([n,...r])=>[n.replace(/^2/,"5"),...r])],["6","Programación del cuadro secundario",DATA[2][2],DATA[2][3].map(([n,...r])=>[n.replace(/^3/,"6"),...r])]],{base:"11.719,00 €",tax:"2.460,99 €",total:"14.179,99 €"}]};
+const HEAD=`<thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead>`;
+const over=b=>b.scrollHeight>b.clientHeight+.5;
+function buildB(holder){
+  const [D,T]=SETS[holder.dataset.b], pages=[];
+  holder.insertAdjacentHTML("beforebegin",`<div class="label"><span>${holder.dataset.title}</span><span class="fit"></span></div>`);
+  const newPage=first=>{
+    const pg=document.createElement("section");pg.className="page v-b";
+    pg.innerHTML=`<div class="body">${first?'<div class="titlebar"><div><div class="client">Conservas Ribera, S.A.</div><h1>Ampliación del grupo de bombeo</h1></div></div>':''}<table>${HEAD}<tbody></tbody></table></div>`;
+    const h=hdr.cloneNode(true).firstElementChild,f=ftr.cloneNode(true).firstElementChild;h.classList.add("low");f.classList.add("low");
+    pg.prepend(h);pg.append(f);holder.append(pg);pages.push(pg);return pg;
+  };
+  const tmp=document.createElement("tbody");tmp.innerHTML=rows.full(D);
+  let pg=newPage(true),tb=pg.querySelector("tbody");
+  const isHead=r=>r&&(r.classList.contains("part")||r.classList.contains("sub"));
+  for(const r of [...tmp.children]){
+    tb.append(r);
+    if(over(pg.querySelector(".body"))){
+      // Una partida o subpartida nunca se queda sola al final de una hoja: pasa con su primera línea.
+      const moved=[r];r.remove();
+      while(isHead(tb.lastElementChild)){const x=tb.lastElementChild;x.remove();moved.unshift(x)}
+      pg=newPage(false);tb=pg.querySelector("tbody");moved.forEach(x=>tb.append(x));
+    }
+  }
+  const close=document.createElement("div");close.className="close";
+  close.innerHTML=`<div class="left"><div class="cond">${cond}</div><div class="place">Alcalá de Henares a 9 de noviembre de 2026</div></div><div class="right"><div class="totals">${totals.replaceAll(TOT.base,T.base).replaceAll(TOT.tax,T.tax).replaceAll(TOT.total,T.total)}</div><div class="stamp"><small>Firma y sello</small></div></div>`;
+  pg.querySelector(".body").append(close);
+  if(over(pg.querySelector(".body"))){
+    // El cierre no cabe: pasa a la hoja siguiente con la última subpartida (y su partida si va justo antes).
+    const rs=[...tb.children];let i=rs.map(x=>x.classList.contains("sub")).lastIndexOf(true);
+    if(i>0&&rs[i-1].classList.contains("part"))i--;
+    pg=newPage(false);const nt=pg.querySelector("tbody");rs.slice(Math.max(i,0)).forEach(x=>nt.append(x));
+    pg.querySelector(".body").append(close);
+  }
+  pages.forEach((p,k)=>p.querySelector(".ftr span:last-child").textContent=`Página ${k+2} de ${pages.length+1}`);
+  const fit=holder.previousElementSibling.querySelector(".fit"),last=pages.at(-1).querySelector(".body");
+  fit.textContent=over(last)?"No cabe ni en una hoja nueva":`${pages.length} ${pages.length>1?"hojas":"hoja"} de partidas · cierre al pie`;
+  fit.className="fit "+(over(last)?"ko":"ok");
+  holder.dataset.pages=pages.length;
+}
+document.fonts.ready.then(()=>document.querySelectorAll("[data-b]").forEach(buildB));
+
+document.querySelectorAll(".page:not(.v-b)").forEach(pg=>{
   const low=pg.hasAttribute("data-low");
   const h=hdr.cloneNode(true).firstElementChild, f=ftr.cloneNode(true).firstElementChild;
   if(low){h.classList.add("low");f.classList.add("low")}
@@ -186,7 +236,7 @@ document.querySelectorAll(".page").forEach(pg=>{
 });
 
 // Mide cada hoja cuando la fuente ya ha cargado: si el cuerpo desborda, lo marca.
-document.fonts.ready.then(()=>document.querySelectorAll(".page").forEach(pg=>{
+document.fonts.ready.then(()=>document.querySelectorAll(".page:not(.v-b)").forEach(pg=>{
   const b=pg.querySelector(".body"), fit=pg.previousElementSibling.previousElementSibling.querySelector(".fit");
   const end=Math.max(...[...b.children].map(c=>c.getBoundingClientRect().bottom));
   const free=b.getBoundingClientRect().bottom-end, mm=v=>Math.round(v*25.4/96);

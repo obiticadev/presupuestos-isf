@@ -29,10 +29,11 @@
   - cabecera con logo, «INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL» y la referencia;
   - pie con fecha, datos registrales, CIF y «Página X de Y»;
   - letra fija de 10 pt, sin encoger nunca;
-  - `thead` repetido y `tr { break-inside: avoid }`;
+  - hoja de partidas en la variante B (diseño 5.3.1): paginación propia, `thead` repetido en cada hoja y ninguna fila partida;
+  - cierre (condiciones, fecha, totales y hueco de firma y sello) pegado al pie de la última hoja, y nunca solo en una hoja;
   - importes «21.628,62 €»;
   - los borradores llevan la marca de agua «BORRADOR» y «BORRADOR» en lugar de la referencia;
-  - sin firma ni sello.
+  - sin firma digital: solo el hueco en blanco «Firma y sello» para firmar y sellar a mano.
 - **Inmutabilidad:** el PDF de un emitido sale solo de `IssuedDocument.snapshot` y de la plantilla de su `templateVersion`. Nunca de `getQuote()` ni de `getSettings()` de hoy, salvo el logo cuando el de la instantánea ya no existe.
 - **Chromium:**
   - un navegador por proceso;
@@ -59,7 +60,7 @@
 
 ```
 src/pdf/browser.ts                  withPage(): navegador único, semáforo de 2, contexto sin JS ni red
-src/pdf/render.ts                   renderPdf({ body, header, footer }): Uint8Array
+src/pdf/render.ts                   renderPdf({ body, header, footer, beforePrint? }): Uint8Array
 src/pdf/document.ts                 PdfSource, PdfDocument, buildDocument(): puro
 src/pdf/fonts.ts                    archivoFontFace(): @font-face con la fuente en base64 (leída una vez)
 src/pdf/templates/index.ts          TEMPLATES, renderTemplate(version, doc, logo)
@@ -89,7 +90,7 @@ tests/pdf/*.test.ts, tests/quotes/pdf.test.ts, tests/settings/logo.test.ts
 **Interfaces:**
 - Produces:
   - `withPage<T>(fn: (page: import("playwright-core").Page) => Promise<T>): Promise<T>`: abre un contexto nuevo (`javaScriptEnabled: false`, `context.route("**", r => r.abort())`), cede la página y cierra el contexto en `finally`. Como mucho 2 a la vez, y espera si hay más. Si el navegador se desconecta, el siguiente uso lanza otro. Si el ejecutable no está, lanza `Error("Falta el navegador del PDF: ejecuta «pnpm exec playwright-core install chromium-headless-shell»")`.
-  - `renderPdf(input: { body: string; header: string; footer: string }): Promise<Uint8Array>`: `page.setContent(body, { waitUntil: "load" })` y después `page.pdf({ format: "A4", printBackground: true, displayHeaderFooter: true, headerTemplate: header, footerTemplate: footer, margin: { top: "34mm", bottom: "20mm", left: "18mm", right: "18mm" } })`. Tiempo máximo de 30 s, y si se pasa, `Error("No se pudo generar el PDF")`.
+  - `renderPdf(input: { body: string; header: string; footer: string; beforePrint?: (page: Page) => Promise<void> }): Promise<Uint8Array>`: `page.setContent(body, { waitUntil: "load" })`, después `beforePrint?.(page)` (la paginación propia de la Tarea 3) y después `page.pdf({ format: "A4", printBackground: true, displayHeaderFooter: true, headerTemplate: header, footerTemplate: footer, margin: { top: "22mm", bottom: "15mm", left: "18mm", right: "18mm" } })`. Los márgenes son los de la cabecera baja de la variante B (diseño 5.3.1): 18 + 4 mm arriba y 11 + 4 mm abajo. Tiempo máximo de 30 s, y si se pasa, `Error("No se pudo generar el PDF")`.
   - `closeBrowser(): Promise<void>`, para las pruebas (`afterAll`).
 
 - [ ] **Step 1: Instalar las dependencias y el navegador.** Run: `pnpm add playwright-core@1.64.1 @fontsource-variable/archivo@5.3.0 && pnpm add -D unpdf@1.9.1 && pnpm exec playwright-core install chromium-headless-shell`. Expected: `package.json` con las tres versiones exactas y el navegador en `~/.cache/ms-playwright`. Si 1.64.1 no admite `chromium-headless-shell`, usar `install --only-shell chromium` y anotarlo en la Tarea 7.
@@ -129,6 +130,7 @@ test("tres PDF a la vez terminan todos", async () => {
 - [ ] **Step 3: Ejecutar y comprobar que fallan.** Run: `pnpm test tests/pdf/render.test.ts`. Expected: FAIL (`@/pdf/render` no existe).
 - [ ] **Step 4: Implementar `browser.ts` y `render.ts`** con las firmas de Interfaces. Lanzar con `chromium.launch({ headless: true })` de `playwright-core`; el semáforo es un contador con una cola de promesas.
 - [ ] **Step 5: Ejecutar y comprobar que pasan.** Run: `pnpm test tests/pdf/render.test.ts`. Expected: PASS.
+- [ ] **Step 6a: Comprobar que `page.evaluate()` funciona con `javaScriptEnabled: false`** (riesgo del diseño, 5.3.1): una prueba con `beforePrint` que añade un `<p>` por `evaluate` y lo encuentra en el texto del PDF. Si no funciona, el contexto activa JavaScript y la prueba de «no ejecuta scripts» pasa a comprobar solo que no hay red. Anotarlo en el commit.
 - [ ] **Step 6: Comprobar la fuente de la cabecera (riesgo del diseño, 5.3).** Generar un PDF cuyo cuerpo declare un `@font-face` de prueba y abrirlo. Si la cabecera no usa esa fuente, la Tarea 3 incrusta el `@font-face` también en `header` y `footer`. Anotar el resultado en el mensaje del commit.
 - [ ] **Step 7: Documentar** en `README.md` (Requisitos) y `docs/operacion.md` (Arranque local) la orden para instalar el navegador.
 - [ ] **Step 8: Commit** — `git commit -m "feat(pdf): Chromium compartido sin red ni JavaScript y renderizado A4 con cabecera y pie"`
@@ -182,7 +184,7 @@ test("tres PDF a la vez terminan todos", async () => {
 ### Task 3: Plantilla v1
 
 **Files:**
-- Create: `src/pdf/fonts.ts`, `src/pdf/templates/index.ts`, `src/pdf/templates/v1/{html,styles,index}.ts`
+- Create: `src/pdf/fonts.ts`, `src/pdf/templates/index.ts`, `src/pdf/templates/v1/{html,styles,index,paginate}.ts`
 - Test: `tests/pdf/template.test.ts`, `tests/pdf/pdf-content.test.ts`
 
 **Interfaces:**
@@ -196,7 +198,11 @@ test("tres PDF a la vez terminan todos", async () => {
   - `TEMPLATES: Record<"v1", Template>`.
   - `renderDocument(version: string, doc: PdfDocument, logo: { mime: string; base64: string } | null): Promise<Uint8Array>`: lanza `Error("Plantilla desconocida: …")` si la versión no existe.
 - La maqueta `docs/diseno/maquetas/pdf.html` es la referencia visual: márgenes, filetes, banda de partida, marca de agua al 7 % y en diagonal.
-- **Densidades (diseño 5.3.1):** `type Density = "compact" | "grouped"` (B y D de `docs/diseno/maquetas/pdf-densidades.html`, que es su referencia visual). `Template.body(doc, density)` y `Template.header(doc, logo, density)`, porque la cabecera baja también cambia. `renderDocument` mide el cuerpo con `page.evaluate()` antes de `page.pdf()` y elige `compact`, luego `grouped`. Si ninguna cabe, usa `compact` con continuación. Para eso `renderPdf` (Tarea 1) admite un `choose?: (page) => Promise<{ header: string; footer: string; margin }>` que se ejecuta tras `setContent`. **Pendiente de la respuesta del usuario (diseño, sección 7):** si elige C en lugar de B, `compact` pasa a ser `summary`.
+- **Hoja de partidas (diseño 5.3.1, elegida por el usuario):** solo la variante B de `docs/diseno/maquetas/pdf-densidades.html`, que es su referencia visual y ya hace este mismo reparto en el navegador. No hay variantes ni `Density`.
+  - `paginate(sheetHeightPx: number): void` en `v1/paginate.ts` es autocontenida, porque se serializa para `page.evaluate`. Reparte las filas del `tbody` en hojas `.sheet` de esa altura, cada una con su `thead` copiado.
+  - Reglas de `paginate`: una fila que no cabe abre hoja; una partida o subpartida al final de una hoja pasa a la siguiente con su primera línea; el cierre va con `margin-top: auto` en la última hoja, y si no cabe pasa a una hoja nueva con la última subpartida (y su partida si va justo antes).
+  - `renderDocument` llama a `renderPdf` con `beforePrint: (p) => p.evaluate(paginate, mmToPx(297 - 22 - 15))`.
+  - Cierre: izquierda, condiciones y debajo lugar y fecha; derecha, totales y debajo el recuadro «Firma y sello» de unos 22 mm de alto. Sin total junto al título.
 
 - [ ] **Step 1: Escribir las pruebas de la plantilla (texto, sin Chromium)**
   - `TEMPLATES.v1.body(doc)` con `title` `'<script>alert(1)</script> & "x"'` contiene `&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;x&quot;` y no `<script>`.
@@ -209,14 +215,14 @@ test("tres PDF a la vez terminan todos", async () => {
 ```ts
 test("PDF corto: todo el texto visible aparece y nada oculto", async () => { /* doc de la Tarea 2 → renderDocument("v1", doc, null) → extractText: contiene cada row.text y row.title, "1.474,99 €", "Transferencia a 60 días", "Asunto: PR-2026000002-R00"; no contiene la descripción oculta */ });
 test("PDF largo: 45 líneas con descripciones largas, ninguna se pierde y hay al menos 3 páginas", async () => { /* 3 partidas × 15 líneas «Línea 01 … texto de 120 caracteres» → todas presentes; pages >= 3; "Denominación" en cada página a partir de la 2 */ });
-test("densidad: el ejemplo de pdf-densidades (4 partidas, 8 subpartidas, 19 líneas) sale en 2 páginas, con el total en la 2", async () => { /* pages === 2; el texto de la página 2 contiene "9.727,19 €" */ });
-test("densidad: con 12 subpartidas de 2 líneas cortas se usa la agrupada y sigue en 2 páginas", async () => { /* pages === 2 */ });
-test("densidad: el largo de 45 líneas sigue en compacta con continuación y no pierde nada", async () => { /* pages >= 3; todas las líneas presentes; "Cantidad" en la cabecera de la tabla de cada página desde la 2 */ });
+test("cierre: con una partida de 6 líneas sale en 2 páginas y el cierre queda al pie de la 2", async () => { /* pages === 2; la página 2 contiene "Firma y sello" y el total; en el DOM tras paginate, |bottom(.close) - bottom(.sheet)| <= 1 px */ });
+test("cierre: el ejemplo de pdf-densidades (4 partidas, 19 líneas) sale en 3 páginas y el cierre se lleva la última subpartida", async () => { /* pages === 3; la página 3 contiene "Documentación", "Manual de operación" y "9.727,19 €"; la 2 no contiene "9.727,19 €" */ });
+test("paginación: el largo de 45 líneas no pierde nada, repite la cabecera y ninguna hoja acaba en una partida o subpartida", async () => { /* pages >= 3; todas las líneas presentes; "Cantidad" en cada página desde la 2; en el DOM, el último tr de cada .sheet es una línea */ });
 test("borrador: BORRADOR en la cabecera y como marca de agua", async () => { /* draft: true → el texto contiene "BORRADOR" al menos una vez por página */ });
 ```
 
 - [ ] **Step 3: Ejecutar y comprobar que fallan.** Run: `pnpm test tests/pdf/template.test.ts tests/pdf/pdf-content.test.ts`. Expected: FAIL.
-- [ ] **Step 4: Implementar `html.ts`, `fonts.ts`, `styles.ts`, `v1/index.ts` y `templates/index.ts`.** Hoja 1, la carta, con `break-after: page`. Hoja 2 y siguientes como en `pdf-densidades.html` (B y D), con la cabecera baja y sus márgenes en todo el documento. Cabecera y pie con estilos en línea y tamaños explícitos, como exige Chromium. Si la Tarea 1, Step 6, vio que la fuente no llega a la cabecera, se repite `archivoFontFace()` dentro de `header` y `footer`.
+- [ ] **Step 4: Implementar `html.ts`, `fonts.ts`, `styles.ts`, `v1/index.ts` y `templates/index.ts`.** Hoja 1, la carta, con `break-after: page`. Hoja 2 y siguientes como la variante B de `pdf-densidades.html`, con `paginate`, la cabecera baja y sus márgenes en todo el documento. Cabecera y pie con estilos en línea y tamaños explícitos, como exige Chromium. Si la Tarea 1, Step 6, vio que la fuente no llega a la cabecera, se repite `archivoFontFace()` dentro de `header` y `footer`.
 - [ ] **Step 5: Ejecutar y comprobar que pasan.** Run: `pnpm test tests/pdf`. Expected: PASS.
 - [ ] **Step 6: Revisión visual.** Guardar el PDF corto y el largo en `.superpowers/` y compararlos con la maqueta en Chrome: logo, lema en una línea, banda de partidas, cabecera de tabla repetida y ninguna fila cortada.
 - [ ] **Step 7: Commit** — `git commit -m "feat(pdf): plantilla v1 con carta, partidas, totales y condiciones, fuente incrustada y marca de agua"`
