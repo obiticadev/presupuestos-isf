@@ -132,6 +132,8 @@ Verificación local con **solo el archivo de producción** y un proyecto aislado
 
 **Pendiente exclusivamente de la revisión de interfaz de esta tarea:** recorrido con **Claude in Chrome** contra la imagen (crear y emitir desde los formularios, abrir y revisar visualmente el PDF, comprobar el logo y la descarga después de reiniciar). Las pruebas de servicios y HTTP anteriores no se presentan como esa revisión. Después, continuar con la Tarea 8 y su revisión final de toda la rama.
 
+**Cierre de sesión:** avances técnicos guardados en `63a1213`. Se arrancó temporalmente `pnpm dev --hostname 127.0.0.1` para que el usuario consultara la app en `http://localhost:3000` (`/api/health`: 200, `status: ok`). Servidor detenido a petición del usuario antes de subir los avances al remoto. Esta consulta no sustituye la revisión pendiente con Claude in Chrome. La BD local existente se mantiene sin detener ni borrar; no se ha fusionado en `master` ni desplegado en Dokploy.
+
 Para repetir la restauración (con variables definidas y una copia de prueba disponible):
 ```sh
 docker compose -p presupuestos-t7 -f compose.yaml stop app
