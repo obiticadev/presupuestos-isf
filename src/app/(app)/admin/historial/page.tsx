@@ -24,6 +24,8 @@ const ACTIONS: Record<string, string> = {
   revision: "Revisión",
   adjust: "Ajuste de precio",
   duplicate: "Duplicado",
+  download: "Descarga",
+  pdf: "PDF",
 };
 
 const fmt = new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" });

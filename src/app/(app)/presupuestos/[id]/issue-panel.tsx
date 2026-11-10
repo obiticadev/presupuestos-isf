@@ -59,6 +59,7 @@ export function IssuePanel({ q, required }: { q: QuoteDetail; required: (Require
         </ul>
       </div>
       <div className="emit">
+        <a className="btn" href={`/api/presupuestos/${q.id}/pdf`} target="_blank" rel="noopener">Vista previa (PDF)</a>
         {problems.length > 0 ? (
           <>
             <button className="btn pri" disabled>Emitir presupuesto</button>

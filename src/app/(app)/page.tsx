@@ -107,7 +107,7 @@ export default async function PresupuestosPage({ searchParams }: PageProps<"/">)
               const days = r.status === "SENT" && r.issuedAt ? Math.floor((now.getTime() - r.issuedAt.getTime()) / 86_400_000) : null;
               return (
                 <tr key={r.id}>
-                  <td className="code"><Link href={`/presupuestos/${r.id}`} style={{ fontWeight: 600 }}>{quoteLabel(r)}</Link></td>
+                  <td className="code"><Link href={`/presupuestos/${r.id}`} style={{ fontWeight: 600 }}>{quoteLabel(r)}</Link>{r.status !== "DRAFT" && <> <a href={`/api/presupuestos/${r.id}/pdf`} target="_blank" rel="noopener">PDF</a></>}</td>
                   <td>{r.client.legalName}</td>
                   <td>
                     {r.subject || <span className="mut">—</span>}
