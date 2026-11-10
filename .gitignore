@@ -26,3 +26,6 @@ node_modules/
 *.tsbuildinfo
 next-env.d.ts
 .superpowers/
+
+# Copias locales de prueba del contenedor backup (BACKUP_DIR=./.backups).
+.backups/

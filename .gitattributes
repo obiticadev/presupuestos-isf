@@ -1,0 +1,2 @@
+# Los scripts se montan directamente en contenedores Linux, también desde Windows.
+*.sh text eol=lf

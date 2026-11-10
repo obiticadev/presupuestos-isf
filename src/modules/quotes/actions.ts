@@ -84,7 +84,11 @@ export const removeKitAction: Action = action((actor, f) => removeKitInstance(ac
 export const setWaiverAction: Action = action((actor, f) =>
   quotes.setWaiver(actor, str(f, "quoteId"), str(f, "conceptId"), f.get("clear") === "1" ? null : str(f, "reason")));
 
-export const issueAction: Action = action(async (actor, f) => (await import("./issue")).issueQuote(actor, str(f, "id")));
+export const issueAction: Action = action(async (actor, f) => {
+  const q = await (await import("./issue")).issueQuote(actor, str(f, "id"));
+  // The issue stands even if the PDF fails: the download regenerates it from the snapshot.
+  await (await import("./pdf")).ensureIssuedPdf(actor, q.id).catch((e) => console.error(`pdf: no se pudo generar el PDF de ${q.reference}`, e));
+});
 export const setStatusAction: Action = action(async (actor, f) =>
   (await import("./lifecycle")).setStatus(actor, str(f, "id"), str(f, "status") as Parameters<typeof import("./lifecycle").setStatus>[2]));
 export const refreshPricesAction: Action = action(async (actor, f) => (await import("./lifecycle")).refreshPricesFromCatalog(actor, str(f, "id")));

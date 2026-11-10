@@ -1,4 +1,4 @@
-# Producción: `docker compose -f compose.yaml up -d --build`.
+# Producción (Dokploy): `docker compose -f compose.yaml up -d --build`. La app queda en el puerto ${APP_PORT:-3100}.
 # Sin `-f`, compose añade compose.override.yaml, que publica PostgreSQL solo para desarrollo.
 # Las variables salen de .env (ver .env.example).
 
@@ -42,9 +42,32 @@ services:
       - appdata:/data
     depends_on:
       migrate: { condition: service_completed_successfully }
-    # Dokploy/Traefik pone la entrada (plan 4); aquí solo se expone el 3000.
+    # Acceso por IP y puerto, sin Traefik delante: el 3000 del servidor lo usa el panel de Dokploy.
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3100}:3000"
+    # Límite sugerido (Chromium incluido); lo decide quien despliega.
+    # mem_limit: 1g
+    networks: [internal]
+
+  # Copia diaria a las 02:00 de la base de datos y de appdata en ${BACKUP_DIR}; conserva 30 de cada.
+  # Copia al momento: `docker compose exec backup /scripts/backup.sh now`. Restaurar: ver scripts/restore.sh.
+  backup:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Madrid
+      PGHOST: db
+      PGUSER: ${POSTGRES_USER:-presupuestos}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
+      PGDATABASE: ${POSTGRES_DB:-presupuestos}
+    volumes:
+      - appdata:/data:ro
+      - ${BACKUP_DIR:-/srv/presupuestos-backups}:/backups
+      - ./scripts/backup.sh:/scripts/backup.sh:ro
+      - ./scripts/restore.sh:/scripts/restore.sh:ro
+    command: /scripts/backup.sh loop
+    depends_on:
+      db: { condition: service_healthy }
     networks: [internal]
 
 volumes:

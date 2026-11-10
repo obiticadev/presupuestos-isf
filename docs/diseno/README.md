@@ -26,5 +26,7 @@ Dirección elegida el 2026-11-06 (impeccable). Cada conjunto se dibuja como su e
 | `clientes.html` | Ficha de cliente: datos, contactos, ubicaciones y presupuestos |
 | `login.html` | Inicio de sesión |
 | `movil.html` | Presupuesto en el móvil: estado, totales y cambio de estado |
+| `pdf.html` | Documento PDF del presupuesto (plan 4): carta, partidas, continuación con la cabecera repetida y borrador con marca de agua |
+| `pdf-densidades.html` | Hoja de partidas del PDF en cuatro densidades (estándar, compacta, resumen arriba y agrupada). **Elegida la B**, con el cierre al pie y el hueco de firma y sello, que se ve en tres casos: el ejemplo, pocos elementos y continuación (plan 4, diseño 5.3.1) |
 
 Son referencia visual, no código de producción. El logo definitivo está pendiente de la empresa.

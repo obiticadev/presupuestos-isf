@@ -95,7 +95,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<"/
           <tbody>
             {quotes.map((q) => (
               <tr key={q.id}>
-                <td><Link className="code" href={`/presupuestos/${q.id}`}>{quoteLabel(q)}</Link></td>
+                <td><Link className="code" href={`/presupuestos/${q.id}`}>{quoteLabel(q)}</Link>{q.status !== "DRAFT" && <> <a href={`/api/presupuestos/${q.id}/pdf`} target="_blank" rel="noopener">PDF</a></>}</td>
                 <td>{q.subject || <span className="mut">—</span>}</td>
                 <td>{formatDateEs(q.date)}</td>
                 <td>

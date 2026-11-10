@@ -1,0 +1,205 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>PDF del presupuesto · ISF</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap">
+<!--
+  Maqueta estática del documento PDF (plan 4). No es código de producción.
+  Cada .page es una hoja A4. En producción, la cabecera y el pie de cada hoja los pone Chromium
+  (headerTemplate/footerTemplate) y el cuerpo fluye solo entre páginas; aquí se dibujan a mano
+  para enseñar el resultado, incluida una página de continuación con la cabecera de tabla repetida.
+  Datos ficticios: los del recorrido de prueba del plan 3 (PR-2026000002-R00).
+-->
+<style>
+:root{--ink:#0f1f1d;--green:#004742;--rule:#c9d1cb;--mut:#56645f;--band:#eef1ee}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#d9ddd9;font-family:Archivo,sans-serif;color:var(--ink);font-size:10pt;line-height:1.4;font-variant-numeric:tabular-nums;padding:24px 0}
+.note{max-width:210mm;margin:0 auto 16px;font-size:13px;color:#33413d;background:#fff;padding:12px 16px;border-left:4px solid var(--green)}
+.note b{font-weight:700}
+.page{width:210mm;height:297mm;margin:0 auto 24px;background:#fff;position:relative;box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;flex-direction:column;padding:0 18mm;overflow:hidden}
+.label{max-width:210mm;margin:0 auto 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#33413d;font-weight:700}
+
+/* Cabecera y pie: iguales en todas las hojas (en producción, plantillas de Chromium). */
+.hdr{height:30mm;display:flex;align-items:center;justify-content:space-between;border-bottom:1.5pt solid var(--green);gap:12mm}
+.hdr img{height:16mm;width:auto}
+.hdr .tag{font-size:7pt;font-weight:700;letter-spacing:.12em;white-space:nowrap;color:var(--green);font-stretch:110%;text-align:center;flex:1}
+.hdr .ref{font-size:9pt;font-weight:700;font-stretch:88%;text-align:right;white-space:nowrap}
+.hdr .ref small{display:block;font-weight:400;color:var(--mut);font-size:7pt;letter-spacing:.1em}
+.body{flex:1;padding-top:8mm;overflow:hidden}
+.ftr{height:16mm;border-top:.75pt solid var(--rule);display:flex;justify-content:space-between;align-items:center;font-size:7pt;color:var(--mut);gap:8mm}
+.ftr .reg{flex:1}
+
+/* Página 1: carta. */
+.from{font-size:8.5pt;color:var(--mut);line-height:1.5}
+.from b{color:var(--ink);font-size:9.5pt}
+.to{margin:10mm 0 0 95mm;line-height:1.5}
+.to b{font-weight:700}
+.place{margin-top:12mm;text-align:right}
+.subject{margin-top:8mm;font-weight:700}
+.letter p{margin-top:5mm;max-width:160mm}
+
+/* Página 2 y siguientes: tabla P | Denominación | Cantidad | Total. */
+h1{font-size:14pt;font-weight:800;font-stretch:88%;line-height:1.2}
+.client{color:var(--mut);font-size:9pt;margin-bottom:2mm}
+table{width:100%;border-collapse:collapse;margin-top:6mm}
+thead th{font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;text-align:left;border-bottom:1.5pt solid var(--ink);padding:2mm 1.5mm;font-weight:700}
+td{padding:1.6mm 1.5mm;border-bottom:.5pt solid var(--rule);vertical-align:top}
+tr{break-inside:avoid}
+.n{text-align:right;white-space:nowrap}
+.p{width:14mm;font-weight:700}
+.qty{width:30mm}
+.tot{width:30mm}
+tr.part td{background:var(--band);font-weight:800;text-transform:uppercase;font-size:9.5pt}
+tr.sub td{font-weight:700}
+tr.line td:nth-child(2){padding-left:6mm}
+.totals{margin:6mm 0 0 auto;width:85mm;break-inside:avoid}
+.totals div{display:flex;justify-content:space-between;padding:1.4mm 0;border-bottom:.5pt solid var(--rule)}
+.totals .big{font-size:12pt;font-weight:800;border-bottom:none;border-top:1.5pt solid var(--ink);margin-top:1mm;padding-top:2mm}
+.cond{margin-top:7mm;break-inside:avoid}
+.cond h2{font-size:8pt;letter-spacing:.12em;text-transform:uppercase;margin-top:4mm;font-weight:700}
+.cond p{margin-top:1mm;white-space:pre-line}
+.cont{font-size:8pt;color:var(--mut);text-align:right;margin-top:3mm}
+
+/* Borrador: marca de agua en cada hoja y «BORRADOR» en lugar del número. */
+.wm{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.wm span{transform:rotate(-35deg);font-size:96pt;font-weight:800;font-stretch:110%;letter-spacing:.06em;color:rgba(15,31,29,.07)}
+</style></head><body>
+
+<div class="note">
+  <b>Maqueta del PDF (plan 4).</b> Cuatro hojas A4: la carta, la tabla de partidas, una continuación con la cabecera de tabla repetida y una hoja de un borrador con su marca de agua.
+  Las líneas ocultas (aquí, desplazamiento y horas de la partida 1.2) suman en su subpartida pero no se imprimen.
+  No hay precios unitarios: solo cantidades y los totales de partidas y subpartidas.
+</div>
+
+<div class="label">Hoja 1 · Carta</div>
+<section class="page">
+  <header class="hdr">
+    <img src="../../logos/photo_2026-05-18_10-48-03.jpg" alt="ISF">
+    <div class="tag">INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL</div>
+    <div class="ref"><small>REFERENCIA</small>PR-2026000002-R00</div>
+  </header>
+  <div class="body">
+    <div class="from">
+      <b>ISF Instalaciones, Servicios y Formación, S.L.</b><br>
+      C/ Ejemplo, 12 · 28801 Alcalá de Henares (Madrid)<br>
+      CIF B00000000 · 910 000 000 · oficina@isf-esp.com
+    </div>
+    <div class="to">
+      <b>Conservas Ribera, S.A.</b><br>
+      Planta de envasado<br>
+      Ctra. de Toledo, km 4 · 28300 Aranjuez (Madrid)<br>
+      A la atención de Ana López
+    </div>
+    <div class="letter">
+      <div class="place">Alcalá de Henares a 9 de noviembre de 2026</div>
+      <div class="subject">Asunto: PR-2026000002-R00</div>
+      <p>Muy Sres. Nuestros:</p>
+      <p>Agradeciendo la confianza depositada en nuestra firma, tenemos el gusto de presentarle nuestra mejor oferta en referencia a ampliación del grupo de bombeo.</p>
+      <p>Esperando que la presente oferta sea de su agrado, quedamos a su entera disposición para cuantas consultas desee realizar sin compromiso alguno por su parte.</p>
+      <p>Sin otro particular, reciba un cordial saludo.</p>
+      <p>Atentamente.</p>
+    </div>
+  </div>
+  <footer class="ftr">
+    <span>9/11/2026</span>
+    <span class="reg">Inscrita en el Registro Mercantil de Madrid, tomo 00000, folio 000, hoja M-000000 · CIF B00000000</span>
+    <span>Página 1 de 3</span>
+  </footer>
+</section>
+
+<div class="label">Hoja 2 · Partidas</div>
+<section class="page">
+  <header class="hdr">
+    <img src="../../logos/photo_2026-05-18_10-48-03.jpg" alt="ISF">
+    <div class="tag">INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL</div>
+    <div class="ref"><small>REFERENCIA</small>PR-2026000002-R00</div>
+  </header>
+  <div class="body">
+    <div class="client">Conservas Ribera, S.A.</div>
+    <h1>Ampliación del grupo de bombeo</h1>
+    <table>
+      <thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead>
+      <tbody>
+        <tr class="part"><td class="p">1</td><td>Grupo de bombeo</td><td></td><td class="n">639,00 €</td></tr>
+        <tr class="sub"><td class="p">1.1</td><td>Suministro e instalación de bombas</td><td></td><td class="n">604,00 €</td></tr>
+        <tr class="line"><td></td><td>Bomba de potencia mayor que 7,5 kW</td><td class="n">2 ud</td><td></td></tr>
+        <tr class="line"><td></td><td>Manguera 4 hilos x 2,5 mm²</td><td class="n">40 m</td><td></td></tr>
+        <tr class="sub"><td class="p">1.2</td><td>Desplazamiento y puesta en marcha</td><td></td><td class="n">35,00 €</td></tr>
+        <tr class="part"><td class="p">2</td><td>Programación</td><td></td><td class="n">500,00 €</td></tr>
+        <tr class="sub"><td class="p">2.1</td><td>Programación del PLC del grupo</td><td></td><td class="n">500,00 €</td></tr>
+        <tr class="line"><td></td><td>Hora de programador</td><td class="n">10 h</td><td></td></tr>
+        <tr class="part"><td class="p">3</td><td>Cuadro eléctrico</td><td></td><td class="n">80,00 €</td></tr>
+        <tr class="sub"><td class="p">3.1</td><td>Adecuación del cuadro existente</td><td></td><td class="n">80,00 €</td></tr>
+        <tr class="line"><td></td><td>Material auxiliar de conexionado</td><td class="n">1 ud</td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="cont">Continúa en la página siguiente</div>
+  </div>
+  <footer class="ftr">
+    <span>9/11/2026</span>
+    <span class="reg">Inscrita en el Registro Mercantil de Madrid, tomo 00000, folio 000, hoja M-000000 · CIF B00000000</span>
+    <span>Página 2 de 3</span>
+  </footer>
+</section>
+
+<div class="label">Hoja 3 · Continuación (la cabecera de la tabla se repite; ninguna fila se parte)</div>
+<section class="page">
+  <header class="hdr">
+    <img src="../../logos/photo_2026-05-18_10-48-03.jpg" alt="ISF">
+    <div class="tag">INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL</div>
+    <div class="ref"><small>REFERENCIA</small>PR-2026000002-R00</div>
+  </header>
+  <div class="body">
+    <table>
+      <thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead>
+      <tbody>
+        <tr class="line"><td></td><td>Prensaestopas y terminales para cable de 2,5 mm² (bolsa de 50 unidades)</td><td class="n">2 ud</td><td></td></tr>
+      </tbody>
+    </table>
+    <div class="totals">
+      <div><span>Importe del presupuesto</span><span>1.219,00 €</span></div>
+      <div><span>IVA 21 %</span><span>255,99 €</span></div>
+      <div class="big"><span>Total presupuesto</span><span>1.474,99 €</span></div>
+    </div>
+    <div class="cond">
+      <h2>Exclusiones</h2>
+      <p>Obra civil, ayudas de albañilería y legalizaciones.
+Cualquier trabajo no indicado expresamente en esta oferta.</p>
+      <h2>Forma de pago</h2>
+      <p>Transferencia a 60 días.</p>
+      <h2>Validez de la oferta</h2>
+      <p>30 días.</p>
+      <p style="margin-top:6mm">Alcalá de Henares a 9 de noviembre de 2026</p>
+    </div>
+  </div>
+  <footer class="ftr">
+    <span>9/11/2026</span>
+    <span class="reg">Inscrita en el Registro Mercantil de Madrid, tomo 00000, folio 000, hoja M-000000 · CIF B00000000</span>
+    <span>Página 3 de 3</span>
+  </footer>
+</section>
+
+<div class="label">Borrador · marca de agua en cada hoja y «BORRADOR» en lugar del número</div>
+<section class="page">
+  <div class="wm"><span>BORRADOR</span></div>
+  <header class="hdr">
+    <img src="../../logos/photo_2026-05-18_10-48-03.jpg" alt="ISF">
+    <div class="tag">INSTALACIONES ELÉCTRICAS · AUTOMATIZACIÓN Y CONTROL</div>
+    <div class="ref"><small>REFERENCIA</small>BORRADOR</div>
+  </header>
+  <div class="body">
+    <div class="client">Conservas Ribera, S.A.</div>
+    <h1>Ampliación del grupo de bombeo</h1>
+    <table>
+      <thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead>
+      <tbody>
+        <tr class="part"><td class="p">1</td><td>Grupo de bombeo</td><td></td><td class="n">639,00 €</td></tr>
+        <tr class="sub"><td class="p">1.1</td><td>Suministro e instalación de bombas</td><td></td><td class="n">604,00 €</td></tr>
+        <tr class="line"><td></td><td>Bomba de potencia mayor que 7,5 kW</td><td class="n">2 ud</td><td></td></tr>
+      </tbody>
+    </table>
+  </div>
+  <footer class="ftr">
+    <span>9/11/2026</span>
+    <span class="reg">Inscrita en el Registro Mercantil de Madrid, tomo 00000, folio 000, hoja M-000000 · CIF B00000000</span>
+    <span>Página 2 de 3</span>
+  </footer>
+</section>
+</body></html>

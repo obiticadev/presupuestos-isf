@@ -6,12 +6,13 @@ Estado:
 - **Plan 1, base:** inicio de sesión, roles, usuarios, historial y configuración.
 - **Plan 2, catálogo y clientes:** conceptos con categorías y unidades editables, importación y exportación en Excel, y clientes con contactos, ubicaciones y condiciones.
 - **Plan 3, presupuestos:** conjuntos configurables, editor con partidas y líneas, ajustes de precio con motivo, emisión con numeración, estados, revisiones, duplicado y listado con filtros.
-- El PDF, el despliegue en Dokploy y las copias de seguridad llegan en el plan 4 (`docs/superpowers/plans/`).
+- **Plan 4, PDF y despliegue:** PDF corporativo con Chromium (el del emitido se genera una vez y se guarda con su SHA-256; el borrador lleva marca de agua), imagen Docker, despliegue en Dokploy en `http://192.168.105.83:3100` y copias diarias con su restauración. Ver [`docs/despliegue.md`](docs/despliegue.md).
 
 ## Requisitos
 
 - Node 24 y pnpm 12 (`npm i -g pnpm@12.18.0`)
 - Docker con Compose
+- Navegador del PDF: `pnpm exec playwright-core install chromium-headless-shell` (una vez por equipo)
 - Una ruta de proyecto **sin `#`**: Vite/Vitest no la admite.
 
 ## Arranque local
@@ -39,14 +40,15 @@ pnpm build
 
 ```bash
 docker compose -f compose.yaml up -d --build
-curl http://localhost:3000/api/health      # {"status":"ok"}
+curl http://localhost:3100/api/health      # {"status":"ok"}
 ```
 
 - `db`: PostgreSQL 17 con el volumen `pgdata`, sin puertos publicados.
 - `migrate`: aplica las migraciones (`prisma migrate deploy`) y termina.
-- `app`: arranca cuando `migrate` termina bien. Guarda los archivos (logo y, más adelante, PDF) en el volumen `appdata` (`/data`).
+- `app`: arranca cuando `migrate` termina bien, en el puerto `${APP_PORT:-3100}`. Guarda los logos y los PDF emitidos en el volumen `appdata` (`/data`). Lleva Chromium para el PDF.
+- `backup`: copia diaria a las 02:00 de la base de datos y de `appdata` en `${BACKUP_DIR}`; conserva 30 de cada.
 
-`compose.override.yaml` publica PostgreSQL en el 5433 y solo se usa en desarrollo (sin `-f compose.yaml`). El despliegue en Dokploy, HTTPS y las copias de seguridad llegan en el plan 4.
+`compose.override.yaml` publica PostgreSQL en el 5433 y solo se usa en desarrollo (sin `-f compose.yaml`). `compose.restore.yaml` solo sirve para restaurar una copia. Despliegue, copias y restauración: [`docs/despliegue.md`](docs/despliegue.md).
 
 ## Estructura
 
@@ -62,9 +64,12 @@ src/modules/<módulo>/    schema.ts (Zod) · service.ts (lógica y permisos) · 
   kits/                  conjuntos (plantillas) y sus fórmulas (formulas.ts)
   quotes/                presupuestos: cálculo (calculation.ts), borradores (service.ts), conjuntos insertados
                          (kit-instances.ts), emisión (issue.ts), numeración (numbering.ts) y ciclo de vida (lifecycle.ts)
+src/pdf/                 PDF: Chromium compartido (browser.ts, render.ts), modelo del documento (document.ts)
+                         y plantilla versionada (templates/v1, con la paginación de la hoja de partidas)
 src/lib/                 BD, errores, decimales y validación
 prisma/                  esquema y migraciones
 scripts/admin.ts         CLI: create / reset-password
+scripts/backup.sh        copias (loop | now) · scripts/restore.sh: restauración
 tests/                   pruebas (Vitest)
 docs/                    diseño, planes, diseño visual y operación
 ```

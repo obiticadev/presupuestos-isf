@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-10.
+Última actualización: 2026-11-10 (Tarea 7 cerrada tras la revisión con Claude in Chrome; falta la Tarea 8).
 
 ## Cronología
 
@@ -92,14 +92,133 @@ La interfaz de las tareas 6 y 7 está hecha y probada en Chrome (detalle en la c
 - **Queda de la revisión, aplazado:**
   - una prueba del reinicio anual a lo largo de dos años (necesita simular la fecha);
   - la instantánea guarda los importes sin ceros finales («1246.3»): el PDF del plan 4 debe formatearlos con `formatDecimalEs`.
-- **PR #3 definitivo** (2026-11-10): rama subida y título y descripción actualizados. Queda revisarlo y fusionarlo en `master`.
+- **PR #3 fusionado en `master`** (2026-11-10, commit `1b60c6d`). `master` tiene los planes 1, 2 y 3; su árbol es idéntico al de `plan-3-presupuestos`.
+
+### Plan 4: en ejecución (rama `plan-4-pdf-despliegue`) — traspaso del 2026-11-10
+
+Ejecutado con superpowers:subagent-driven-development (un implementador por tarea, una revisión por tarea). El usuario pidió seguir con otro asistente a partir de aquí.
+
+**Hecho y revisado** (pruebas: 214+ en verde; `tests/pdf` 23/23; `tsc` y `lint` limpios):
+
+| Tarea | Commits | Notas |
+|---|---|---|
+| 1. Chromium y `renderPdf` | `da2f332` | `page.evaluate()` funciona con JS desactivado. La cabecera y el pie de Chromium no heredan el `@font-face`: la plantilla lo repite en ellos. Navegador: `pnpm exec playwright-core install chromium-headless-shell`. |
+| 2. Modelo `buildDocument` | `fb34b9d` (+ `0a37d26`) | Etiqueta de impuesto: el nombre solo si ya contiene «%» (los nombres reales son «IVA 21 %»). |
+| 3. Plantilla v1 y `paginate` | `f8942cf`, `cb37423`, `45830b7`, `0a37d26` | Variante B con cierre al pie y «Firma y sello». Arreglos: subpartidas sin líneas al paginar; la fuente se lee de `process.cwd()/node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2` y `next.config.ts` la incluye en standalone (`outputFileTracingIncludes`); datos de empresa vacíos sin separadores. |
+| 4. Logo por contenido | `54347b3` | `uploads/logo-<sha12>.<ext>`; `readLogo(path)` con respaldo al logo actual. |
+| 5. PDF del emitido y del borrador | `3cf0caf` | `src/modules/quotes/pdf.ts`: `ensureIssuedPdf` con `FOR UPDATE`, hash y regeneración; `draftPdf`; `pdfResponse`. |
+| 6. Descarga e interfaz | `04098b5` | `GET /api/presupuestos/[id]/pdf`; «Descargar PDF», «Vista previa (PDF)», enlace «PDF» en listado y ficha de cliente; historial «Descarga» y «PDF». |
+
+**Probado en navegador** (Chrome sin interfaz por CDP contra `pnpm build` + `pnpm start`, porque la extensión Claude in Chrome no estaba conectada): vista previa del borrador, emisión, descarga del emitido (archivo en `data/pdf/2026/`), historial y enlace del listado. Sin probar en la interfaz: el cambio de logo tras emitir (lo cubren las pruebas de las tareas 4 y 5). Sin sesión, la ruta del PDF responde 307 a `/login` por `src/proxy.ts`; se aceptó (el 401 de `pdfResponse` queda como segunda defensa).
+
+**Datos cambiados en la BD de desarrollo** (puerto 5433, solo desarrollo): administrador `pdf-check@isf.local`; conceptos BOM-MAYOR75, MAN-4X25, MAN-12X075, SER-DESPL y SER-PROG marcados como validados; el borrador de Talleres Henares quedó **emitido** como `PR-2026000001-R00`.
+
+**Tarea 7, preparada y validada técnicamente (2026-11-10).** El usuario pidió expresamente dejar la revisión con Claude in Chrome para más adelante. No se ha fusionado ni desplegado en Dokploy. La Tarea 8 sigue pendiente.
+
+Cambios y problemas encontrados al probar el «wip»:
+- `Dockerfile`: OpenSSL y certificados también en `migrate`; CLI de Prisma directo, sin descargar pnpm al arrancar como `node`; variables ficticias solo durante la compilación para evitar errores de Better Auth sin secretos reales; Chromium 1.64.1 instalado y legible por `node`.
+- **Faltaba `playwright-core` en la imagen.** `next.config.ts` lo declara externo y traza el paquete completo, además de la fuente. Comprobado en la imagen con UID 1000 y generación real de PDF.
+- `backup.sh`: bloqueo con `flock` compartido con la restauración (se libera incluso con SIGKILL); permisos privados; no sobrescribe copias del mismo minuto; completa ambos temporales antes de publicar; limpia sus temporales al fallar; mantiene 30 copias por tipo. El bucle continúa tras un fallo y usa las 03:00 si no existen las 02:00 por el cambio horario de primavera.
+- `restore.sh`: valida fecha, copia y archivo antes de modificar datos, rechaza la app encendida incluso sin conexiones a la BD, comprueba conexiones y restaura la BD en una sola transacción.
+- **`docker compose run -v …:rw` no quitaba el montaje de solo lectura en este Compose.** Se añade `compose.restore.yaml`, que cambia únicamente `/data` a escritura y conserva el volumen lógico `appdata` del proyecto. **Usarlo solo con `run`, nunca con `up`, y siempre con el mismo `-p` que la app.**
+- `.gitattributes`: scripts `.sh` en LF también en Windows. Pruebas repetibles en `tests/docker/` (instrucciones en su `README.md`).
+
+Verificación local con **solo el archivo de producción** y un proyecto aislado: `docker compose -p presupuestos-t7 -f compose.yaml …`; `BETTER_AUTH_URL=http://localhost:3100`, `BACKUP_DIR=./.backups` y secretos exclusivos de prueba. No se ha cambiado la BD de desarrollo.
+1. Imagen construida, `migrate` termina con código 0, `app` saludable y `backup` en marcha. Solo `app` publica `3100:3000`; `db`, `migrate` y `backup` no publican puertos.
+2. Administrador creado con el CLI de la imagen. Cliente, ubicación, logo y presupuesto creados mediante los servicios dentro del contenedor; emisión `PR-2026000001-R00` y PDF de **211.753 bytes**, 2 páginas. Descarga HTTP con sesión de Better Auth: referencia, cliente, total **1.246,30 €** y «Firma y sello» presentes. SHA-256 del archivo, de la BD y de la descarga: `d08c1be1af347ead672a0df0d1ec19ed137e870dc45eb199cb4744120a07201e`.
+3. `down` sin `-v`, `up` y después redespliegue con `up -d --build`: presupuesto, logo y descarga conservados, mismo SHA-256.
+4. Copia real `20261110-1034`; emitido un segundo presupuesto y creado un archivo posterior; restauración rechazada con la app encendida. Tras pararla, restauración correcta: desaparecen el segundo presupuesto y el archivo posterior, se conserva el logo y el primero descarga el PDF con el mismo SHA-256. Retención real con 31 copias falsas por tipo y una nueva: quedan 30 de cada.
+5. `tests/docker/backup-scripts.sh` y `runtime-smoke.mjs` correctos. `tsc` correcto; build Linux en Docker correcto; **217/217 pruebas Vitest**. La primera ejecución concurrente con la compilación tuvo un timeout de 5 s en una prueba existente de cabecera; repetida sin esa carga, pasa la suite entera sin cambiar los tiempos de espera. Lint sin errores, con avisos anteriores (13 en código y 4 de un auxiliar local antiguo).
+
+**Revisión con Claude in Chrome contra la imagen: hecha (2026-11-10).** Proyecto aislado `presupuestos-t7` reconstruido desde `4324a56` con solo `compose.yaml`, secretos de prueba fuera del repositorio y administrador creado con el CLI de la imagen. Todo desde los formularios en `http://localhost:3100`:
+1. Configuración: datos de empresa y logo (`public/logo-isf.jpg`) guardados.
+2. Cliente «Conservas Ribera, S.A.» con contacto y ubicación; el borrador los toma por defecto.
+3. Partida y subpartida, conjunto «Instalación de bomba» (2 × BOM-MAYOR75, 20 m, MAN-4X25 = 604,00 €), 100 km y 8 h: base 1.034,00 €, IVA 21 % 217,14 €, total **1.251,14 €**.
+4. Vista previa del borrador: dos páginas, logo, marca de agua «BORRADOR», cierre con exclusiones, forma de pago, validez, totales y «Firma y sello».
+5. Conceptos validados en el catálogo y emisión como `PR-2026000001-R00`; el PDF del emitido lleva la referencia en cabecera y asunto y no tiene marca de agua.
+6. `down` (sin `-v`) y `up`: logo y PDF conservados; la descarga desde el navegador tiene el mismo SHA-256 que el archivo guardado (`6b6fd25b…e7f0ea`). El historial registra validaciones, emisión y descargas.
+
+Observación menor, sin corregir: en la hoja de partidas el título es el asunto tal cual, que empieza en minúscula («la sustitución de…») porque el campo está pensado para continuar «…en referencia a». Decidir en la Tarea 8 si se pone en mayúscula inicial.
+
+**Tarea 8 (2026-11-10), antes del despliegue:**
+- Título de la hoja de partidas con mayúscula inicial (`d53dff7`, con prueba).
+- `docs/despliegue.md` nuevo y `docs/operacion.md` ampliado con «Actualizar la versión», «Revertir» y «Navegador del PDF» (`38fdc7c`).
+- Verificación completa: `tsc` limpio, lint sin errores (17 avisos antiguos), `pnpm build` correcto y **217/217** pruebas. En la primera ejecución falló una vez `tests/quotes/kit-instances.test.ts` («sin manguera el conjunto queda incompleto…»); no se reprodujo ni sola ni repitiendo la suite: queda como prueba intermitente que vigilar.
+- Revisión final de toda la rama (`1b60c6d..38fdc7c`, revisor independiente): sin críticos. Los dos importantes estaban en `docs/despliegue.md` y están corregidos en `4466407`: la prueba de restauración va en una subshell para que sus variables no lleguen a producción, y tras restaurar se usa `up -d` (corre `migrate`) en lugar de `start app`. También se documentan `--build`/`--rmi local` en la prueba, recrear `backup` si cambian sus scripts y el acceso SSH.
+- Menores aplazados: el aviso «El PDF se generará al descargarlo» de la spec 5.5.1 no se muestra al emitir si falla el PDF (solo queda en el log); al recolocar el cierre, un encabezado de partida o subpartida puede quedar solo al pie de la hoja (`paginate.ts`); un cierre más alto que una hoja se corta sin aviso; `tar` falla la copia entera si un archivo cambia mientras se lee; la versión de Playwright está en `Dockerfile` y en `package.json`.
+- **Servidor:** la API de Dokploy funciona. SSH entra como `isf` con `~/.ssh/isf_dokploy`, pero `isf` no está en el grupo `docker` y `sudo` pide contraseña: hace falta `sudo usermod -aG docker isf` (lo hace el usuario) para crear el administrador y probar la restauración por SSH.
+
+**Cierre de sesión:** avances técnicos guardados en `63a1213`. Se arrancó temporalmente `pnpm dev --hostname 127.0.0.1` para que el usuario consultara la app en `http://localhost:3000` (`/api/health`: 200, `status: ok`). Servidor detenido a petición del usuario antes de subir los avances al remoto. Esta consulta no sustituye la revisión pendiente con Claude in Chrome. La BD local existente se mantiene sin detener ni borrar; no se ha fusionado en `master` ni desplegado en Dokploy.
+
+Para repetir la restauración (con variables definidas y una copia de prueba disponible):
+```sh
+docker compose -p presupuestos-t7 -f compose.yaml stop app
+docker compose -p presupuestos-t7 -f compose.yaml -f compose.restore.yaml run --rm backup /scripts/restore.sh AAAAMMDD-HHMM
+docker compose -p presupuestos-t7 -f compose.yaml start app
+```
+
+Al acabar las pruebas se retira el proyecto aislado con `down -v` y se borra `./.backups`; no se deben usar estos datos ni las contraseñas de prueba en producción. Para la revisión futura de la imagen, recrear este proyecto aislado y sus datos de prueba.
+
+**Tarea 8:** `docs/despliegue.md`, `docs/operacion.md`, verificación completa (`pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`), revisión final de toda la rama, README/AGENTS/progreso y PR contra `master`. El despliegue real (Alcance de la Tarea 8) solo con el visto bueno del usuario.
+
+**Decisiones tomadas durante la ejecución:**
+- Las comprobaciones de interfaz se hicieron con Chrome sin interfaz por CDP y curl.
+- La Tarea 7 se prueba con `-p presupuestos-t7 -f compose.yaml` (lo que ejecuta Dokploy, sin `compose.override.yaml`).
+- Si la fuente cambiaba el número de páginas de las pruebas, mandaba la regla de `paginate` (al final coincidieron: 2 y 3 páginas).
+- Ruta del PDF sin sesión: 307 a `/login`, aceptado.
+- Etiqueta del impuesto: el nombre solo si contiene «%».
+
+**Menores aplazados, para la revisión final:**
+- `browser.ts`: el evento `disconnected` pone `browser = null` sin comparar la instancia; el límite de 30 s cuenta el tiempo en cola y no cancela el render; las pruebas de «sin red» y del límite de 2 son indirectas.
+- `document.ts`: `?? "0"` silencioso si falta un total; referencia vacía en un emitido sin referencia; faltan pruebas de líneas en subpartida GLOBAL y de «Sin título» en subpartida.
+- `paginate.ts`: el cierre que no cabe puede dejar una partida o subpartida al pie de la hoja anterior; los atajos (fila más alta que una hoja) cortan sin avisar.
+- Plantilla: el título colapsa los saltos de línea del asunto; el tipo del logo se repite tres veces; `v1/index.ts` y `paginate.ts` tienen saltos de línea CRLF y el resto LF.
+- `settings`: `logoPath` de la instantánea va directo a `path.join` (comprobar el prefijo `uploads/logo-`).
+- `quotes/pdf.ts`: el `.tmp` no se borra si fallan `writeFile` o `rename`; `seqYear` nulo daría `pdf/null/…`; el render dentro de la transacción ocupa una conexión del pool, así que varias descargas distintas a la vez pueden agotarlo (500).
+- La salida de las pruebas tiene un `DeprecationWarning` de pg que ya estaba antes.
+
+### Plan 4: diseño y plan escritos, pendientes de revisión (rama `plan-4-pdf-despliegue`)
+
+Escritos el 2026-11-10 con superpowers (brainstorming → comprobación del constructor → writing-plans) mientras el usuario estaba ausente. **No hay código todavía.** Antes de ejecutar:
+
+1. Leer el diseño, `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md`, y sobre todo su sección 7, «Para confirmar». Hay 12 decisiones mías y una pregunta abierta: si el plan incluye **ejecutar** el despliegue en el servidor o termina en la imagen probada en local y la documentación. Para ejecutarlo hace falta saber:
+   - versión de Dokploy (las copias de un Compose piden 0.22 o posterior);
+   - si habrá acceso al servidor;
+   - DNS interno;
+   - si hay destino S3.
+2. Ver la maqueta del documento: `docs/diseno/maquetas/pdf.html`, con la carta, las partidas, la continuación con la cabecera repetida y el borrador con marca de agua.
+3. Revisar el plan, `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, con 8 tareas, y elegir cómo ejecutarlo: con subagentes o en la misma sesión.
+2b. **Densidades de la hoja de partidas** (pedido del usuario el 2026-11-10: que el presupuesto quepa en una hoja con el total, la carta aparte): ver `docs/diseno/maquetas/pdf-densidades.html` y el diseño 5.3.1.
+   - Cuatro variantes con el mismo presupuesto de 31 filas y la letra a 10 pt: A estándar (no cabe, unas 15 filas), B compacta (unas 31), C resumen arriba (unas 31 de desglose) y D agrupada (la que más cabe: sobran 63 mm).
+   - **Respondido el 2026-11-10: la B**, con estos cambios:
+     - sin total junto al título;
+     - cierre (condiciones, fecha y totales) siempre pegado al pie de la última hoja;
+     - hueco de «Firma y sello» a la derecha, bajo los totales y de su mismo alto;
+     - si el cierre no cabe, pasa a la hoja siguiente con la última subpartida.
+   - Se hace con paginación propia antes de `page.pdf()` (diseño 5.3.1). La maqueta ya la tiene, con tres casos.
+   - Letra a 10 pt; A, C y D descartadas. El diseño y el plan (tareas 1 y 3) están actualizados.
+
+**Hallazgos del diseño:**
+
+- **El logo** se sobrescribía siempre en `uploads/logo.png`. Para que el PDF regenerado de un emitido conserve su logo, pasa a guardarse por contenido (Tarea 4).
+- **Comprobación del constructor:** guardar el SHA-256 y dar error si no coincidía fallaba en casos normales:
+  - dos descargas a la vez generan PDF distintos, porque Chromium no da bytes idénticos;
+  - las copias de base de datos y de volumen se hacen a horas distintas.
+
+  Ahora se serializa por presupuesto y se regenera desde la instantánea.
+- **El PDF de referencia** `PR-2026001029-R00.pdf` no está en el equipo Linux: la comparación visual se hace en el equipo original.
+- **Dokploy (documentación consultada el 2026-11-10):**
+  - el dominio de un Compose añade solo Traefik y `dokploy-network` al servicio elegido;
+  - las copias de base de datos y de volúmenes van a destinos S3, con un cron;
+  - la copia de volúmenes puede parar el contenedor («Container OFF»);
+  - la restauración se hace desde la interfaz y exige que el volumen no exista.
+- **Versiones elegidas**, con al menos tres semanas por la edad mínima de pnpm: `playwright-core` 1.64.1, `@fontsource-variable/archivo` 5.3.0 y `unpdf` 1.9.1.
 
 ### Después
 
-- **Plan 4, por escribir:** PDF con Playwright (plantilla en `src/pdf/templates/`), Dokploy y copias de seguridad. La emisión ya guarda la instantánea con `templateVersion: "v1"`; `IssuedDocument.pdfPath` y `sha256` están a `null` hasta ese plan.
-- **Integración.** `master` solo tiene el plan 1. El PR #3 lleva los planes 2 y 3.
+- **Empresa:** confirmar la numeración (por defecto `PR-{AAAA}{NNNNNN}-R{RR}`, sin reinicio anual, desde 1), el destino S3 y la retención de copias, y el logo y los textos definitivos.
+- **Docker.** La imagen no se ha vuelto a construir desde que se añadió `exceljs` (plan 2). Se hace en la Tarea 7 del plan 4.
 - **`pnpm start` avisa** de que no encaja con `output: standalone`; sirve para probar en local, pero en producción se usa `node .next/standalone/server.js` (Docker ya lo hace).
-- **Docker.** La imagen no se ha vuelto a construir desde que se añadió `exceljs` (plan 2).
 
 ## Decisiones tomadas por el camino
 

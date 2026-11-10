@@ -37,6 +37,7 @@ export function IssuedPanel({ q }: { q: QuoteDetail }) {
           <button className="btn pri">Nueva revisión</button>
         </ActionForm>
       ))}
+      <a className="btn" href={`/api/presupuestos/${q.id}/pdf`} target="_blank" rel="noopener">Descargar PDF</a>
       <DuplicateButton id={q.id} />
     </div>
   );
