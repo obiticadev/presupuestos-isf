@@ -22,14 +22,20 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 **El detalle completo (cronología, cómo retomar en otro equipo, decisiones tomadas y pendientes) está en `docs/superpowers/progreso.md`. Léelo antes de seguir.**
 
 - Ramas:
-  - `master` tiene los planes 1, 2 y 3 (PR #3 fusionado el 2026-11-10).
-  - `plan-4-pdf-despliegue`, desde `master`: plan 4 **en ejecución**.
-- Plan 4 (PDF, Dokploy y copias): **tareas 1 a 6 hechas y revisadas; Tarea 7 hecha y revisada en Claude in Chrome contra la imagen; falta la 8.** El traspaso completo está en `docs/superpowers/progreso.md`, sección «Plan 4: en ejecución». Léela antes de tocar nada.
+  - `master` tiene los planes 1 a 4 (PR #4 fusionado el 2026-11-10).
+- Plan 4 (PDF, Dokploy y copias): **terminado y desplegado** en `http://192.168.105.83:3100` (2026-11-10). Quedan comprobaciones en el servidor y errores por revisar.
+- **Para un chat nuevo: empieza por `docs/superpowers/progreso.md`, sección «Pendiente tras el despliegue (revisar)».** Resumen:
+  - interfaz: en el editor, entre ~1360 y ~1600 px de ancho, los nombres de partida y subpartida y las descripciones de línea se ven cortados;
+  - prueba intermitente en `tests/quotes/kit-instances.test.ts`;
+  - menores aplazados de la revisión final del plan 4;
+  - en el servidor: emisión de prueba, reinicio y redespliegue, estado del contenedor `backup` y prueba de restauración (el usuario SSH `isf` aún no está en el grupo `docker`);
+  - seguridad: rotar las credenciales que se pegaron en el chat;
+  - manual de usuario: decidir si sus scripts van al repositorio y retirar la instancia local `presupuestos-manual`.
   - Diseño: `docs/superpowers/specs/2026-11-10-plan-4-pdf-despliegue-design.md` (5.3.1 hoja de partidas B con cierre al pie y «Firma y sello»; 5.11 despliegue por IP y puerto y copias en el propio servidor).
   - Plan: `docs/superpowers/plans/2026-11-10-plan-4-pdf-despliegue.md`, 8 tareas.
-  - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, que todavía apunta a `./docker-compose.yml` (hay que cambiarlo a `./compose.yaml`). API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio.
+  - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, `appName presupuestos-isf-app-oy9un2`, `composePath ./compose.yaml`. API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio. SSH: `ssh -i ~/.ssh/isf_dokploy isf@192.168.105.83`.
   - **Fusionar en `master` y desplegar en Dokploy exige el visto bueno explícito del usuario.**
-- Siguiente paso: Tarea 8 (documentación, verificación completa, revisión final de la rama y PR) y, con el visto bueno del usuario, el despliegue. Para restaurar, usar `-f compose.yaml -f compose.restore.yaml` y el mismo proyecto `-p`: el override habilita escritura en el volumen correcto; nunca se usa para `up`.
+- Siguiente paso: revisar y corregir lo de «Pendiente tras el despliegue». Despliegue, copias y restauración: `docs/despliegue.md`. Para restaurar, usar `-f compose.yaml -f compose.restore.yaml` y el mismo proyecto `-p`: el override habilita escritura en el volumen correcto; nunca se usa para `up`.
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).
 - Reglas aprendidas:
   - Ningún rol tiene permisos del plugin admin de Better Auth: todo pasa por los servicios.
@@ -41,6 +47,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - Las pruebas de interfaz se hacen con Claude in Chrome. El progreso se registra a mano en claude-mem y en `progreso.md`.
   - Al reescribir `AGENTS.md` o `progreso.md` desde un script, conserva sus saltos de línea CRLF.
   - Para matar el servidor desde Bash usa un patrón que no se encuentre a sí mismo: `pkill -f '[n]ext dev'`.
+  - Con Playwright, `getByLabel(..., { exact: true })` no encuentra un `select` o un `textarea` con valor: la etiqueta envuelve al control y su texto incluye las opciones o el contenido. Localízalos por `name` o por el primer texto de la `label`.
 
 Actualiza esta sección cuando cambie el estado.
 

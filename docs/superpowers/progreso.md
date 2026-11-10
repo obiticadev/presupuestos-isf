@@ -147,6 +147,7 @@ Observación menor, sin corregir: en la hoja de partidas el título es el asunto
 - Revisión final de toda la rama (`1b60c6d..38fdc7c`, revisor independiente): sin críticos. Los dos importantes estaban en `docs/despliegue.md` y están corregidos en `4466407`: la prueba de restauración va en una subshell para que sus variables no lleguen a producción, y tras restaurar se usa `up -d` (corre `migrate`) en lugar de `start app`. También se documentan `--build`/`--rmi local` en la prueba, recrear `backup` si cambian sus scripts y el acceso SSH.
 - Menores aplazados: el aviso «El PDF se generará al descargarlo» de la spec 5.5.1 no se muestra al emitir si falla el PDF (solo queda en el log); al recolocar el cierre, un encabezado de partida o subpartida puede quedar solo al pie de la hoja (`paginate.ts`); un cierre más alto que una hoja se corta sin aviso; `tar` falla la copia entera si un archivo cambia mientras se lee; la versión de Playwright está en `Dockerfile` y en `package.json`.
 - **Servidor:** la API de Dokploy funciona. SSH entra como `isf` con `~/.ssh/isf_dokploy`, pero `isf` no está en el grupo `docker` y `sudo` pide contraseña: hace falta `sudo usermod -aG docker isf` (lo hace el usuario) para crear el administrador y probar la restauración por SSH.
+- **Desplegado (2026-11-10 12:10):** PR #4 fusionado en `master` (`b7a7e45`); en Dokploy `composePath ./compose.yaml` y variables `POSTGRES_PASSWORD` y `BETTER_AUTH_SECRET` (aleatorias, solo en Dokploy), `BETTER_AUTH_URL=http://192.168.105.83:3100` y `BACKUP_DIR=/srv/presupuestos-backups`. `compose.deploy` → `done`; `/api/health` responde `ok` y `/login` 200; 5432 y 5433 cerrados desde la red. Pendiente: primer administrador, emisión de prueba, reinicio y redespliegue, y prueba de restauración (necesitan SSH con acceso a Docker).
 
 **Cierre de sesión:** avances técnicos guardados en `63a1213`. Se arrancó temporalmente `pnpm dev --hostname 127.0.0.1` para que el usuario consultara la app en `http://localhost:3000` (`/api/health`: 200, `status: ok`). Servidor detenido a petición del usuario antes de subir los avances al remoto. Esta consulta no sustituye la revisión pendiente con Claude in Chrome. La BD local existente se mantiene sin detener ni borrar; no se ha fusionado en `master` ni desplegado en Dokploy.
 
@@ -291,3 +292,48 @@ Cada decisión con lo que cuesta si resulta equivocada.
   - Numeración con un contador por fila: `INSERT … ON CONFLICT DO NOTHING` + `UPDATE … RETURNING`, dentro de la transacción de emisión. Así no hay huecos ni duplicados con emisiones a la vez.
   - El año del número es el de la emisión (Europe/Madrid); las revisiones conservan su número.
   - Por defecto: patrón `PR-{AAAA}{NNNNNN}-R{RR}`, sin reinicio anual y empezando en 1, todo configurable. **Falta que la empresa lo confirme.**
+
+### Pendiente tras el despliegue (revisar) — anotado el 2026-11-10
+
+Errores y cabos sueltos encontrados durante el despliegue y al preparar el manual de usuario. Ninguno está corregido.
+
+**1. Interfaz: textos cortados en el editor del borrador (por corregir).**
+- Entre ~1360 px (a partir de ahí el panel va al lado de la tabla) y ~1600 px de ancho de ventana, los campos del nombre de partida y de subpartida y la descripción de las líneas son demasiado estrechos: se ve «BOMBEO DE LA LÍNEA DE ENVASAD» o «Cuadro de mando y protección p…».
+- El valor se guarda completo (comprobado en la BD); solo se ve recortado. A 1440 px se recorta más («BOMBEO DE»).
+- Reproducir: borrador con una partida de nombre largo y una línea de catálogo de descripción larga, ventana de 1440 px. Código en `src/app/(app)/presupuestos/[id]/sections.tsx`.
+- Probable arreglo: que esos campos ocupen el ancho de la columna «Denominación» (o un `min-width` razonable) y comprobarlo en Chrome a 1366, 1440, 1600 y 1920 px.
+
+**2. Prueba intermitente.** `tests/quotes/kit-instances.test.ts`, «sin manguera el conjunto queda incompleto y no suma; elegirla después lo valora», falló una vez en la verificación completa de la Tarea 8. Sola y repitiendo la suite (217/217) pasa. Buscar dependencia de orden, de tiempo o del estado compartido de `presupuestos_test`.
+
+**3. Menores aplazados de la revisión final del plan 4** (detalle en «Tarea 8» arriba):
+- no se muestra «El PDF se generará al descargarlo» si falla el PDF al emitir (spec 5.5.1);
+- al recolocar el cierre, un encabezado de partida o subpartida puede quedar solo al pie de una hoja (`src/pdf/templates/v1/paginate.ts`);
+- un cierre más alto que una hoja se corta sin aviso;
+- `tar` hace fallar la copia entera si un archivo cambia mientras se lee (`scripts/backup.sh`);
+- la versión de Playwright está duplicada en `Dockerfile` y `package.json`.
+
+**4. Comprobaciones en el servidor sin hacer** (aceptación, `docs/despliegue.md` apartado 8):
+- el usuario creó el primer administrador y dice que la app funciona; falta una emisión de prueba con descarga del PDF desde un equipo de la oficina;
+- reinicio del servidor y redespliegue sin pérdida de datos;
+- estado y log del contenedor `backup` (`docker logs presupuestos-isf-app-oy9un2-backup-1`), y que `/srv/presupuestos-backups` se llena tras las 02:00;
+- prueba de restauración en el proyecto aparte `presupuestos-restore`;
+- comparación del PDF con `PR-2026001029-R00.pdf`.
+
+Bloqueo: el usuario SSH `isf` no está en el grupo `docker` y `sudo` pide contraseña. Lo resuelve el usuario con `ssh -t -i ~/.ssh/isf_dokploy isf@192.168.105.83 'sudo usermod -aG docker isf'`. El agente no escribe contraseñas de `sudo`.
+
+**5. Seguridad.** Durante la sesión se pegaron en el chat la contraseña del usuario de servidor `isf` (la misma que la de `obiticadev` y la que el usuario usaba en la app) y la clave privada de una clave SSH creada en Dokploy. Recomendado:
+- cambiar esas contraseñas y no repetirlas entre servidor y app;
+- borrar esa clave en Dokploy (la copia local ya se borró).
+
+Las contraseñas de producción (`POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`) se generaron al momento y solo están en la pestaña Environment de Dokploy.
+
+**6. Manual de usuario (2026-11-10).**
+- PDF de 37 páginas en la raíz de la carpeta del proyecto: `Manual de usuario - Presupuestos ISF.pdf`. Git lo ignora.
+- Se hizo con capturas automáticas (Playwright y el Chromium del proyecto) de una instancia local aislada con datos de demostración: proyecto Compose `presupuestos-manual`, puerto 3101.
+- Los scripts (`capture.mjs`, `content.mjs`, `build.mjs`) quedaron en la carpeta temporal de la sesión y se pierden con ella. Decidir si se rehacen en `docs/manual/` para regenerar el manual cuando cambie la interfaz.
+- La instancia sigue encendida. Para retirarla sin su `.env`:
+  ```sh
+  docker rm -f $(docker ps -aq --filter label=com.docker.compose.project=presupuestos-manual)
+  docker volume rm presupuestos-manual_appdata presupuestos-manual_pgdata
+  docker image rm presupuestos-manual-app presupuestos-manual-migrate
+  ```
