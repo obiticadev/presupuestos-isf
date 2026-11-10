@@ -12,7 +12,10 @@ export function paginate(sheetHeightPx: number): void {
   close.remove();
 
   const over = (s: HTMLElement) => s.scrollHeight > s.clientHeight + 0.5;
-  const isHead = (r: Element | null) => !!r && (r.classList.contains("part") || r.classList.contains("sub"));
+  const is = (r: Element, kind: string) => r.classList.contains(kind);
+  // A heading must not be split from what it introduces: a part from its sub or first line, a sub from its first line.
+  // A sub without lines (hidden lines, a GLOBAL subsection) introduces nothing and may end a sheet.
+  const leads = (a: Element, b: Element) => (is(a, "part") && (is(b, "sub") || is(b, "line"))) || (is(a, "sub") && is(b, "line"));
   const newSheet = (after: HTMLElement) => {
     const s = document.createElement("section");
     s.className = "sheet";
@@ -31,9 +34,9 @@ export function paginate(sheetHeightPx: number): void {
   for (const r of rows) {
     tbody.append(r);
     if (!over(sheet)) continue;
-    // The row does not fit: it opens a sheet, and a part or sub row never ends one (it goes with its first line).
+    // The row does not fit: it opens a sheet, and a part or sub row never ends one (it goes with what it introduces).
     const moved = [r];
-    for (let p = r.previousElementSibling; isHead(p); p = p!.previousElementSibling) moved.unshift(p!);
+    for (let p = r.previousElementSibling; p && leads(p, moved[0]); p = p.previousElementSibling) moved.unshift(p);
     if (moved.length === tbody.children.length) continue; // shortcut: a row taller than a whole sheet stays and is cut; not seen in practice
     sheet = newSheet(sheet);
     tbody = sheet.querySelector("tbody")!;
@@ -47,11 +50,11 @@ export function paginate(sheetHeightPx: number): void {
   const rs = [...tbody.children];
   if (rs.length < 2) return; // shortcut: a sheet of a single row cannot give one away; not seen in practice
   let from = rs.map((x) => x.classList.contains("sub")).lastIndexOf(true);
-  while (from > 0 && isHead(rs[from - 1])) from--;
+  while (from > 0 && leads(rs[from - 1], rs[from])) from--;
   if (from <= 0) {
     // The last sub fills this whole sheet (or started on an earlier one): carry its last lines, keeping heads with a line.
     from = 1;
-    while (from < rs.length - 1 && isHead(rs[from - 1])) from++;
+    while (from < rs.length - 1 && leads(rs[from - 1], rs[from])) from++;
   }
   sheet = newSheet(sheet);
   const target = sheet.querySelector("tbody")!;

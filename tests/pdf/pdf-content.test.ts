@@ -84,6 +84,18 @@ test("paginación: el largo de 45 líneas no pierde nada, repite la cabecera y n
   expect(s.at(-1)!.closeGap).toBeLessThanOrEqual(1);
 });
 
+test("paginación: 60 subpartidas sin líneas (GLOBAL u ocultas) no se pierden y el cierre sale al pie", async () => {
+  const src = withParts(Array.from({ length: 6 }, (_, p) => [`Partida ${p + 1}`, Array.from({ length: 10 }, (_, s): [string, [string, string, string][]] => [`Subpartida global ${p + 1}.${s + 1}`, []])]));
+  const p = await pages(src);
+  const all = p.join(" ");
+  expect(p.length).toBeGreaterThanOrEqual(3);
+  for (const r of buildDocument(src, { draft: false }).rows) if (r.kind !== "line") expect(all).toContain(norm(`${r.number}${r.title}`));
+  for (const s of ["1.474,99 €", "Firma y sello"]) expect(has(p.at(-1)!, s)).toBe(true);
+  const s = await sheets(src);
+  expect(s.length).toBeGreaterThanOrEqual(2);
+  expect(s.at(-1)!.closeGap).toBeLessThanOrEqual(1);
+});
+
 test("borrador: BORRADOR en la cabecera y como marca de agua", async () => {
   const p = await pages(withParts(longParts()), true);
   p.forEach((page) => expect(page.match(/borrador/g)?.length ?? 0).toBeGreaterThanOrEqual(2));
