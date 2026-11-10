@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-10 (plan 4 en ejecución, traspaso tras la Tarea 6).
+Última actualización: 2026-11-10 (Tarea 7 validada técnicamente; revisión con Claude in Chrome aplazada por el usuario).
 
 ## Cronología
 
@@ -113,10 +113,33 @@ Ejecutado con superpowers:subagent-driven-development (un implementador por tare
 
 **Datos cambiados en la BD de desarrollo** (puerto 5433, solo desarrollo): administrador `pdf-check@isf.local`; conceptos BOM-MAYOR75, MAN-4X25, MAN-12X075, SER-DESPL y SER-PROG marcados como validados; el borrador de Talleres Henares quedó **emitido** como `PR-2026000001-R00`.
 
-**Tarea 7, a medias y SIN PROBAR** (cambios sin probar en el commit «wip» de la rama): `Dockerfile` (Chromium en `runtime`), `compose.yaml` (puerto `${APP_PORT:-3100}:3000` y servicio `backup`), `scripts/backup.sh`, `scripts/restore.sh`, `.gitignore` y `.dockerignore`. Falta todo lo de la tarea a partir del Step 2: construir, PDF dentro del contenedor, persistencia, copia y restauración en local, puertos. Reglas para hacerlo:
-- Probar con un proyecto aparte y solo el archivo de producción, para no tocar la BD de desarrollo: `docker compose -p presupuestos-t7 -f compose.yaml …` con `POSTGRES_PASSWORD`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL=http://localhost:3100` y `BACKUP_DIR=./.backups`.
-- Comprobar dentro de la imagen que existen la fuente (`node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2`, puede ser un enlace de pnpm) y `playwright-core` en el `node_modules` de standalone.
-- Al terminar: `docker compose -p presupuestos-t7 -f compose.yaml down -v` y borrar `./.backups`.
+**Tarea 7, preparada y validada técnicamente (2026-11-10).** El usuario pidió expresamente dejar la revisión con Claude in Chrome para más adelante. No se ha fusionado ni desplegado en Dokploy. La Tarea 8 sigue pendiente.
+
+Cambios y problemas encontrados al probar el «wip»:
+- `Dockerfile`: OpenSSL y certificados también en `migrate`; CLI de Prisma directo, sin descargar pnpm al arrancar como `node`; variables ficticias solo durante la compilación para evitar errores de Better Auth sin secretos reales; Chromium 1.64.1 instalado y legible por `node`.
+- **Faltaba `playwright-core` en la imagen.** `next.config.ts` lo declara externo y traza el paquete completo, además de la fuente. Comprobado en la imagen con UID 1000 y generación real de PDF.
+- `backup.sh`: bloqueo con `flock` compartido con la restauración (se libera incluso con SIGKILL); permisos privados; no sobrescribe copias del mismo minuto; completa ambos temporales antes de publicar; limpia sus temporales al fallar; mantiene 30 copias por tipo. El bucle continúa tras un fallo y usa las 03:00 si no existen las 02:00 por el cambio horario de primavera.
+- `restore.sh`: valida fecha, copia y archivo antes de modificar datos, rechaza la app encendida incluso sin conexiones a la BD, comprueba conexiones y restaura la BD en una sola transacción.
+- **`docker compose run -v …:rw` no quitaba el montaje de solo lectura en este Compose.** Se añade `compose.restore.yaml`, que cambia únicamente `/data` a escritura y conserva el volumen lógico `appdata` del proyecto. **Usarlo solo con `run`, nunca con `up`, y siempre con el mismo `-p` que la app.**
+- `.gitattributes`: scripts `.sh` en LF también en Windows. Pruebas repetibles en `tests/docker/` (instrucciones en su `README.md`).
+
+Verificación local con **solo el archivo de producción** y un proyecto aislado: `docker compose -p presupuestos-t7 -f compose.yaml …`; `BETTER_AUTH_URL=http://localhost:3100`, `BACKUP_DIR=./.backups` y secretos exclusivos de prueba. No se ha cambiado la BD de desarrollo.
+1. Imagen construida, `migrate` termina con código 0, `app` saludable y `backup` en marcha. Solo `app` publica `3100:3000`; `db`, `migrate` y `backup` no publican puertos.
+2. Administrador creado con el CLI de la imagen. Cliente, ubicación, logo y presupuesto creados mediante los servicios dentro del contenedor; emisión `PR-2026000001-R00` y PDF de **211.753 bytes**, 2 páginas. Descarga HTTP con sesión de Better Auth: referencia, cliente, total **1.246,30 €** y «Firma y sello» presentes. SHA-256 del archivo, de la BD y de la descarga: `d08c1be1af347ead672a0df0d1ec19ed137e870dc45eb199cb4744120a07201e`.
+3. `down` sin `-v`, `up` y después redespliegue con `up -d --build`: presupuesto, logo y descarga conservados, mismo SHA-256.
+4. Copia real `20261110-1034`; emitido un segundo presupuesto y creado un archivo posterior; restauración rechazada con la app encendida. Tras pararla, restauración correcta: desaparecen el segundo presupuesto y el archivo posterior, se conserva el logo y el primero descarga el PDF con el mismo SHA-256. Retención real con 31 copias falsas por tipo y una nueva: quedan 30 de cada.
+5. `tests/docker/backup-scripts.sh` y `runtime-smoke.mjs` correctos. `tsc` correcto; build Linux en Docker correcto; **217/217 pruebas Vitest**. La primera ejecución concurrente con la compilación tuvo un timeout de 5 s en una prueba existente de cabecera; repetida sin esa carga, pasa la suite entera sin cambiar los tiempos de espera. Lint sin errores, con avisos anteriores (13 en código y 4 de un auxiliar local antiguo).
+
+**Pendiente exclusivamente de la revisión de interfaz de esta tarea:** recorrido con **Claude in Chrome** contra la imagen (crear y emitir desde los formularios, abrir y revisar visualmente el PDF, comprobar el logo y la descarga después de reiniciar). Las pruebas de servicios y HTTP anteriores no se presentan como esa revisión. Después, continuar con la Tarea 8 y su revisión final de toda la rama.
+
+Para repetir la restauración (con variables definidas y una copia de prueba disponible):
+```sh
+docker compose -p presupuestos-t7 -f compose.yaml stop app
+docker compose -p presupuestos-t7 -f compose.yaml -f compose.restore.yaml run --rm backup /scripts/restore.sh AAAAMMDD-HHMM
+docker compose -p presupuestos-t7 -f compose.yaml start app
+```
+
+Al acabar las pruebas se retira el proyecto aislado con `down -v` y se borra `./.backups`; no se deben usar estos datos ni las contraseñas de prueba en producción. Para la revisión futura de la imagen, recrear este proyecto aislado y sus datos de prueba.
 
 **Tarea 8:** `docs/despliegue.md`, `docs/operacion.md`, verificación completa (`pnpm exec tsc --noEmit && pnpm lint && pnpm test && pnpm build`), revisión final de toda la rama, README/AGENTS/progreso y PR contra `master`. El despliegue real (Alcance de la Tarea 8) solo con el visto bueno del usuario.
 

@@ -3,6 +3,7 @@
 #   backup.sh now    hace una copia ahora (antes de cada actualización con migraciones)
 #   backup.sh loop   hace una copia cada día a las 02:00 (hora de TZ); un fallo queda en el log y no para el contenedor
 set -eu
+umask 077
 
 KEEP=30
 
@@ -12,16 +13,22 @@ log() { echo "$(date '+%Y-%m-%d %H:%M:%S') $*"; }
 prune() { ls -1 "$1"/*"$2" 2>/dev/null | sort -r | tail -n +$((KEEP + 1)) | xargs -r rm -f --; }
 
 backup_now() {
-  stamp=$(date +%Y%m%d-%H%M)
   mkdir -p /backups/db /backups/appdata
-  rm -f /backups/db/*.tmp /backups/appdata/*.tmp
+  # flock (incluido en postgres:17) se libera incluso si el contenedor muere con SIGKILL.
+  exec 9>/backups/.operation.lock
+  flock -n 9 || { log "ERROR: hay otra copia o restauración en curso"; exit 1; }
+  stamp=$(date +%Y%m%d-%H%M)
   db=/backups/db/presupuestos-$stamp.dump
   files=/backups/appdata/appdata-$stamp.tar.gz
-  # Primero a .tmp y después mv: nunca queda una copia a medias con nombre válido.
+  trap 'rm -f "$db.tmp" "$files.tmp"' EXIT
+  trap 'exit 1' TERM INT
+  # No sobrescribir una copia del mismo minuto (ni durante la hora repetida del cambio de horario).
+  [ ! -e "$db" ] && [ ! -e "$files" ] || { log "ERROR: ya existe una copia de $stamp; espera al siguiente minuto"; exit 1; }
+  # Completar los dos temporales antes de publicar ninguno.
   pg_dump -Fc -f "$db.tmp"
-  mv "$db.tmp" "$db"
   tar -czf "$files.tmp" -C /data .
   mv "$files.tmp" "$files"
+  mv "$db.tmp" "$db"
   prune /backups/db .dump
   prune /backups/appdata .tar.gz
   log "copia hecha: $db y $files"
@@ -29,8 +36,11 @@ backup_now() {
 
 seconds_until_2am() {
   now=$(date +%s)
-  next=$(date -d '02:00' +%s)
-  [ "$next" -gt "$now" ] || next=$(date -d 'tomorrow 02:00' +%s)
+  # En el salto de primavera no existen las 02:00 de Madrid: copiar a las 03:00, sin matar el bucle.
+  next=$(date -d '02:00' +%s 2>/dev/null) || next=$(date -d '03:00' +%s)
+  if [ "$next" -le "$now" ]; then
+    next=$(date -d 'tomorrow 02:00' +%s 2>/dev/null) || next=$(date -d 'tomorrow 03:00' +%s)
+  fi
   echo $((next - now))
 }
 

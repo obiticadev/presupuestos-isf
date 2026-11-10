@@ -332,6 +332,8 @@ test("borrador: BORRADOR en la cabecera y como marca de agua", async () => { /* 
 
 ### Task 7: Imagen Docker con Chromium y Compose para Dokploy
 
+**Estado (2026-11-10):** preparación y verificación técnica terminadas. El usuario aplaza expresamente el recorrido y la revisión visual con Claude in Chrome. Resultado detallado en `../progreso.md`, sección «Plan 4: en ejecución». Se añaden `compose.restore.yaml`, el trazado completo de Playwright en `next.config.ts` y pruebas repetibles en `tests/docker/`.
+
 **Files:**
 - Modify: `Dockerfile` (etapa `runtime`), `compose.yaml` (`app` publica `${APP_PORT:-3100}:3000`; servicio `backup` nuevo; `mem_limit` comentado)
 - Create: `scripts/backup.sh`, `scripts/restore.sh`
@@ -344,17 +346,18 @@ test("borrador: BORRADOR en la cabecera y como marca de agua", async () => { /* 
   - `backup.sh loop|now`: en modo `loop`, espera hasta las 02:00 y repite cada día. Cada copia escribe `db/presupuestos-AAAAMMDD-HHMM.dump` (`pg_dump -Fc`) y `appdata/appdata-AAAAMMDD-HHMM.tar.gz`, primero en un archivo `.tmp` y después con `mv`, para que nunca quede una copia a medias con nombre válido. Conserva las 30 más recientes de cada tipo. Con `set -eu`, y un fallo se escribe en el log del contenedor sin pararlo;
   - `restore.sh <AAAAMMDD-HHMM>`: exige que `app` esté parada, hace `pg_restore --clean --if-exists` y vacía y extrae `appdata`.
 
-- [ ] **Step 1: Cambiar el `Dockerfile` y `compose.yaml`, y escribir los dos scripts.** Comprobar que `.next/standalone/node_modules` incluye `playwright-core`. Si no, copiarlo en la etapa `runtime` desde la `build`.
-- [ ] **Step 2: Construir y arrancar.** Run: `BACKUP_DIR=./.backups docker compose up -d --build`. Expected: `migrate` termina con «Exited (0)», `app` queda «healthy», `backup` está «running» y `curl localhost:3100/api/health` devuelve `{"status":"ok"}`.
+- [x] **Step 1: Cambiar el `Dockerfile` y `compose.yaml`, y escribir los dos scripts.** Comprobar que `.next/standalone/node_modules` incluye `playwright-core`. Si no, copiarlo en la etapa `runtime` desde la `build`.
+- [x] **Step 2: Construir y arrancar.** Run: `BACKUP_DIR=./.backups docker compose up -d --build`. Expected: `migrate` termina con «Exited (0)», `app` queda «healthy», `backup` está «running» y `curl localhost:3100/api/health` devuelve `{"status":"ok"}`.
 - [ ] **Step 3: PDF dentro del contenedor.** Crear un administrador con `docker compose exec -e ADMIN_PASSWORD=… app node scripts/admin.mjs create …`. En Chrome, emitir un presupuesto y descargar su PDF. Comprobar que `docker compose exec app ls /data/pdf/<año>` lo muestra.
-- [ ] **Step 4: Persistencia.** Ejecutar `docker compose down` (sin `-v`), volver a levantarlo y comprobar que el presupuesto y su PDF siguen. Después, un `up -d --build` de nuevo, que simula un redespliegue, y la misma comprobación.
-- [ ] **Step 5: Copia y restauración en local.**
+  - CLI, emisión mediante servicios, PDF real y descarga HTTP autenticada comprobados; **recorrido con Claude in Chrome pendiente por petición del usuario**.
+- [x] **Step 4: Persistencia.** Ejecutar `docker compose down` (sin `-v`), volver a levantarlo y comprobar que el presupuesto y su PDF siguen. Después, un `up -d --build` de nuevo, que simula un redespliegue, y la misma comprobación.
+- [x] **Step 5: Copia y restauración en local.**
   - `docker compose exec backup /scripts/backup.sh now` deja un `.dump` y un `.tar.gz` en `./.backups`.
-  - Emitir otro presupuesto, parar `app` y ejecutar `docker compose run --rm backup /scripts/restore.sh <fecha>`.
+  - Emitir otro presupuesto, parar `app` y ejecutar `docker compose -f compose.yaml -f compose.restore.yaml run --rm backup /scripts/restore.sh <fecha>` (mismo proyecto `-p` que la app; el override habilita escritura en `appdata`).
   - Arrancar `app` y comprobar que el segundo presupuesto ya no está y que el primero descarga su PDF con el mismo SHA-256.
   - Con 31 copias falsas en `./.backups/db`, una copia más deja 30.
-- [ ] **Step 6: Comprobar los puertos:** `docker compose config` publica solo `3100:3000` en `app`; `db` y `backup` no publican nada.
-- [ ] **Step 7: Commit** — `git commit -m "build: Chromium en la imagen, app en el puerto 3100 y contenedor de copias diarias con restauración"`
+- [x] **Step 6: Comprobar los puertos:** `docker compose config` publica solo `3100:3000` en `app`; `db` y `backup` no publican nada.
+- [x] **Step 7: Commit** — `git commit -m "build: Chromium en la imagen, app en el puerto 3100 y contenedor de copias diarias con restauración"` (revisión con Claude in Chrome aplazada, no se da por realizada).
 
 ---
 

@@ -1,0 +1,10 @@
+# Solo para restaurar, NUNCA para `up`: permite escribir en el mismo appdata del proyecto.
+# Usar el mismo `-p` que la aplicación, detener app y ejecutar:
+# docker compose -f compose.yaml -f compose.restore.yaml run --rm backup /scripts/restore.sh AAAAMMDD-HHMM
+services:
+  backup:
+    volumes:
+      - type: volume
+        source: appdata
+        target: /data
+        read_only: false
