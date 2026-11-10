@@ -12,6 +12,7 @@ Estado:
 
 - Node 24 y pnpm 12 (`npm i -g pnpm@12.18.0`)
 - Docker con Compose
+- Navegador del PDF: `pnpm exec playwright-core install chromium-headless-shell` (una vez por equipo)
 - Una ruta de proyecto **sin `#`**: Vite/Vitest no la admite.
 
 ## Arranque local

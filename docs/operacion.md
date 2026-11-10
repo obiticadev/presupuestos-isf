@@ -10,6 +10,7 @@ Requisitos: Node 24 (también funciona con 25), pnpm 12 y Docker.
 cp .env.example .env            # y cambia BETTER_AUTH_SECRET por 32+ caracteres aleatorios
 docker compose up -d db         # PostgreSQL de desarrollo en localhost:5433 (compose.override.yaml)
 pnpm install
+pnpm exec playwright-core install chromium-headless-shell   # navegador del PDF (una vez por equipo)
 pnpm db:migrate                 # aplica las migraciones a la BD de desarrollo
 pnpm exec prisma generate       # Prisma 7 no regenera el cliente tras migrate dev
 pnpm admin create --email tu@isf-esp.com --name "Tu nombre"
