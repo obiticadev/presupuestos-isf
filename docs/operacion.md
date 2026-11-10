@@ -62,3 +62,31 @@ docker compose -f compose.yaml ps              # migrate: Exited (0); app: healt
 ```
 
 Las migraciones las aplica el servicio `migrate` en cada arranque (`prisma migrate deploy`). La app no arranca si fallan.
+
+## Actualizar la versión
+
+Producción la despliega Dokploy desde `master` (ver `docs/despliegue.md`). Para publicar una versión:
+
+1. Fusionar el PR en `master`.
+2. Si la versión trae migraciones nuevas (`prisma/migrations`), hacer antes una **copia en el momento** en el servidor: `docker compose -p presupuestos-isf-app-oy9un2 -f compose.yaml exec backup /scripts/backup.sh now`.
+3. En Dokploy, **Deploy** del Compose. `migrate` aplica las migraciones antes de arrancar la app.
+4. Comprobar `http://192.168.105.83:3100/api/health` y abrir un presupuesto.
+
+## Revertir
+
+Volver a desplegar el commit anterior **no revierte las migraciones**: la base de datos se queda con el esquema nuevo y la versión anterior puede fallar. Si la versión que se quiere quitar migró la base:
+
+1. Desplegar el commit anterior.
+2. Restaurar la copia hecha justo antes de actualizar (apartado «Restauración» de `docs/despliegue.md`). Se pierde lo que se hiciera entre la actualización y la restauración.
+
+Si no había migraciones, basta con desplegar el commit anterior.
+
+## Navegador del PDF
+
+Los PDF se generan con el *headless shell* de Chromium de `playwright-core`. En la imagen Docker ya viene instalado. En desarrollo hay que instalarlo una vez por equipo:
+
+```bash
+pnpm exec playwright-core install chromium-headless-shell
+```
+
+Sin él, las pruebas del PDF fallan con un mensaje que dice cómo instalarlo.
