@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-10 (Tarea 7 validada técnicamente; revisión con Claude in Chrome aplazada por el usuario).
+Última actualización: 2026-11-10 (Tarea 7 cerrada tras la revisión con Claude in Chrome; falta la Tarea 8).
 
 ## Cronología
 
@@ -130,7 +130,17 @@ Verificación local con **solo el archivo de producción** y un proyecto aislado
 4. Copia real `20261110-1034`; emitido un segundo presupuesto y creado un archivo posterior; restauración rechazada con la app encendida. Tras pararla, restauración correcta: desaparecen el segundo presupuesto y el archivo posterior, se conserva el logo y el primero descarga el PDF con el mismo SHA-256. Retención real con 31 copias falsas por tipo y una nueva: quedan 30 de cada.
 5. `tests/docker/backup-scripts.sh` y `runtime-smoke.mjs` correctos. `tsc` correcto; build Linux en Docker correcto; **217/217 pruebas Vitest**. La primera ejecución concurrente con la compilación tuvo un timeout de 5 s en una prueba existente de cabecera; repetida sin esa carga, pasa la suite entera sin cambiar los tiempos de espera. Lint sin errores, con avisos anteriores (13 en código y 4 de un auxiliar local antiguo).
 
-**Pendiente exclusivamente de la revisión de interfaz de esta tarea:** recorrido con **Claude in Chrome** contra la imagen (crear y emitir desde los formularios, abrir y revisar visualmente el PDF, comprobar el logo y la descarga después de reiniciar). Las pruebas de servicios y HTTP anteriores no se presentan como esa revisión. Después, continuar con la Tarea 8 y su revisión final de toda la rama.
+**Revisión con Claude in Chrome contra la imagen: hecha (2026-11-10).** Proyecto aislado `presupuestos-t7` reconstruido desde `4324a56` con solo `compose.yaml`, secretos de prueba fuera del repositorio y administrador creado con el CLI de la imagen. Todo desde los formularios en `http://localhost:3100`:
+1. Configuración: datos de empresa y logo (`public/logo-isf.jpg`) guardados.
+2. Cliente «Conservas Ribera, S.A.» con contacto y ubicación; el borrador los toma por defecto.
+3. Partida y subpartida, conjunto «Instalación de bomba» (2 × BOM-MAYOR75, 20 m, MAN-4X25 = 604,00 €), 100 km y 8 h: base 1.034,00 €, IVA 21 % 217,14 €, total **1.251,14 €**.
+4. Vista previa del borrador: dos páginas, logo, marca de agua «BORRADOR», cierre con exclusiones, forma de pago, validez, totales y «Firma y sello».
+5. Conceptos validados en el catálogo y emisión como `PR-2026000001-R00`; el PDF del emitido lleva la referencia en cabecera y asunto y no tiene marca de agua.
+6. `down` (sin `-v`) y `up`: logo y PDF conservados; la descarga desde el navegador tiene el mismo SHA-256 que el archivo guardado (`6b6fd25b…e7f0ea`). El historial registra validaciones, emisión y descargas.
+
+Observación menor, sin corregir: en la hoja de partidas el título es el asunto tal cual, que empieza en minúscula («la sustitución de…») porque el campo está pensado para continuar «…en referencia a». Decidir en la Tarea 8 si se pone en mayúscula inicial.
+
+Siguiente: Tarea 8 y su revisión final de toda la rama.
 
 **Cierre de sesión:** avances técnicos guardados en `63a1213`. Se arrancó temporalmente `pnpm dev --hostname 127.0.0.1` para que el usuario consultara la app en `http://localhost:3000` (`/api/health`: 200, `status: ok`). Servidor detenido a petición del usuario antes de subir los avances al remoto. Esta consulta no sustituye la revisión pendiente con Claude in Chrome. La BD local existente se mantiene sin detener ni borrar; no se ha fusionado en `master` ni desplegado en Dokploy.
 
