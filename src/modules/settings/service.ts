@@ -1,4 +1,5 @@
-import { mkdir, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
@@ -108,11 +109,30 @@ export async function saveLogo(actor: CurrentUser, file: { name: string; type: s
   const declaredOk = file.type === "image/png" || file.type === "image/jpeg";
   if (!declaredOk || !kind) throw new ValidationError({ logo: "El logo debe ser una imagen PNG o JPEG" });
   if (file.bytes.byteLength > MAX_LOGO_BYTES) throw new ValidationError({ logo: "El logo no puede pasar de 2 MB" });
-  const logoPath = `uploads/logo.${kind}`;
+  // Named by content: an issued quote keeps the logo it was issued with, so a file is never overwritten.
+  const logoPath = `uploads/logo-${createHash("sha256").update(file.bytes).digest("hex").slice(0, 12)}.${kind}`;
   await mkdir(path.join(dataDir(), "uploads"), { recursive: true });
   await writeFile(path.join(dataDir(), logoPath), file.bytes);
   await prisma.$transaction(async (tx) => {
     await tx.companySettings.update({ where: { id: 1 }, data: { logoPath } });
     await logAction(tx, { userId: actor.id, entity: "settings", entityId: "1", action: "logo", summary: `Logo actualizado (${file.name})` });
   });
+}
+
+/** Logo for the PDF: the one at `logoPath`, or the current one (with a warning) if that file is gone. */
+export async function readLogo(logoPath: string | null): Promise<{ mime: string; base64: string } | null> {
+  const load = async (p: string) => {
+    try {
+      const bytes = await readFile(path.join(dataDir(), p));
+      return { mime: p.endsWith(".png") ? "image/png" : "image/jpeg", base64: bytes.toString("base64") };
+    } catch {
+      return null;
+    }
+  };
+  const own = logoPath ? await load(logoPath) : null;
+  if (own) return own;
+  const current = (await getSettings()).logoPath;
+  if (!current) return null;
+  if (logoPath) console.warn(`pdf: falta el logo ${logoPath}; se usa el actual`);
+  return load(current);
 }

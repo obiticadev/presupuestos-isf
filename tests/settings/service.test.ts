@@ -1,9 +1,9 @@
-import { mkdtemp, readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { prisma } from "@/lib/db";
 import { ForbiddenError, ValidationError } from "@/lib/errors";
-import { getSettings, listTaxes, saveLogo, saveTax, setTaxActive, updateSettings } from "@/modules/settings/service";
+import { getSettings, listTaxes, readLogo, saveLogo, saveTax, setTaxActive, updateSettings } from "@/modules/settings/service";
 import { makeUser } from "../helpers/users";
 
 const PNG = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -75,13 +75,42 @@ test("el logo solo admite PNG/JPEG de hasta 2 MB", async () => {
   await expect(saveLogo(admin, { name: "l.png", type: "image/png", bytes: fake })).rejects.toThrow(ValidationError);
 });
 
-test("un PNG válido se guarda en DATA_DIR/uploads y queda en logoPath", async () => {
+const PNG_B = [...PNG, 1, 2, 3];
+const LOGO_NAME = /^uploads\/logo-[0-9a-f]{12}\.(png|jpg)$/;
+const png = (b: number[]) => ({ name: "logo.png", type: "image/png", bytes: new Uint8Array(b) });
+
+test("un PNG válido se guarda por contenido en DATA_DIR/uploads y queda en logoPath", async () => {
   process.env.DATA_DIR = await mkdtemp(path.join(tmpdir(), "isf-data-"));
   const admin = await makeUser("admin");
-  await saveLogo(admin, { name: "logo.png", type: "image/png", bytes: new Uint8Array(PNG) });
+  await saveLogo(admin, png(PNG));
   const s = await getSettings();
-  expect(s.logoPath).toBe("uploads/logo.png");
-  expect([...(await readFile(path.join(process.env.DATA_DIR, "uploads/logo.png")))]).toEqual(PNG);
+  expect(s.logoPath).toMatch(LOGO_NAME);
+  expect([...(await readFile(path.join(process.env.DATA_DIR, s.logoPath!)))]).toEqual(PNG);
+});
+
+test("un logo nuevo no sobrescribe el anterior y readLogo lee por ruta, con respaldo al actual", async () => {
+  process.env.DATA_DIR = await mkdtemp(path.join(tmpdir(), "isf-data-"));
+  const admin = await makeUser("admin");
+  await saveLogo(admin, png(PNG));
+  const pathA = (await getSettings()).logoPath!;
+  await saveLogo(admin, png(PNG_B));
+  const pathB = (await getSettings()).logoPath!;
+  expect(pathA).toMatch(LOGO_NAME);
+  expect(pathB).toMatch(LOGO_NAME);
+  expect(pathB).not.toBe(pathA);
+  expect([...(await readFile(path.join(process.env.DATA_DIR, pathA)))]).toEqual(PNG);
+  expect(await readLogo(pathA)).toEqual({ mime: "image/png", base64: Buffer.from(PNG).toString("base64") });
+  await rm(path.join(process.env.DATA_DIR, pathA));
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  expect(await readLogo(pathA)).toEqual({ mime: "image/png", base64: Buffer.from(PNG_B).toString("base64") });
+  expect(warn).toHaveBeenCalledWith(expect.stringContaining("pdf: falta el logo"));
+  warn.mockRestore();
+});
+
+test("readLogo(null) sin logo configurado devuelve null", async () => {
+  process.env.DATA_DIR = await mkdtemp(path.join(tmpdir(), "isf-data-"));
+  await prisma.companySettings.update({ where: { id: 1 }, data: { logoPath: null } });
+  expect(await readLogo(null)).toBeNull();
 });
 
 test("la migración deja IVA 21 % como impuesto por defecto", async () => {
