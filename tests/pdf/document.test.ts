@@ -44,6 +44,7 @@ describe("buildDocument", () => {
     expect(d.totals).toEqual({ base: "1.219,00 €", taxes: [{ label: "IVA 21 %", amount: "255,99 €" }], total: "1.474,99 €" });
     expect([d.shortDate, d.longDate, d.place]).toEqual(["9/11/2026", "9 de noviembre de 2026", "Alcalá de Henares a 9 de noviembre de 2026"]);
     expect(d.letter.intro.endsWith(" ampliación del grupo de bombeo.")).toBe(true);
+    expect(d.title).toBe("Ampliación del grupo de bombeo");
     expect(d.letter.closing).toEqual(["Esperando.", "Saludos.", "Atentamente."]);
     expect(d.conditions.validity).toBe("30 días");
     expect(d.reference).toBe("PR-2026000001-R00");

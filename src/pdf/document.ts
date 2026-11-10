@@ -78,7 +78,8 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
       closing: company.letterClosing.split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean),
     },
     clientName: q.client.legalName,
-    title: q.subject,
+    // The subject continues «…en referencia a», so it starts in lowercase; as a heading it needs a capital.
+    title: q.subject.trim().replace(/^./u, (c) => c.toLocaleUpperCase("es")),
     rows,
     totals: {
       base: money(q.totals.base),
