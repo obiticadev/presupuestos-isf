@@ -2,7 +2,9 @@
 
 Fecha: 2026-11-11. Rama: `mejoras-uso-real` (desde `master` en `8a03a55`). `master` y el despliegue no se tocan hasta que el usuario fusione.
 
-> **Estado: BORRADOR, sin aprobar.** Las decisiones marcadas como «del usuario» están tomadas. Las de «Decisiones tomadas por el agente», al final, están **pendientes de confirmar**. Falta debatir el estilo final y aprobar el documento. Después, con la skill `superpowers:writing-plans`, se escribe un plan por bloque y se sube a esta rama. No se implementa nada antes de eso.
+> **Estado: BORRADOR, decisiones confirmadas el 2026-11-11, falta el visto bueno final del usuario.** Después, con la skill `superpowers:writing-plans`, se escribe un plan por bloque y se sube a esta rama. No se implementa nada antes de eso.
+>
+> **Forma de trabajo (usuario, 2026-11-11):** bloque a bloque: plan → ejecución → revisión en Chrome → commit y push **a esta rama**. Se prueba en local (localhost). `master` no se toca hasta el final: cuando la rama esté bien, se fusiona y se despliega todo de una vez.
 
 ## Intención
 
@@ -49,7 +51,7 @@ La app está desplegada y el equipo la ha usado con presupuestos reales. De ese 
 
 ## Diseño por bloques
 
-Orden de implementación: 1 → 6. Cada bloque es un plan en `docs/superpowers/plans/` y deja la rama con pruebas en verde.
+Orden de implementación: 1 → 7. Cada bloque es un plan en `docs/superpowers/plans/` y deja la rama con pruebas en verde.
 
 ### Bloque 1. Editor y móvil
 
@@ -70,7 +72,7 @@ Orden de implementación: 1 → 6. Cada bloque es un plan en `docs/superpowers/p
 **2.1 Instalaciones.** `ClientLocation` sigue siendo la entidad; cambia su presentación:
 - La sección «Ubicaciones de trabajo» del cliente pasa a llamarse «Instalaciones».
 - Campos, en este orden (decisión del usuario): **Nombre, Dirección, Instalación, País**. Migración con `RENAME COLUMN` que conserva los valores: `city` → `installation` (etiqueta «Instalación», antes «Localidad») y `province` → `country` (etiqueta «País», antes «Provincia»).
-- En la cabecera del presupuesto, «Ubicación» pasa a «Instalación» y cada opción se muestra como `nombre · instalación · país`, omitiendo los vacíos (propuesta del agente). Igual en la vista de solo lectura y en el aviso de «Para emitir» («Falta la instalación»).
+- En la cabecera del presupuesto (decisión del usuario), donde hoy está «Ubicación», van dos campos en la misma fila: a la izquierda **«Nombre»**, el selector, cuyas opciones son solo el nombre de cada instalación del cliente; a su derecha **«Instalación»**, de solo lectura, que muestra juntos la instalación y el país de la elegida: `instalación · país` (sin el separador si falta uno; «—» si no hay ninguna elegida). Igual en la vista de solo lectura (Nombre e Instalación) y en el aviso de «Para emitir» («Falta la instalación»). Cómo se refresca «Instalación» al cambiar el selector lo decide el constructor.
 - PDF: el bloque de dirección mantiene su estructura: dirección y, debajo, `instalación (país)`. Los snapshots ya emitidos tienen `city` y `province`: `buildDocument` lee `installation ?? city` y `country ?? province` para que los PDF antiguos se regeneren igual.
 
 **2.3 Filas alineadas.** En las listas editables por filas (`.rowform`: contactos e instalaciones del cliente, y cualquier otra que use la misma clase), la fila vacía de «Añadir» y las filas guardadas tienen los mismos anchos de columna. Hoy no cuadran porque las guardadas llevan dos botones («Guardar» y «Eliminar») y la nueva uno («Añadir»), y la columna `auto` cambia de ancho. Arreglo: la columna de acciones tiene ancho fijo, el mismo en la cabecera, las filas y la fila nueva.
@@ -93,14 +95,14 @@ Orden de implementación: 1 → 6. Cada bloque es un plan en `docs/superpowers/p
 
 ### Bloque 4. Ciclo, caducado y notas
 
-**4.1 Caducado automático.** Un presupuesto en *Emitido* o *Enviado* pasa a *Caducado* cuando `hoy (Madrid) > fecha de emisión + validityDays`. Fecha de emisión: `issuedAt` en zona Madrid. Mecanismo: una función `expireQuotes()` con un `UPDATE … WHERE status IN ('ISSUED','SENT') AND …` idempotente, llamada al cargar el listado y la ficha de un presupuesto (sin tareas programadas). Cada cambio queda en el historial con usuario «Sistema» (`userId` nulo). Aceptado y Rechazado no cambian. Un caducado puede seguir pasándose a mano a otro estado como hoy.
+**4.1 Caducado automático.** Un presupuesto en *Emitido* o *Enviado* pasa a *Caducado* cuando `hoy (Madrid) > fecha de emisión + validityDays`. Fecha de emisión: `issuedAt` en zona Madrid. Mecanismo (decisión del usuario: **tarea programada**, para que la base esté al día aunque nadie abra la app, por ejemplo si se consulta desde otra herramienta o una IA): una función `expireQuotes()` con un `UPDATE … WHERE status IN ('ISSUED','SENT') AND …` idempotente, que el propio servidor ejecuta al arrancar y después cada hora (propuesta del agente: desde `instrumentation.ts` de Next, sin servicio nuevo en Compose; si la app estuvo parada, se pone al día al arrancar). Cada cambio queda en el historial con usuario «Sistema» (`userId` nulo). Aceptado y Rechazado no cambian. Un caducado puede seguir pasándose a mano a otro estado como hoy.
 
 **4.2 Notas internas.** Sustituyen al campo `travelNote` del panel de desplazamiento:
 - Se quita el texto de ayuda «Pon los km facturables…» y el título pasa a «Notas internas».
 - Tabla nueva `QuoteNote` (id, quoteId con `Cascade`, userId nulo con `SetNull`, userName, text ≤ 1000, createdAt). `userName` guarda el nombre del autor para que la nota sobreviva si se elimina el usuario (6.1), mostrada entonces como «Nombre (eliminado)». Al guardar, la nota se añade arriba de una lista con fecha y hora (Madrid), autor y ✕ para eliminarla (con confirmación); el campo queda vacío.
 - Se pueden añadir y eliminar en cualquier estado (no forman parte del documento, no pasan por `withDraft`). Las elimina su autor o un admin.
 - Nunca van al PDF ni al snapshot.
-- Al crear una revisión o duplicar, se copian las notas con su autor y fecha originales (propuesta del agente).
+- Al crear una revisión o duplicar, se copian las notas con su autor y fecha originales (decisión del usuario). Las notas nuevas que se añadan en la revisión o el duplicado llevan como autor a quien las escribe. Si una nota copiada ya no hace falta, se elimina.
 - Migración: cada `travelNote` no vacío pasa a ser una nota con el creador del presupuesto como autor y `updatedAt` como fecha; luego se borra la columna `travelNote`.
 - Alta y baja de notas quedan en el historial.
 
@@ -138,8 +140,8 @@ Orden de implementación: 1 → 6. Cada bloque es un plan en `docs/superpowers/p
 - Una revisión conserva la serie de su original.
 
 **6.5 Zona de peligro.** Al final de Configuración, solo admins: recuadro con borde y fondo rojos en el estilo de la app, con dos acciones:
-- *Reiniciar la numeración*: pasa a la serie siguiente (`""` → `B` → `C` … → `Z` → `AA`) y la cuenta vuelve al valor inicial. No toca presupuestos.
-- *Borrar todos los presupuestos y reiniciar la numeración*: borra todos los presupuestos (todas sus tablas dependientes, incluidas notas y documentos emitidos), sus PDF en `DATA_DIR/pdf`, los contadores, y deja la serie en `""`. Es para limpiar datos de prueba (decisión del usuario): los números volverán a empezar y podrán coincidir con los de presupuestos borrados, y el aviso de confirmación lo dice expresamente. Es la única excepción al anti-objetivo de no repetir números. El historial de los presupuestos borrados se conserva (propuesta del agente).
+- *Reiniciar la numeración*: pasa a la serie siguiente (`""` → `B` → `C` … → `Z` → `AA`) y la cuenta vuelve al valor inicial, igual que un reinicio anual pero con letra nueva. No toca presupuestos ni historial.
+- *Borrar todos los presupuestos y reiniciar la numeración*: es para empezar de cero con la plataforma (decisión del usuario). Borra todos los presupuestos (todas sus tablas dependientes, incluidas notas y documentos emitidos), sus PDF en `DATA_DIR/pdf`, los contadores, y **las entradas del historial de esos presupuestos** (decisión del usuario), y deja la serie en `""`. Los números volverán a empezar y podrán coincidir con los de presupuestos borrados, y el aviso de confirmación lo dice expresamente. Es la única excepción al anti-objetivo de no repetir números. Queda una sola entrada en el historial que registra quién hizo la puesta a cero y cuántos presupuestos se borraron.
 - Cada una se confirma escribiendo una palabra (`REINICIAR` / `BORRAR`) en un cuadro; el botón no se activa hasta que coincide, y el servidor vuelve a comprobarla. El texto recomienda hacer antes una copia manual (`docs/despliegue.md`). Ambas quedan en el historial.
 
 ## Datos y migraciones (resumen)
@@ -161,11 +163,23 @@ Ancho exacto del corte en 1.1, iconos y textos menores, la forma del recorte del
 
 Se puede decidir al construir, sin consultar: si un concepto que solo aparece dentro de un conjunto cuenta como «usado»; qué hacer con nombres de contacto repetidos en una importación; y si la serie se puede editar a mano en Configuración.
 
-## Decisiones tomadas por el agente (PENDIENTES DE CONFIRMAR por el usuario)
+### Bloque 7. Pendientes del despliegue (código)
 
-- Opción del selector de instalación: `nombre · instalación · país`, sin los vacíos.
-- Notas copiadas a revisiones y duplicados: conservan el autor y la fecha originales.
-- Notas y entradas del historial de un usuario eliminado: se conservan con su nombre.
-- Historial de los presupuestos borrados en la puesta a cero: se conserva.
-- Caducado: lo calcula `expireQuotes()` al cargar el listado o la ficha, sin tareas programadas.
-- Vista previa de un borrador: firma del usuario que la mira.
+Lo anotado en `progreso.md`, «Pendiente tras el despliegue», que se arregla en código (decisión del usuario: al final, con su propio plan):
+- prueba intermitente de `tests/quotes/kit-instances.test.ts`;
+- aviso «El PDF se generará al descargarlo» si falla el PDF al emitir (spec del plan 4, 5.5.1);
+- encabezado de partida o subpartida solo al pie de una hoja al recolocar el cierre (`src/pdf/templates/v1/paginate.ts`);
+- cierre más alto que una hoja que se corta sin aviso;
+- `tar` que hace fallar la copia si un archivo cambia mientras se lee (`scripts/backup.sh`);
+- versión de Playwright duplicada en `Dockerfile` y `package.json`.
+
+Los textos cortados del editor ya los resuelve 1.1. Las comprobaciones en el servidor y el cambio de credenciales quedan para el usuario, al desplegar.
+
+## Decisiones confirmadas por el usuario (2026-11-11)
+
+- Cabecera: selector «Nombre» y, a su derecha, «Instalación» con `instalación · país` (2.1).
+- Notas copiadas a revisiones y duplicados con su autor y fecha originales; las nuevas, con quien las escribe (4.2).
+- Notas y entradas del historial de un usuario eliminado se conservan con su nombre (anti-objetivo «perder quién hizo qué»).
+- Puesta a cero completa: borra también el historial de esos presupuestos; reiniciar solo la numeración no toca el historial (6.5).
+- Caducado por tarea programada, no al cargar la página (4.1).
+- Vista previa de un borrador: firma del usuario que la mira (5.5).
