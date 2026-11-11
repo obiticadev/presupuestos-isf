@@ -97,3 +97,35 @@ test("la instantánea emitida lleva los comentarios", async () => {
   expect([s.comment, s.children[0].comment, s.children[0].lines.find((l) => l.id === lineId)?.comment, s.children[0].kits[0].comment])
     .toEqual(["De la partida", "De la subpartida", "De la línea", "Del conjunto"]);
 });
+
+test("editar el comentario en el borrador de la revisión no cambia la instantánea emitida", async () => {
+  const { actor, quote, lineId } = await commented();
+  await issueQuote(actor, quote.id);
+  const before = (await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: quote.id } })).snapshot;
+  const rev = await createRevision(actor, quote.id);
+  const revLine = (await getQuote(rev.id)).sections[0].children[0].lines.find((l) => l.comment === "De la línea")!;
+  await setComment(actor, { kind: "line", id: revLine.id, comment: "Cambiado en la R01" });
+  const after = (await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: quote.id } })).snapshot;
+  expect(after).toEqual(before);
+  expect((await prisma.quoteLine.findUniqueOrThrow({ where: { id: lineId } })).comment).toBe("De la línea");
+});
+
+test("quitar un componente opcional del conjunto borra su línea y su comentario", async () => {
+  const { actor, sub } = await makeDraft();
+  await prisma.kitTemplate.create({
+    data: {
+      id: "kit-prueba-opcional", name: "Bomba con manguera opcional", active: true,
+      definition: {
+        main: { categoryId: "cat-bombas", label: "Bomba" }, params: [],
+        components: [{ slot: "c1", label: "Manguera", ref: { categoryId: "cat-mangueras" }, required: false, formula: { type: "FIXED", k: "5" } }],
+      },
+    },
+  });
+  const input = { templateId: "kit-prueba-opcional", quantity: "1", params: {}, choices: { main: "concept-bom-mayor75", c1: "concept-man-4x25" } };
+  const kit = await addKitInstance(actor, sub.id, input);
+  const hose = await prisma.quoteLine.findFirstOrThrow({ where: { kitInstanceId: kit.id, kitSlot: "c1" } });
+  await setComment(actor, { kind: "line", id: hose.id, comment: "Manguera a medida" });
+  await updateKitInstance(actor, kit.id, { ...input, choices: { main: "concept-bom-mayor75" } });
+  expect(await prisma.quoteLine.findUnique({ where: { id: hose.id } })).toBeNull();
+  expect(await prisma.quoteLine.count({ where: { comment: "Manguera a medida" } })).toBe(0);
+});

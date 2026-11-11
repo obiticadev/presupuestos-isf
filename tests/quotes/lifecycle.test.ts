@@ -48,6 +48,16 @@ test("duplicar avisa de conceptos con otro precio o inactivos y refrescar actual
   expect((await getQuote(quote.id)).base.toFixed(2)).toBe("1040.00");
 });
 
+test("refrescar copia también el cambio de unidad o de nombre del impuesto aunque el precio no cambie", async () => {
+  const { actor, admin, quote, sub } = await completeDraft();
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-man-4x25", quantity: "1" });
+  const c = await getConcept("concept-man-4x25");
+  await updateConcept(admin, c.id, { ...conceptFields(c), unitId: "unit-ud", salePrice: c.salePrice!.toString() });
+  expect(await refreshPricesFromCatalog(actor, quote.id)).toBe(1);
+  const line = (await getQuote(quote.id)).sections[0].children[0].lines.find((l) => l.conceptId === "concept-man-4x25")!;
+  expect(line.unitName).toBe("ud");
+});
+
 test("el listado filtra por fechas y estado, cuenta por estado y suma solo la última revisión", async () => {
   const a = await completeDraft();
   await issueQuote(a.actor, a.quote.id);

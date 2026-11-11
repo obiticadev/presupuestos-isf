@@ -138,12 +138,12 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .qrow.line .c-code{font-size:12px;overflow-wrap:anywhere}
 .qrow .c-qty:not(.n){display:flex;gap:6px;align-items:center}.qrow .c-qty input{width:72px;flex:none;text-align:right}.qrow .c-qty .unit{font-size:12px}
 .qrow textarea.c-desc{font:inherit;color:var(--ink);border:1px solid var(--rule);background:var(--sheet);padding:5px 7px;min-height:32px;width:100%;resize:none;field-sizing:content;line-height:1.35;display:block}
-.qrow textarea.c-desc:focus{border-color:var(--ink);outline:none}
+.qrow textarea.c-desc:focus{border-color:var(--ink)}
 .lineform{display:contents}.lineform>.formerr,.qrow>.flags{grid-column:2/-1}
 .qhead{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;border-bottom:1.5px solid var(--ink)}
 .qrow.part{background:var(--band);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
 .qrow.part input{text-transform:uppercase;font-weight:700}.qrow.part .confirm summary{text-transform:none;letter-spacing:0}
-.inline>span>textarea[name=title]{flex:1 1 200px;font:inherit;color:var(--ink);border:1px solid var(--rule);background:var(--sheet);padding:5px 7px;min-height:32px;min-width:0;resize:none;field-sizing:content;line-height:1.35}.inline>span>textarea[name=title]:focus{border-color:var(--ink);outline:none}.inline>span{display:contents}
+.inline>span>textarea[name=title]{flex:1 1 200px;font:inherit;color:var(--ink);border:1px solid var(--rule);background:var(--sheet);padding:5px 7px;min-height:32px;min-width:0;resize:none;field-sizing:content;line-height:1.35}.inline>span>textarea[name=title]:focus{border-color:var(--ink)}.inline>span{display:contents}
 .qrow.part textarea[name=title]{text-transform:uppercase;font-weight:700}
 .qrow.sub{font-weight:700}
 .qrow.line.hidden{opacity:.55}
@@ -151,11 +151,9 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .qrow input:focus,.qrow select:focus{border-color:var(--ink)}
 .inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
 .inline>input[name=title],.inline>input[name=description]{flex:1 1 200px}
-.addrow .num{width:96px;text-align:right}
 .inline .unit{min-width:24px}
 .acts{display:flex;gap:4px;align-items:center;justify-content:flex-end}
-/* El último hueco (✕, ＋ o comentario) se reserva aunque esté vacío, para que las flechas de partida, subpartida y línea queden en la misma vertical. */
-.acts .slot{display:inline-block;width:30px;height:30px;flex:none}
+
 .icon{font:600 14px var(--font-archivo),sans-serif;min-width:30px;min-height:30px;padding:0 6px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);cursor:pointer;display:inline-grid;place-items:center;list-style:none}
 .icon:hover{border-color:var(--ink)}.icon[disabled]{color:var(--mut);background:var(--band);border-color:var(--rule);cursor:default}
 .flags{display:flex;gap:6px;flex-wrap:wrap}.flags:empty{display:none}
@@ -189,9 +187,6 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .addform .cancel{margin-left:auto}
 .addpart{display:block;width:100%;text-align:left;background:var(--band);border:0;border-top:1.5px solid var(--ink);padding:12px 8px;font:700 14px var(--font-archivo),sans-serif;text-transform:uppercase;letter-spacing:.03em;color:var(--green);cursor:pointer}
 .addpart:hover{background:#e2e6e1}
-.addrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
-.addrow select,.addrow input{font:inherit;border:1.5px solid var(--ink);background:var(--sheet);padding:6px 8px;min-height:36px;min-width:0}
-.addrow select{flex:1 1 260px}.addrow input[name=description],.addrow input[name=title]{flex:1 1 220px}
 /* Conjunto plegable: todo el ancho, silueta en el título, pie en una línea con el ✓ */
 .kit{margin:8px;border:1.5px solid var(--ink);background:var(--sheet)}
 .kit.inc{border-color:var(--amber-line)}
@@ -223,7 +218,6 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .mini s{display:block;width:34px;height:1.5px;background:var(--ink);position:relative}
 .mini s::after{content:"";position:absolute;right:-1px;top:-6px;width:12px;height:12px;border:1.5px solid var(--ink);border-radius:50%;background:var(--sheet)}
 .mini s.miss{background:none;border-top:2px dashed var(--amber-line);height:0}.mini s.miss::after{border-color:var(--amber-line);border-style:dashed;top:-7px}
-.node{width:48px;height:48px;border:2px solid var(--ink);display:grid;place-items:center;font-weight:800;flex:none}
 .kitsum{padding:0 12px 10px;font-size:14px}.kitsum .amber,.amber{color:var(--amber);font-weight:600}
 .kitfoot{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--rule)}
 .kbtns{display:flex;gap:10px}
@@ -260,7 +254,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
   .qrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"desc desc" "code amt" "qty price" "acts acts"}
   .qrow>.flags,.lineform>.formerr{grid-column:1/-1}
   .qrow .c-acts{justify-content:flex-start;gap:6px}
-  .qrow .c-acts .icon,.qrow .c-acts .slot{min-width:38px;min-height:38px}
+  .qrow .c-acts .icon{min-width:38px;min-height:38px}
   .qrow .c-acts .up{margin-left:auto}
   .qrow .c-acts .last{margin-left:14px}
   .comment.cl{padding-left:8px}

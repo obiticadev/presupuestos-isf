@@ -2,7 +2,7 @@
 // Every editable control is a small ActionForm bound to one Server Action; read-only quotes render plain text.
 import { ActionForm, ConfirmButton, SubmitOnBlur, SubmitOnChange } from "@/components/action-form";
 import type { ReactNode } from "react";
-import { CloseButton, CollapseKitButton, Menu, OpenButton } from "@/components/disclosure";
+import { CloseButton, CollapseKitButton, Menu, OpenButton, OpenIfIncomplete } from "@/components/disclosure";
 import { Comment, CommentButton } from "./comment";
 import { formatDecimalEs } from "@/lib/decimal";
 import type { ConceptOption } from "@/modules/catalog/service";
@@ -39,8 +39,8 @@ function Move({ action, id, first, last }: { action: typeof moveSectionAction; i
 }
 
 /** A panel opened by an OpenButton: a <details> whose summary is hidden. */
-function Panel({ id, group, children }: { id: string; group?: string; children: ReactNode }) {
-  return <details id={id} data-group={group} className="addpanel"><summary tabIndex={-1} aria-hidden /> {children}</details>;
+function Panel({ id, children }: { id: string; children: ReactNode }) {
+  return <details id={id} className="addpanel"><summary tabIndex={-1} aria-hidden /> {children}</details>;
 }
 
 /** The band at the foot of the table that adds a partida at the end of the quote. */
@@ -89,7 +89,7 @@ export function SectionHead({ ctx, section, number, amount, first, last }: {
       </span>
     </div>
     {ctx.editable && (
-      <Panel id={`nueva-subpartida-${section.id}`} group={section.id}>
+      <Panel id={`nueva-subpartida-${section.id}`}>
         <ActionForm action={addSectionAction} reset close className="addform">
           <span className="ttl">Nueva subpartida en la partida {number}</span>
           <input type="hidden" name="quoteId" value={ctx.quoteId} />
@@ -268,7 +268,8 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
   };
 
   return (
-    <details id={`conjunto-${kit.id}`} className={`kit${missing.length ? " inc" : ""}`} open={missing.length > 0}>
+    <details id={`conjunto-${kit.id}`} className={`kit${missing.length ? " inc" : ""}`}>
+      <OpenIfIncomplete incomplete={missing.length > 0} />
       <summary>
         <Silhouette main={def.main.label} parts={parts} />
         <b>Conjunto · {kit.name}</b>
@@ -342,7 +343,7 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
           {kits && <OpenButton target={`nuevo-conjunto-${sub.id}`}>Conjunto<small>varios elementos que se calculan juntos</small></OpenButton>}
         </Menu>
       </div>
-      <Panel id={`del-catalogo-${sub.id}`} group={sub.id}>
+      <Panel id={`del-catalogo-${sub.id}`}>
         <ActionForm action={addCatalogLineAction} reset close className="addform">
           <span className="ttl">Añadir del catálogo</span>
           <input type="hidden" name="subsectionId" value={sub.id} />
@@ -355,7 +356,7 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
           <CloseButton />
         </ActionForm>
       </Panel>
-      <Panel id={`linea-especifica-${sub.id}`} group={sub.id}>
+      <Panel id={`linea-especifica-${sub.id}`}>
         <ActionForm action={addCustomLineAction} reset close className="addform">
           <span className="ttl">Añadir línea específica</span>
           <input type="hidden" name="subsectionId" value={sub.id} />
@@ -375,7 +376,7 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
         </ActionForm>
       </Panel>
       {kits && (
-        <Panel id={`nuevo-conjunto-${sub.id}`} group={sub.id}>
+        <Panel id={`nuevo-conjunto-${sub.id}`}>
           <ActionForm action={addKitAction} reset close className="addform">
             <span className="ttl">Añadir conjunto</span>
             <input type="hidden" name="subsectionId" value={sub.id} />

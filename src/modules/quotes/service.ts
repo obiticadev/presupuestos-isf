@@ -24,7 +24,8 @@ const LINE_INCLUDE = {
   adjustments: { orderBy: { createdAt: "asc" } },
 } satisfies Prisma.QuoteLineInclude;
 const SUB_INCLUDE = {
-  lines: { orderBy: [{ kitInstanceId: "asc" }, { position: "asc" }], include: LINE_INCLUDE },
+  // Loose lines first, then each kit's lines, as the editor shows them (PostgreSQL would put the nulls last).
+  lines: { orderBy: [{ kitInstanceId: { sort: "asc", nulls: "first" } }, { position: "asc" }], include: LINE_INCLUDE },
   kits: { orderBy: { position: "asc" } },
 } satisfies Prisma.QuoteSectionInclude;
 const DETAIL = {

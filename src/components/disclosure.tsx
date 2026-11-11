@@ -24,8 +24,14 @@ export function Menu({ label, title, className = "", summaryClassName, children 
     const close = (e: PointerEvent) => {
       if (ref.current?.open && !ref.current.contains(e.target as Node)) ref.current.open = false;
     };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || !ref.current?.open) return;
+      ref.current.open = false;
+      ref.current.querySelector("summary")?.focus();
+    };
     document.addEventListener("pointerdown", close);
-    return () => document.removeEventListener("pointerdown", close);
+    document.addEventListener("keydown", escape);
+    return () => { document.removeEventListener("pointerdown", close); document.removeEventListener("keydown", escape); };
   }, []);
   return (
     <details ref={ref} className={`dd ${className}${up ? " up" : ""}`} onToggle={(e) => setUp(opensUp(e.currentTarget))}>
@@ -38,18 +44,17 @@ export function Menu({ label, title, className = "", summaryClassName, children 
 }
 
 /**
- * Opens the <details id={target}> panel, closes the other panels of its data-group (one form open at a time),
- * opens the folded kit it may sit in and focuses its first field.
+ * Opens the <details id={target}> panel, closes every other open panel of the page (one form open at a time;
+ * what was typed in them stays), opens the folded kit it may sit in and focuses its first field.
  */
 export function OpenButton({ target, className, title, children }: { target: string; className?: string; title?: string; children: ReactNode }) {
   return (
     <button
-      type="button" className={className} title={title} aria-label={title}
+      type="button" className={className} title={title} aria-label={title} aria-controls={target}
       onClick={() => {
         const d = document.getElementById(target) as HTMLDetailsElement | null;
         if (!d) return;
-        const group = d.dataset.group;
-        if (group) document.querySelectorAll<HTMLDetailsElement>(`details[data-group="${group}"]`).forEach((x) => { if (x !== d) x.open = false; });
+        document.querySelectorAll<HTMLDetailsElement>("details.addpanel[open]").forEach((x) => { if (x !== d) x.open = false; });
         d.parentElement?.closest<HTMLDetailsElement>("details.kit")?.setAttribute("open", "");
         d.open = true;
         d.querySelector<HTMLElement>("textarea, select, input:not([type=hidden])")?.focus();
@@ -91,6 +96,18 @@ export function CollapseKitButton() {
       ✓
     </button>
   );
+}
+
+/**
+ * Inside a kit: opens it when it appears (on load or just added) if it is incomplete. Not an `open` prop on the kit:
+ * React would fold it again the moment it is completed, and the one just edited must stay open.
+ */
+export function OpenIfIncomplete({ incomplete }: { incomplete: boolean }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  // Only on mount: completing the kit later must not fold or unfold it.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (incomplete) ref.current?.closest("details")?.setAttribute("open", ""); }, []);
+  return <span ref={ref} hidden />;
 }
 
 /** Opens the folded kit a link points to (#conjunto-…), on load and when the hash changes. */

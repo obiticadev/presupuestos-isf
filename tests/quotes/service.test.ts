@@ -1,3 +1,4 @@
+import { addKitInstance } from "@/modules/quotes/kit-instances";
 import { prisma } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { getConcept, removeConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
@@ -175,4 +176,21 @@ test("un cliente con presupuesto puede cambiar de datos sin afectar al presupues
   const { actor, client, quote } = await makeDraft({ clientOver: { paymentTerms: "Contado" } });
   await updateClient(actor, client.id, { legalName: client.legalName, taxId: client.taxId, paymentTerms: "90 días" });
   expect((await getQuote(quote.id)).paymentTerms).toBe("Contado");
+});
+
+test("un título o una descripción pegados con saltos de línea se guardan en una sola línea", async () => {
+  const { actor, sub, section } = await makeDraft();
+  const line = await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-prog", quantity: "1" });
+  await updateLine(actor, line.id, { description: "Hora de\n  programador\r\nen planta" });
+  await updateSection(actor, section.id, { title: "BOMBEO\nDE LÍNEA" });
+  expect((await prisma.quoteLine.findUniqueOrThrow({ where: { id: line.id } })).description).toBe("Hora de programador en planta");
+  expect((await prisma.quoteSection.findUniqueOrThrow({ where: { id: section.id } })).title).toBe("BOMBEO DE LÍNEA");
+});
+
+test("en la instantánea y el editor, las líneas sueltas van antes que las de los conjuntos", async () => {
+  const { actor, quote, sub } = await makeDraft();
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "1", params: { distancia: "5" }, choices: { main: "concept-bom-mayor75", c1: "concept-man-4x25" } });
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-prog", quantity: "1" });
+  const lines = (await getQuote(quote.id)).sections[0].children[0].lines;
+  expect(lines.map((l) => l.kitSlot ?? l.conceptId)).toEqual(["concept-ser-prog", "main", "c1"]);
 });

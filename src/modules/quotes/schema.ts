@@ -3,6 +3,8 @@ import { parseIsoDate } from "@/lib/dates";
 import { decimalField, optionalDecimalField } from "@/lib/decimal-field";
 
 const text = (max: number) => z.string().trim().max(max, `Máximo ${max} caracteres`);
+/** Titles and descriptions are one line: a pasted line break becomes a space (the PDF would join them anyway). */
+const oneLine = (s: string) => s.replace(/\s*[\r\n]+\s*/g, " ");
 const optionalId = z.string().optional().transform((s) => (s ? s : null));
 
 /** Every header field is optional: the editor saves one block at a time. */
@@ -25,7 +27,7 @@ export const headerInput = z.object({
 export type HeaderInput = z.input<typeof headerInput>;
 
 export const sectionInput = z.object({
-  title: text(300).optional(),
+  title: text(300).transform(oneLine).optional(),
   mode: z.enum(["SUM", "GLOBAL"]).optional(),
   globalQty: optionalDecimalField(),
   globalPrice: optionalDecimalField(),
@@ -37,7 +39,7 @@ export const catalogLineInput = z.object({ conceptId: z.string().min(1, "Elige u
 export type CatalogLineInput = z.input<typeof catalogLineInput>;
 
 export const customLineInput = z.object({
-  description: text(2000).min(1, "Escribe la descripción"),
+  description: text(2000).min(1, "Escribe la descripción").transform(oneLine),
   unitName: text(20),
   quantity: decimalField(),
   unitPrice: optionalDecimalField(),
@@ -46,7 +48,7 @@ export const customLineInput = z.object({
 export type CustomLineInput = z.input<typeof customLineInput>;
 
 export const lineUpdateInput = z.object({
-  description: text(2000).min(1, "Escribe la descripción").optional(),
+  description: text(2000).min(1, "Escribe la descripción").transform(oneLine).optional(),
   // Empty or missing means "unchanged": a quantity cannot be cleared.
   quantity: optionalDecimalField(),
   visible: z.boolean().optional(),
