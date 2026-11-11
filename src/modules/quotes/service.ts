@@ -10,8 +10,8 @@ import type { CurrentUser } from "@/modules/auth/session";
 import { getSettings } from "@/modules/settings/service";
 import { calculateQuote, type CalcSection, type QuoteTotals } from "./calculation";
 import {
-  catalogLineInput, customLineInput, headerInput, lineUpdateInput, LOCKED, priceAdjustInput, sectionInput,
-  type CatalogLineInput, type CustomLineInput, type HeaderInput, type LineUpdateInput, type PriceAdjustInput, type SectionInput,
+  catalogLineInput, commentInput, customLineInput, headerInput, lineUpdateInput, LOCKED, priceAdjustInput, sectionInput,
+  type CatalogLineInput, type CommentInput, type CustomLineInput, type HeaderInput, type LineUpdateInput, type PriceAdjustInput, type SectionInput,
 } from "./schema";
 
 // Spec 5.1: every signed-in user edits every quote, so these functions take the actor for the history only.
@@ -374,6 +374,26 @@ export async function adjustPrice(actor: CurrentUser, lineId: string, raw: Price
     await tx.quoteLine.update({ where: { id: lineId }, data: { unitPrice: input.newPrice } });
     const fmt = (v: { toString(): string }) => formatDecimalEs(v, { max: 4 });
     await logQuote(tx, actor, line.section.quoteId, "adjust", `Ajuste de precio: ${current.description} ${fmt(current.unitPrice)} → ${fmt(input.newPrice)} (${input.reason})`);
+  });
+}
+
+// ── Comments ───────────────────────────────────────────────────────────────────
+
+/** Sets or clears (empty text) the comment of a line, a kit or a partida/subpartida of a draft. */
+export async function setComment(actor: CurrentUser, raw: CommentInput): Promise<void> {
+  const { kind, id, comment } = parseOrThrow(commentInput, raw);
+  const target = kind === "line"
+    ? await prisma.quoteLine.findUnique({ where: { id }, include: { section: true } }).then((l) => l && { quoteId: l.section.quoteId, label: `la línea «${l.description}»` })
+    : kind === "kit"
+      ? await prisma.kitInstance.findUnique({ where: { id }, include: { section: true } }).then((k) => k && { quoteId: k.section.quoteId, label: `el conjunto «${k.name}»` })
+      : await prisma.quoteSection.findUnique({ where: { id } }).then((s) => s && { quoteId: s.quoteId, label: `la ${s.parentId ? "subpartida" : "partida"} «${s.title}»` });
+  if (!target) throw new NotFoundError("El elemento no existe");
+  await withDraft(target.quoteId, async (tx) => {
+    const data = { comment };
+    if (kind === "line") await tx.quoteLine.update({ where: { id }, data });
+    else if (kind === "kit") await tx.kitInstance.update({ where: { id }, data });
+    else await tx.quoteSection.update({ where: { id }, data });
+    await logQuote(tx, actor, target.quoteId, "update", `Comentario ${comment ? "guardado" : "quitado"} en ${target.label}`);
   });
 }
 

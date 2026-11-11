@@ -66,4 +66,8 @@ export const kitInstanceInput = z.object({
 });
 export type KitInstanceInput = z.input<typeof kitInstanceInput>;
 
+/** A comment on a line, a kit or a partida/subpartida: an empty one removes it. */
+export const commentInput = z.object({ kind: z.enum(["line", "kit", "section"]), id: z.string().min(1), comment: text(2000) });
+export type CommentInput = z.input<typeof commentInput>;
+
 export const LOCKED = "El presupuesto ya está emitido y no se puede modificar";

@@ -318,6 +318,8 @@ model QuoteSection {
   globalPrice Decimal?       @db.Decimal(14, 4)
   taxName     String?
   taxRatePct  Decimal?       @db.Decimal(5, 2)
+  /// Comentario en cursiva al pie de la partida o subpartida; "" = sin comentario.
+  comment     String         @default("") @db.Text
   lines       QuoteLine[]
   kits        KitInstance[]
 
@@ -345,6 +347,8 @@ model QuoteLine {
   kitInstanceId String?
   kitInstance   KitInstance?      @relation(fields: [kitInstanceId], references: [id], onDelete: Cascade)
   kitSlot       String?
+  /// Comentario en cursiva bajo la línea; "" = sin comentario. Se conserva al recalcular su conjunto.
+  comment       String            @default("") @db.Text
   adjustments   PriceAdjustment[]
 
   @@index([sectionId])
@@ -367,6 +371,8 @@ model KitInstance {
   /// Lo que falta para valorarlo (etiquetas de expandKit); vacío = completo.
   missing    Json         @default("[]")
   position   Int
+  /// Comentario en cursiva del conjunto entero; "" = sin comentario.
+  comment    String       @default("") @db.Text
   lines      QuoteLine[]
 
   @@index([sectionId])

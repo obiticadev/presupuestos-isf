@@ -71,6 +71,9 @@ export const removeLineAction: Action = action((actor, f) => quotes.removeLine(a
 export const adjustPriceAction: Action = action((actor, f) =>
   quotes.adjustPrice(actor, str(f, "id"), { newPrice: str(f, "newPrice"), reason: str(f, "reason") }));
 
+export const setCommentAction: Action = action((actor, f) =>
+  quotes.setComment(actor, { kind: str(f, "kind") as "line" | "kit" | "section", id: str(f, "id"), comment: str(f, "comment") }));
+
 /** Kit data arrive as param.<key> and choice.<slot>. */
 const kitFields = (f: FormData) => {
   const pick = (prefix: string) => Object.fromEntries([...f.keys()].filter((k) => k.startsWith(prefix)).map((k) => [k.slice(prefix.length), str(f, k)]));
