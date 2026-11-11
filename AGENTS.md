@@ -23,7 +23,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 
 - Ramas:
   - `master` tiene los planes 1 a 4 (PR #4 fusionado el 2026-11-10).
-  - `mejoras-uso-real`: mejoras tras el primer uso real (diseño `docs/superpowers/specs/2026-11-11-mejoras-uso-real-design.md`, 7 bloques). **Bloque 1 hecho**; sigue el Bloque 2. Se trabaja aquí, en local, con push a esta rama; `master` solo al final.
+  - `mejoras-uso-real`: mejoras tras el primer uso real (diseño `docs/superpowers/specs/2026-11-11-mejoras-uso-real-design.md`, 7 bloques). **Bloque 1 hecho y aprobado por el usuario** (2026-11-11); en pausa, sigue el plan del Bloque 2 (detalle de lo pendiente en `progreso.md`). Se trabaja aquí, en local, con push a esta rama; `master` y Dokploy solo al final, con visto bueno del usuario.
 - Plan 4 (PDF, Dokploy y copias): **terminado y desplegado** en `http://192.168.105.83:3100` (2026-11-10). Quedan comprobaciones en el servidor y errores por revisar.
   - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, `appName presupuestos-isf-app-oy9un2`, `composePath ./compose.yaml`. API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio. SSH: `ssh -i ~/.ssh/isf_dokploy isf@192.168.105.83`.
   - **Fusionar en `master` y desplegar en Dokploy exige el visto bueno explícito del usuario.**
