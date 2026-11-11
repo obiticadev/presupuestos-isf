@@ -109,8 +109,11 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .vA .adders{padding:8px 8px 12px;border-bottom:1px solid var(--rule)}
 @container ed (max-width:980px){.vA .adders{padding-left:8px}}
 .vA .kit{margin:8px;border:1.5px solid var(--ink)}
-.vA .kitfoot .done{margin-left:auto;min-width:40px;justify-content:center;font-size:18px;padding:6px 12px}
+.vA .kitfoot{flex-wrap:nowrap;align-items:flex-start}.vA .kbtns{display:flex;gap:10px;flex-wrap:wrap}
+.vA .kitfoot .done{margin-left:auto;flex:none;min-width:40px;justify-content:center;font-size:18px;padding:6px 12px}
 .vA .kitlines .r:last-child{border-bottom:0}
+.addpart{display:block;width:100%;text-align:left;background:var(--band);border:0;border-top:1.5px solid var(--ink);padding:12px 8px;font:700 14px var(--font-archivo),sans-serif;text-transform:uppercase;letter-spacing:.03em;color:var(--green);cursor:pointer}
+.addpart:hover{background:#e2e6e1}
 .vA .kit>summary{display:flex;gap:12px;align-items:center;padding:9px 12px;flex-wrap:wrap}
 .vA .kit .kitsum{padding-top:10px}
 .vA .kit>summary::before{content:"▸";font-weight:800;transition:transform .15s}
@@ -276,14 +279,14 @@ const ADD = [
   ["cat", "Del catálogo", "concepto con su precio"],
   ["line", "Línea específica", "texto y precio a mano"],
   ["com", "Comentario", "nota en cursiva al pie"],
-  ["kit", "Conjunto", "cuadro, manguera y carga"],
+  ["kit", "Conjunto", "varios elementos que se calculan juntos"],
 ];
 const hasComment = {};
 
 const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
 const lineActs = (sm) => `<label class="check small" title="Visible en el documento"><input type="checkbox" checked>Ver</label><button class="icon" title="Ajustar precio">€</button><button class="icon" aria-label="Subir">↑</button><button class="icon" aria-label="Bajar">↓</button><button class="icon" aria-label="Eliminar">✕</button>`;
 const kitLineActs = `<label class="check small"><input type="checkbox" checked>Ver</label><button class="icon">€</button>`;
-const sectActs = (plus) => `<button class="icon">↑</button><button class="icon">↓</button>${plus ? `<button class="icon" title="Añadir subpartida">＋</button>` : ""}<button class="icon" title="Eliminar">Eliminar</button>`;
+const sectActs = (plus) => `<button class="icon">↑</button><button class="icon">↓</button>${plus ? `<button class="icon" title="Añadir una subpartida a esta partida">+ Subpartida</button>` : ""}<button class="icon" title="Eliminar">Eliminar</button>`;
 const qtyCell = (l) => `<span class="qty"><input class="num" value="${l.qty}" aria-label="Cantidad"><span>${l.unit}</span></span>`;
 const flag = (l) => l.flag ? ` <span class="badge amber">${l.flag}</span>` : "";
 const diagram = (k) => `<div class="diagram" aria-hidden="true"><span class="node">${k.node}</span>${k.wires.map(w => `<span class="wire${w.miss ? " miss" : ""}"><label>${w.l}</label>${w.s ? `<small>${w.s}</small>` : ""}</span>`).join("")}<span class="mult">× ${k.sum[0]}</span></div>`;
@@ -314,7 +317,7 @@ function vA() {
   const v = "A";
   const row = (l, inKit) => `<div class="r line"><span class="code">${l.code}</span><span><input value="${esc(l.desc)}" aria-label="Descripción">${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${inKit ? kitLineActs : lineActs()}</span></div>`;
   const mini = (k) => `<span class="mini" title="${k.mainLabel}${k.wires.map(w => " → " + w.l).join("")}" aria-hidden="true"><i>${k.node}</i>${k.wires.map(w => `<s class="${w.miss ? "miss" : ""}"></s>`).join("")}</span>`;
-  const foot = (k) => `<div class="kitfoot">${k.missing ? `<button class="btn warn">Completar conjunto</button>` : `<button class="btn">Editar conjunto</button>`}<button class="btn">Quitar conjunto</button><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
+  const foot = (k) => `<div class="kitfoot"><div class="kbtns">${k.missing ? `<button class="btn warn">Completar conjunto</button>` : `<button class="btn">Editar conjunto</button>`}<button class="btn">Quitar conjunto</button></div><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
   const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary>${mini(k)}<b>Conjunto · ${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}</summary>${kitSum(k)}<div class="kitlines">${k.lines.map(l => row(l, true)).join("")}</div>${foot(k)}</details>`;
   return `
   <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
@@ -324,7 +327,9 @@ function vA() {
   ${KITS.map(kit).join("")}
   ${commentBlock(v)}
   <div class="adders"><details class="dd"><summary class="btn">+ Añadir ▾</summary>${menu(v)}</details></div>
-  ${forms(v)}`;
+  ${forms(v)}
+  <button class="addpart" data-open="A-part">＋ Nueva partida</button>
+  <div class="addform" data-form="A-part" hidden><span class="ttl">Nueva partida al final del presupuesto</span><input class="grow" placeholder="Nombre de la nueva partida"><button class="btn pri">Añadir partida</button><button class="icon cancel" data-cancel title="Cancelar" aria-label="Cancelar">✕</button></div>`;
 }
 
 /* ---------- B ---------- */
@@ -396,7 +401,7 @@ const VARIANTS = [
   {id:"A", fn:vA, name:"Dos pisos, ajustada",
    fila:"Igual que antes: una fila mientras cabe; si el editor se estrecha, la denominación sube a un piso propio.",
    add:"Igual que antes: un único «+ Añadir ▾» bajo las líneas y ✕ para cancelar cada formulario.",
-   kit:"Ocupa todo el ancho a cualquier tamaño, alineado con el comentario. En el título, la silueta del conjunto (de la B): las letras son del primer elemento (BO de bomba, VA de variador, MO de motor) y un círculo por cada componente, discontinuo en ámbar si falta. Al abrirlo ya no se dibuja el esquema grande. Al pie, un ✓ verde lo recoge sin tener que subir."},
+   kit:"Ocupa todo el ancho a cualquier tamaño, alineado con el comentario. En el título, la silueta del conjunto (de la B): las letras son del primer elemento (BO de bomba, VA de variador, MO de motor) y un círculo por cada componente, discontinuo en ámbar si falta. Al abrirlo ya no se dibuja el esquema grande. Al pie, un ✓ verde lo recoge sin tener que subir. Al final del presupuesto, la banda «＋ Nueva partida»; en cada partida, «+ Subpartida» con texto."},
 ];
 
 function render() {
