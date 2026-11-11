@@ -1,17 +1,16 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 // Small client helpers around <details>: everything else in the editor stays a Server Component.
 
-/** Opens the menu upwards when it does not fit below the summary in the window and there is more room above. */
-function placeMenu(d: HTMLDetailsElement) {
-  d.classList.remove("up");
+/** True when the open menu does not fit below its button in the window and there is more room above. */
+function opensUp(d: HTMLDetailsElement): boolean {
   const menu = d.querySelector<HTMLElement>(".menu");
-  if (!d.open || !menu || getComputedStyle(menu).position !== "absolute") return;
-  const below = window.innerHeight - d.getBoundingClientRect().bottom;
-  const above = d.getBoundingClientRect().top;
-  if (menu.offsetHeight + 8 > below && above > below) d.classList.add("up");
+  if (!d.open || !menu || getComputedStyle(menu).position !== "absolute") return false;
+  const { top, bottom } = d.getBoundingClientRect();
+  const below = window.innerHeight - bottom;
+  return menu.offsetHeight + 8 > below && top > below;
 }
 
 /** A pop-up menu that closes when clicking outside it or choosing one of its buttons, and opens upwards if it does not fit below. */
@@ -19,6 +18,8 @@ export function Menu({ label, title, className = "", summaryClassName, children 
   label: ReactNode; title?: string; className?: string; summaryClassName: string; children: ReactNode;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
+  // In state, not set on the element by hand, so a re-render while the menu is open keeps it upwards.
+  const [up, setUp] = useState(false);
   useEffect(() => {
     const close = (e: PointerEvent) => {
       if (ref.current?.open && !ref.current.contains(e.target as Node)) ref.current.open = false;
@@ -27,7 +28,7 @@ export function Menu({ label, title, className = "", summaryClassName, children 
     return () => document.removeEventListener("pointerdown", close);
   }, []);
   return (
-    <details ref={ref} className={`dd ${className}`} onToggle={(e) => placeMenu(e.currentTarget)}>
+    <details ref={ref} className={`dd ${className}${up ? " up" : ""}`} onToggle={(e) => setUp(opensUp(e.currentTarget))}>
       <summary className={summaryClassName} title={title} aria-label={title}>{label}</summary>
       <div className="menu" onClick={(e) => { if ((e.target as HTMLElement).closest("button") && ref.current) ref.current.open = false; }}>
         {children}
