@@ -2,7 +2,7 @@
 
 Fecha: 2026-11-11. Rama: `mejoras-uso-real` (desde `master` en `8a03a55`). `master` y el despliegue no se tocan hasta que el usuario fusione.
 
-> **Estado: BORRADOR, decisiones confirmadas el 2026-11-11, falta el visto bueno final del usuario.** Después, con la skill `superpowers:writing-plans`, se escribe un plan por bloque y se sube a esta rama. No se implementa nada antes de eso.
+> **Estado: decisiones confirmadas el 2026-11-11; el aspecto del Bloque 1 se eligió con la maqueta `docs/diseno/maquetas/editor-filas-v2.html` («luz verde» del usuario). Falta el visto bueno final del documento.** Después, con la skill `superpowers:writing-plans`, se escribe un plan por bloque y se sube a esta rama. No se implementa nada antes de eso.
 >
 > **Forma de trabajo (usuario, 2026-11-11):** bloque a bloque: plan → ejecución → revisión en Chrome → commit y push **a esta rama**. Se prueba en local (localhost). `master` no se toca hasta el final: cuando la rama esté bien, se fusiona y se despliega todo de una vez.
 
@@ -24,7 +24,7 @@ La app está desplegada y el equipo la ha usado con presupuestos reales. De ese 
 - Importar clientes desde Baseges (aparcado hasta tener un archivo de ejemplo).
 - Cambiar PDF ya generados: lo emitido antes de este trabajo conserva su PDF sin firma.
 - Notas internas en el PDF.
-- Varios comentarios sueltos y reordenables dentro de una partida (se eligió un comentario por partida/subpartida).
+- Comentarios sueltos que se ordenan por su cuenta, como una línea más (se eligió un comentario pegado a cada elemento).
 
 ## Anti-objetivos (sería un fracaso aunque funcione)
 
@@ -44,7 +44,8 @@ La app está desplegada y el equipo la ha usado con presupuestos reales. De ese 
 
 | Decisión | Opciones | Elegida y por qué |
 |---|---|---|
-| Comentario en cursiva al pie | A: un campo `comment` por partida/subpartida. B: líneas de texto sueltas sin precio | **A** (usuario). Siempre queda al pie, no toca cálculo, paginación ni revisiones más allá de copiar un campo. |
+| Comentario en cursiva | A: un campo `comment` en cada elemento (línea, conjunto, subpartida, partida). B: líneas de texto sueltas sin precio | **A** (usuario, ampliado tras ver la maqueta). El comentario va pegado a su elemento y se mueve con él; no toca cálculo, y en revisiones solo se copia un campo. |
+| Aspecto del editor | Cinco variantes en `editor-filas.html` | **A «Dos pisos»** (usuario), con la silueta del conjunto de la B y los ajustes de `editor-filas-v2.html`. |
 | Dónde guardar la firma | A: PNG en la base de datos, en el usuario, copiado al snapshot al emitir. B: archivo en el volumen como el logo | **A** (usuario). Entra en la copia de la BD y el PDF emitido queda congelado con la firma de ese día. |
 | Reiniciar solo la numeración | A: seguir desde un número elegido. B: nueva serie con marca. C: solo si no hay presupuestos del año | **B** (usuario). Se puede volver a 1 sin chocar con referencias existentes. |
 | Organización del trabajo | Un diseño común, una rama, un plan por bloque | Propuesta aceptada. |
@@ -55,17 +56,39 @@ Orden de implementación: 1 → 7. Cada bloque es un plan en `docs/superpowers/p
 
 ### Bloque 1. Editor y móvil
 
-**1.1 Campos cortados entre ~900 y ~1600 px.** Hoy `.qrow` usa columnas fijas (`96px 1fr 110px 100px 112px auto`) y la columna de acciones (`auto`) crece con sus botones; con el menú (224 px) y el panel lateral (380 px) a la vista, el `1fr` de la denominación se queda en unos pocos píxeles (captura: «Bc», «Bomba de poten»). Arreglo: el editor de partidas se vuelve contenedor (`container-type: inline-size`) y, por debajo de un ancho de contenedor (orientativo 820 px; el constructor lo ajusta probando), la fila pasa a dos pisos: arriba la denominación a todo el ancho; abajo código, cantidad, precio, importe y acciones. Se aplica a partidas, subpartidas, líneas y líneas de conjunto. El valor completo ya se guarda; solo es presentación.
+Referencia visual obligatoria: `docs/diseno/maquetas/editor-filas-v2.html` (variante A ajustada, aprobada por el usuario el 2026-11-11). Si este texto y la maqueta discrepan, manda la maqueta.
 
-**1.2 Menú en móvil (≤ 900 px).** Hoy el menú lateral pasa encima del contenido ocupando la pantalla. Pasa a una barra superior con «ISF Presupuestos» y un botón de menú que despliega los enlaces (y «Cerrar sesión»). Sin librerías: `<details>` o un botón con estado.
+**1.1 Filas que no se cortan.** Hoy `.qrow` usa columnas fijas (`96px 1fr 110px 100px 112px auto`) y la columna de acciones (`auto`) crece con sus botones; con el menú (224 px) y el panel lateral (380 px) a la vista, el `1fr` de la denominación se queda en unos pocos píxeles (captura: «Bc», «Bomba de poten»). Arreglo:
+- El editor de partidas es contenedor (`container-type: inline-size`). La columna de acciones tiene ancho fijo.
+- Por debajo de ~980 px de contenedor, la fila pasa a dos pisos: arriba la denominación a todo el ancho (desde la columna del código); abajo cantidad, precio, importe y acciones. Por debajo de ~480 px (móvil), apilada: denominación; código e importe; cantidad y precio; acciones.
+- La descripción de las líneas es un cuadro de texto que crece hacia abajo (`field-sizing: content`): el texto largo baja de línea y se lee entero.
+- Se aplica a partidas, subpartidas, líneas y líneas de conjunto. El valor completo ya se guarda; es solo presentación.
 
-**1.3 Botón «+ Añadir ▾».** En cada partida/subpartida editable, los botones «+ Del catálogo», «+ Línea específica» y «+ Conjunto» se agrupan en un único botón con desplegable: *Del catálogo · Línea específica · Comentario · Conjunto*. «Conjunto» solo aparece cuando la subpartida va «por suma» (como hoy). Mismo tamaño y estilo que los botones `.btn` actuales. «Comentario» no aparece si ya hay comentario (se edita el existente).
+**1.2 Menú en móvil (≤ 900 px).** Hoy el menú lateral pasa encima del contenido ocupando la pantalla. Pasa a una barra superior con «ISF Presupuestos» y un botón de menú que despliega los enlaces (y «Cerrar sesión»). Sin librerías: `<details>` o un botón con estado. (No se maquetó: se revisa en Chrome al construirlo.)
 
-**1.4 Cancelar al añadir.** Cada formulario de añadir abierto (concepto del catálogo, línea específica, comentario, conjunto) lleva un botón ✕ «Cancelar» a su derecha, igual al ✕ de las líneas, que lo cierra sin guardar y lo deja vacío.
+**1.3 Botones de acción y su orden.** Mismo tamaño de botón en todas las filas (`.icon`, 30 px; 38 px en móvil).
+- Línea: Ver · € · comentario · ↑ · ↓ · ✕. En móvil: Ver, € y comentario a la izquierda; ↑ ↓ a la derecha; ✕ al extremo, separado de las flechas.
+- Línea de conjunto: Ver · € · comentario (sin flechas ni ✕, como hoy).
+- Partida: «Eliminar» · ↑ · ↓ · «＋ ▾» (desplegable: *Subpartida* · *Comentario de la partida*). Subpartida: «Eliminar» · ↑ · ↓ · comentario. «Eliminar» va primero (a la izquierda del todo en móvil) y las flechas quedan en la misma vertical que las de las líneas; el último hueco se reserva aunque el botón esté oculto.
+- Las flechas se ven siempre, pero desactivadas y en gris cuando no hay con quién cambiar (primera/última línea; partida o subpartida única o en un extremo).
 
-**1.5 Comentario de partida/subpartida.** Campo nuevo `QuoteSection.comment` (texto, por defecto `""`, máx. 2000). Se edita en un cuadro al pie de la partida/subpartida, con «Guardar» y ✕ para quitarlo (lo vacía). Se ve en cursiva en el editor y en el PDF, al pie de su partida/subpartida, después de sus líneas. Se copia en duplicados y revisiones y entra en el snapshot. Un comentario vacío no se pinta.
+**1.4 «+ Añadir ▾» y cancelar.** En cada subpartida editable, bajo sus líneas, los botones «+ Del catálogo», «+ Línea específica» y «+ Conjunto» se agrupan en un único `.btn` «+ Añadir ▾» con menú; cada opción lleva una línea de ayuda: *Del catálogo* («concepto con su precio») · *Línea específica* («texto y precio a mano») · *Comentario de la subpartida* («al pie de la subpartida») · *Conjunto* («varios elementos que se calculan juntos»). «Conjunto» solo aparece si la subpartida va «por suma» (como hoy). Cada formulario abierto lleva a su derecha un ✕ «Cancelar» cuadrado de la misma altura que su botón principal (40 px), que lo cierra vacío sin guardar. Solo hay un formulario abierto a la vez.
 
-**1.6 Conjunto plegable.** El bloque de conjunto se muestra plegado (una línea: «Conjunto · nombre», resumen e importe o «Incompleto») y se despliega al pulsarlo (`<details>`). Recuerda abierto el que se acaba de editar (ancla `#conjunto-…` abre el `<details>`). Los incompletos se muestran abiertos.
+**1.5 Nueva partida.** Al final del presupuesto, una banda a todo el ancho con el aspecto de una fila de partida, «＋ NUEVA PARTIDA», que abre el nombre, «Añadir partida» y ✕. Sustituye al formulario siempre visible de hoy. La nueva subpartida se añade desde el «＋ ▾» de la partida, con su nombre.
+
+**1.6 Comentarios.** Campo `comment` (texto, por defecto `""`, máx. 2000) en `QuoteLine`, `KitInstance` y `QuoteSection` (partidas y subpartidas).
+- Cada elemento tiene su botón de comentario (icono de bocadillo, rectangular); el cuadro se abre justo donde se verá, con «Guardar» y ✕. Mientras el elemento tiene comentario, el botón se oculta y el comentario se edita con su ✎ o se quita con su ✕ (lo vacía).
+- Dónde se ve, en cursiva, sin marcas: bajo su línea (alineado con la descripción); el de un conjunto, tras sus líneas y antes de su pie; el de la subpartida, al pie de la subpartida; el de la partida, al pie de la partida, con fondo gris. Igual en el PDF.
+- Se mueve con su elemento (no tiene flechas propias) y se borra con él.
+- Al recalcular un conjunto, el comentario de cada línea se conserva si sigue existiendo la línea de ese hueco (`kitSlot`).
+- Se copian en duplicados y revisiones y entran en el snapshot. Un comentario vacío no se pinta. Los snapshots antiguos no los tienen.
+
+**1.7 Conjunto plegable.**
+- Ocupa todo el ancho de la subpartida, alineado con los comentarios, a cualquier tamaño.
+- Plegado (`<details>`): ▸, la silueta del conjunto, «Conjunto · nombre», resumen e importe o «Incompleto». La silueta: un cuadrado con las dos primeras letras del primer elemento (BO de bomba, VA de variador, MO de motor…) y un círculo por componente, discontinuo en ámbar si falta; al pasar el ratón muestra los nombres. Se ve igual plegado que abierto.
+- Abierto: el cálculo, sus líneas, su comentario y el pie. Ya no se dibuja el esquema grande.
+- Pie, separado de la última línea por un filete y en una sola línea también en móvil: «Editar» (o «Completar» en ámbar) · «Quitar» · comentario … ✓ verde a la derecha, que lo pliega y deja su título a la vista.
+- Los incompletos salen abiertos y con borde ámbar; el que se acaba de editar se abre por su ancla `#conjunto-…`.
 
 ### Bloque 2. Clientes e instalaciones
 
@@ -148,18 +171,18 @@ Orden de implementación: 1 → 7. Cada bloque es un plan en `docs/superpowers/p
 
 | Cambio | Migración |
 |---|---|
-| `QuoteSection.comment` | `ADD COLUMN … DEFAULT ''` |
+| `QuoteSection.comment`, `QuoteLine.comment`, `KitInstance.comment` | `ADD COLUMN … DEFAULT ''` |
 | `ClientLocation.city` → `installation`, `province` → `country` | `RENAME COLUMN` |
 | `QuoteNote` (con `userName`, FK de usuario `SET NULL`) | tabla nueva; datos desde `Quote.travelNote`; luego `DROP COLUMN travelNote` |
 | `User.signature` | `ADD COLUMN bytea NULL` |
 | `AuditLog.userName`, `PriceAdjustment.userName` | `ADD COLUMN`, relleno desde `user.name`, FK a `SET NULL` |
 | `CompanySettings.numberSeries`, `Quote.series` | `ADD COLUMN … DEFAULT ''`; cambio del índice único |
 
-Los snapshots emitidos no se migran: `buildDocument` debe seguir leyendo los antiguos (sin `comment`, con `province`, sin firma).
+Los snapshots emitidos no se migran: `buildDocument` debe seguir leyendo los antiguos (sin comentarios, con `province`, sin firma).
 
 ## Lo que queda al constructor
 
-Ancho exacto del corte en 1.1, iconos y textos menores, la forma del recorte del lienzo, el orden de las columnas de los Excel de clientes, y cómo se reparte cada bloque en tareas.
+Anchos exactos de los cortes en 1.1 (tomar los de la maqueta como punto de partida), iconos y textos menores, la forma del recorte del lienzo, el orden de las columnas de los Excel de clientes, y cómo se reparte cada bloque en tareas.
 
 Se puede decidir al construir, sin consultar: si un concepto que solo aparece dentro de un conjunto cuenta como «usado»; qué hacer con nombres de contacto repetidos en una importación; y si la serie se puede editar a mano en Configuración.
 
@@ -177,6 +200,7 @@ Los textos cortados del editor ya los resuelve 1.1. Las comprobaciones en el ser
 
 ## Decisiones confirmadas por el usuario (2026-11-11)
 
+- Editor (Bloque 1): variante A de la maqueta, con comentarios en cada línea, conjunto, subpartida y partida (1.1–1.7).
 - Cabecera: selector «Nombre» y, a su derecha, «Instalación» con `instalación · país` (2.1).
 - Notas copiadas a revisiones y duplicados con su autor y fecha originales; las nuevas, con quien las escribe (4.2).
 - Notas y entradas del historial de un usuario eliminado se conservan con su nombre (anti-objetivo «perder quién hizo qué»).
