@@ -109,7 +109,7 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .vA .adders{padding:8px 8px 12px;border-bottom:1px solid var(--rule)}
 @container ed (max-width:980px){.vA .adders{padding-left:8px}}
 .vA .kit{margin:8px;border:1.5px solid var(--ink)}
-.vA .kitfoot{flex-wrap:nowrap;align-items:flex-start}.vA .kbtns{display:flex;gap:10px;flex-wrap:wrap}
+.vA .kitfoot{flex-wrap:nowrap;align-items:center;border-top:1px solid var(--rule)}.vA .kbtns{display:flex;gap:10px;flex-wrap:nowrap}
 .vA .kitfoot .done{margin-left:auto;flex:none;min-width:40px;justify-content:center;font-size:18px;padding:6px 12px}
 .vA .kitlines .r:last-child{border-bottom:0}
 .addpart{display:block;width:100%;text-align:left;background:var(--band);border:0;border-top:1.5px solid var(--ink);padding:12px 8px;font:700 14px var(--font-archivo),sans-serif;text-transform:uppercase;letter-spacing:.03em;color:var(--green);cursor:pointer}
@@ -317,7 +317,7 @@ function vA() {
   const v = "A";
   const row = (l, inKit) => `<div class="r line"><span class="code">${l.code}</span><span><input value="${esc(l.desc)}" aria-label="Descripción">${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${inKit ? kitLineActs : lineActs()}</span></div>`;
   const mini = (k) => `<span class="mini" title="${k.mainLabel}${k.wires.map(w => " → " + w.l).join("")}" aria-hidden="true"><i>${k.node}</i>${k.wires.map(w => `<s class="${w.miss ? "miss" : ""}"></s>`).join("")}</span>`;
-  const foot = (k) => `<div class="kitfoot"><div class="kbtns">${k.missing ? `<button class="btn warn">Completar conjunto</button>` : `<button class="btn">Editar conjunto</button>`}<button class="btn">Quitar conjunto</button></div><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
+  const foot = (k) => `<div class="kitfoot"><div class="kbtns">${k.missing ? `<button class="btn warn" title="Completar conjunto">Completar</button>` : `<button class="btn" title="Editar conjunto">Editar</button>`}<button class="btn" title="Quitar conjunto">Quitar</button></div><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
   const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary>${mini(k)}<b>Conjunto · ${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}</summary>${kitSum(k)}<div class="kitlines">${k.lines.map(l => row(l, true)).join("")}</div>${foot(k)}</details>`;
   return `
   <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
