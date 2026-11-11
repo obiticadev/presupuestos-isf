@@ -176,8 +176,8 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .menu button small{font-weight:400;font-size:12px;color:var(--mut)}
 .menu button:hover{background:var(--band)}
 .menu button[disabled]{cursor:default;background:var(--band)}
-/* Estado del emitido: el desplegable ocupa el ancho del panel */
-.dd.status{display:block}.dd.status>summary{width:100%;justify-content:space-between}.dd.status .menu{right:0}
+/* Estado del emitido: a todo el ancho del panel y, como el panel tiene su propio scroll, el menú se abre dentro, empujando lo de debajo */
+.dd.status{display:block}.dd.status>summary{width:100%;justify-content:space-between}.dd.status .menu{position:static;margin-top:4px}
 .addpanel>summary{display:none}
 .addform{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 8px;border-bottom:1px solid var(--rule);background:#fbfcfa}
 .addform select,.addform input{font:inherit;border:1.5px solid var(--ink);background:var(--sheet);min-height:36px;padding:6px 8px;min-width:0}

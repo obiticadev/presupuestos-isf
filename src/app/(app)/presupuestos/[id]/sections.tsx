@@ -285,7 +285,7 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
       {ctx.editable && (
         <>
           <Panel id={`editar-conjunto-${kit.id}`}>
-            <ActionForm action={updateKitAction} key={`${kit.quantity}-${JSON.stringify(params)}-${JSON.stringify(choices)}`} className="kitform">
+            <ActionForm action={updateKitAction} close className="kitform">
               <input type="hidden" name="id" value={kit.id} />
               <label className="field">{def.main.label}: cantidad (N)<input name="quantity" defaultValue={n} inputMode="decimal" required /></label>
               {refCategoryId(def.main) && (
