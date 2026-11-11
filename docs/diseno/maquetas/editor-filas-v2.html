@@ -83,7 +83,11 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .comment.ck{padding:8px 12px;border-top:1px solid var(--rule);border-bottom:0}
 .comment.cp{background:var(--band);border-top:1px solid var(--rule)}
 .comment.cl .icon,.comment .icon{min-width:26px;min-height:26px;font-size:12px}
-.r.line:has(+ .comment.cl){border-bottom:0}
+.r.line:has(+ .slot:not(:empty)){border-bottom:0}
+.slot:empty{display:none}
+.comment.editing{font-style:normal;flex-wrap:wrap}.comment.editing textarea{flex:1 1 100%;font-style:italic;border:1.5px solid var(--ink);min-height:56px}
+.icon.bub svg{display:block}
+.kbtns .bub{min-width:40px;min-height:40px;border:1.5px solid var(--ink)}
 .where{display:flex;flex-direction:column;gap:4px;flex:1 1 100%;font-size:12px;font-weight:600;color:var(--mut);font-style:normal}
 .where select{width:100%;flex:none}
 .menu.right{left:auto;right:0}
@@ -333,36 +337,36 @@ const NOTE = {
   sub: COMMENT,
   part: "Trabajos en horario de parada de línea (fines de semana).",
 };
-const note = (key, cls) => NOTE[key] ? `<div class="comment ${cls}"><p>${NOTE[key]}</p><span class="acts"><button class="icon" title="Editar comentario">✎</button><button class="icon" title="Quitar comentario" data-rmcom>✕</button></span></div>` : "";
+const BUB = `<svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M2 3h12v8H7l-3 3v-3H2z"/></svg>`;
+const SLOT_CLS = {};
+// Cada elemento tiene su hueco de comentario y su botón 💬; el botón se oculta mientras hay comentario.
+const noteHtml = (key) => `<div class="comment ${SLOT_CLS[key]}"><p>${esc(NOTE[key])}</p><span class="acts"><button class="icon" title="Editar comentario" data-editcom="${key}">✎</button><button class="icon" title="Quitar comentario" data-rmcom="${key}">✕</button></span></div>`;
+const slot = (key, cls) => { SLOT_CLS[key] = cls; return `<div class="slot" data-slot="${key}">${NOTE[key] ? noteHtml(key) : ""}</div>`; };
+const bub = (key, label) => `<button class="icon bub" data-addcom="${key}" title="${label}" aria-label="${label}"${NOTE[key] ? " hidden" : ""}>${BUB}</button>`;
 function vA() {
   const v = "A";
-  const row = (l, inKit, key) => `<div class="r line"><span class="code">${l.code}</span><span><textarea class="desc" rows="1" aria-label="Descripción">${esc(l.desc)}</textarea>${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${inKit ? kitLineActs : lineActs()}</span></div>${note(key, "cl")}`;
+  const acts = (inKit, key) => `<label class="check small" title="Visible en el documento"><input type="checkbox" checked>Ver</label><button class="icon" title="Ajustar precio">€</button>${bub(key, "Añadir comentario a este producto")}${inKit ? "" : `<button class="icon" aria-label="Subir">↑</button><button class="icon" aria-label="Bajar">↓</button><button class="icon" aria-label="Eliminar">✕</button>`}`;
+  const row = (l, inKit, key) => `<div class="r line"><span class="code">${l.code}</span><span><textarea class="desc" rows="1" aria-label="Descripción">${esc(l.desc)}</textarea>${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${acts(inKit, key)}</span></div>${slot(key, "cl")}`;
   const mini = (k) => `<span class="mini" title="${k.mainLabel}${k.wires.map(w => " → " + w.l).join("")}" aria-hidden="true"><i>${k.node}</i>${k.wires.map(w => `<s class="${w.miss ? "miss" : ""}"></s>`).join("")}</span>`;
-  const foot = (k) => `<div class="kitfoot"><div class="kbtns">${k.missing ? `<button class="btn warn" title="Completar conjunto">Completar</button>` : `<button class="btn" title="Editar conjunto">Editar</button>`}<button class="btn" title="Quitar conjunto">Quitar</button></div><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
-  const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary>${mini(k)}<b>Conjunto · ${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}</summary>${kitSum(k)}<div class="kitlines">${k.lines.map((l, i) => row(l, true, k.id + "l" + i)).join("")}</div>${note(k.id, "ck")}${foot(k)}</details>`;
-  const opt = (key, label) => `<option${NOTE[key] ? " disabled" : ""}>${label}${NOTE[key] ? " (ya tiene)" : ""}</option>`;
-  const where = `<label class="where">Debajo de<select>
-      ${opt("sub", "La subpartida " + S.n + ", al pie")}
-      <optgroup label="Líneas">${LINES.map((l, i) => opt("line" + i, (l.code ? l.code + " · " : "") + l.desc)).join("")}</optgroup>
-      ${KITS.map(k => `<optgroup label="Conjunto · ${k.name}">${opt(k.id, "El conjunto entero")}${k.lines.map((l, i) => opt(k.id + "l" + i, "— " + l.code + " · " + l.desc)).join("")}</optgroup>`).join("")}
-    </select></label>`;
-  const comForm = `<div class="addform" data-form="A-com" hidden><span class="ttl">Añadir comentario</span>${where}
-    <textarea placeholder="Se verá en cursiva justo debajo de lo que elijas, en el editor y en el PDF"></textarea><button class="btn pri">Guardar</button><button class="icon cancel" data-cancel title="Cancelar" aria-label="Cancelar">✕</button></div>`;
-  const subMenu = `<div class="menu">${ADD.map(([k, t, s]) => `<button data-open="A-${k}">${t}<small>${k === "com" ? "debajo de un producto, un conjunto o la subpartida" : s}</small></button>`).join("")}</div>`;
-  const partActs = `<button class="icon">↑</button><button class="icon">↓</button><details class="dd"><summary class="icon" title="Añadir a la partida" aria-label="Añadir a la partida">＋</summary><div class="menu right"><button data-open="A-sub">Subpartida<small>nueva subpartida al final de la partida</small></button><button data-open="A-pcom"${NOTE.part ? " disabled" : ""}>Comentario de la partida<small>${NOTE.part ? "ya tiene uno: edítalo al pie de la partida" : "al pie de la partida"}</small></button></div></details><button class="icon" title="Eliminar">Eliminar</button>`;
+  const foot = (k) => `<div class="kitfoot"><div class="kbtns">${k.missing ? `<button class="btn warn" title="Completar conjunto">Completar</button>` : `<button class="btn" title="Editar conjunto">Editar</button>`}<button class="btn" title="Quitar conjunto">Quitar</button>${bub(k.id, "Añadir comentario al conjunto")}</div><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
+  const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary>${mini(k)}<b>Conjunto · ${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}</summary>${kitSum(k)}<div class="kitlines">${k.lines.map((l, i) => row(l, true, k.id + "l" + i)).join("")}</div>${slot(k.id, "ck")}${foot(k)}</details>`;
+  const subMenu = `<div class="menu">${ADD.map(([k, t, s]) => k === "com"
+      ? `<button data-addcom="sub">Comentario de la subpartida<small>al pie de la subpartida; para un producto o un conjunto, usa su botón de comentario</small></button>`
+      : `<button data-open="A-${k}">${t}<small>${s}</small></button>`).join("")}</div>`;
+  const partActs = `<button class="icon">↑</button><button class="icon">↓</button><details class="dd"><summary class="icon" title="Añadir a la partida" aria-label="Añadir a la partida">＋</summary><div class="menu right"><button data-open="A-sub">Subpartida<small>nueva subpartida al final de la partida</small></button><button data-addcom="part">Comentario de la partida<small>al pie de la partida</small></button></div></details><button class="icon" title="Eliminar">Eliminar</button>`;
+  const subActs = `<button class="icon">↑</button><button class="icon">↓</button>${bub("sub", "Añadir comentario a la subpartida")}<button class="icon" title="Eliminar">Eliminar</button>`;
   const cancel = `<button class="icon cancel" data-cancel title="Cancelar" aria-label="Cancelar">✕</button>`;
   return `
   <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
   <div class="r part"><span>${P.n}</span><span><input value="${P.title}"></span><span></span><span></span><span class="n">${P.amt}</span><span class="acts">${partActs}</span></div>
   <div class="addform" data-form="A-sub" hidden><span class="ttl">Nueva subpartida en la partida ${P.n}</span><input class="grow" placeholder="Nombre de la subpartida"><button class="btn pri">Añadir subpartida</button>${cancel}</div>
-  <div class="addform" data-form="A-pcom" hidden><span class="ttl">Comentario de la partida ${P.n}</span><textarea placeholder="Se verá en cursiva al pie de la partida"></textarea><button class="btn pri">Guardar</button>${cancel}</div>
-  <div class="r sub"><span>${S.n}</span><span class="subtitle"><input value="${esc(S.title)}"><select><option>por suma</option></select></span><span></span><span></span><span class="n">${S.amt}</span><span class="acts">${sectActs()}</span></div>
+  <div class="r sub"><span>${S.n}</span><span class="subtitle"><input value="${esc(S.title)}"><select><option>por suma</option></select></span><span></span><span></span><span class="n">${S.amt}</span><span class="acts">${subActs}</span></div>
   ${LINES.map((l, i) => row(l, false, "line" + i)).join("")}
   ${KITS.map(kit).join("")}
-  ${note("sub", "cs")}
+  ${slot("sub", "cs")}
   <div class="adders"><details class="dd"><summary class="btn">+ Añadir ▾</summary>${subMenu}</details></div>
-  ${forms(v).replace(/<div class="addform" data-form="A-com"[\s\S]*?<\/div>/, comForm)}
-  ${note("part", "cp")}
+  ${forms(v).replace(/<div class="addform" data-form="A-com"[\s\S]*?<\/div>/, "")}
+  ${slot("part", "cp")}
   <button class="addpart" data-open="A-part">＋ Nueva partida</button>
   <div class="addform" data-form="A-part" hidden><span class="ttl">Nueva partida al final del presupuesto</span><input class="grow" placeholder="Nombre de la nueva partida"><button class="btn pri">Añadir partida</button>${cancel}</div>`;
 }
@@ -436,7 +440,7 @@ const VARIANTS = [
   {id:"A", fn:vA, name:"Dos pisos, ajustada",
    fila:"Igual que antes: una fila mientras cabe; si el editor se estrecha, la denominación sube a un piso propio.",
    add:"Igual que antes: un único «+ Añadir ▾» bajo las líneas y ✕ para cancelar cada formulario.",
-   kit:"Ocupa todo el ancho a cualquier tamaño, alineado con el comentario. En el título, la silueta del conjunto (de la B): las letras son del primer elemento (BO de bomba, VA de variador, MO de motor) y un círculo por cada componente, discontinuo en ámbar si falta. Al abrirlo ya no se dibuja el esquema grande. Al pie, un ✓ verde lo recoge sin tener que subir. Al final del presupuesto, la banda «＋ Nueva partida». Comentarios pegados a su elemento: bajo un producto, un conjunto, una línea de conjunto, al pie de la subpartida o de la partida (con fondo gris)."},
+   kit:"Ocupa todo el ancho a cualquier tamaño, alineado con el comentario. En el título, la silueta del conjunto (de la B): las letras son del primer elemento (BO de bomba, VA de variador, MO de motor) y un círculo por cada componente, discontinuo en ámbar si falta. Al abrirlo ya no se dibuja el esquema grande. Al pie, un ✓ verde lo recoge sin tener que subir. Al final del presupuesto, la banda «＋ Nueva partida». Comentarios pegados a su elemento: cada producto, conjunto, subpartida y partida tiene su botón de comentario (un bocadillo) que abre el cuadro justo donde se verá; desaparece mientras ya tiene uno (se edita con ✎)."},
 ];
 
 function render() {
@@ -488,7 +492,26 @@ document.addEventListener("click", (e) => {
   if (!frame) return;
   if (t.dataset.open) { e.preventDefault(); openForm(frame, t.dataset.open); }
   else if (t.hasAttribute("data-cancel")) { e.preventDefault(); closeForms(frame); }
-  else if (t.hasAttribute("data-rmcom")) { t.closest(".comment").remove(); }
+  else if (t.dataset.addcom || t.dataset.editcom) {
+    const key = t.dataset.addcom || t.dataset.editcom, sl = frame.querySelector(`[data-slot="${key}"]`);
+    frame.querySelectorAll("details.dd[open]").forEach(d => d.open = false);
+    sl.closest("details")?.setAttribute("open", "");
+    sl.innerHTML = `<div class="comment editing ${SLOT_CLS[key]}"><textarea placeholder="Comentario: se verá en cursiva justo aquí, en el editor y en el PDF">${NOTE[key] ? esc(NOTE[key]) : ""}</textarea><button class="btn pri" data-savenote="${key}">Guardar</button><button class="icon" data-cancelnote="${key}" title="Cancelar" aria-label="Cancelar">✕</button></div>`;
+    frame.querySelectorAll(`[data-addcom="${key}"].bub`).forEach(b => b.hidden = true);
+    sl.querySelector("textarea").focus();
+  }
+  else if (t.dataset.savenote) {
+    const key = t.dataset.savenote, v = t.closest(".comment").querySelector("textarea").value.trim();
+    if (v) NOTE[key] = v; else delete NOTE[key];
+    const sl = frame.querySelector(`[data-slot="${key}"]`); sl.innerHTML = NOTE[key] ? noteHtml(key) : "";
+    frame.querySelectorAll(`[data-addcom="${key}"].bub`).forEach(b => b.hidden = !!NOTE[key]);
+  }
+  else if (t.dataset.cancelnote || t.dataset.rmcom) {
+    const key = t.dataset.cancelnote || t.dataset.rmcom;
+    if (t.dataset.rmcom) delete NOTE[key];
+    const sl = frame.querySelector(`[data-slot="${key}"]`); sl.innerHTML = NOTE[key] ? noteHtml(key) : "";
+    frame.querySelectorAll(`[data-addcom="${key}"].bub`).forEach(b => b.hidden = !!NOTE[key]);
+  }
   else if (t.dataset.delcom) { hasComment[t.dataset.delcom] = false; rerenderFrame(t.dataset.delcom); }
   else if (t.dataset.savecom) { hasComment[t.dataset.savecom] = true; rerenderFrame(t.dataset.savecom); }
   else if (t.hasAttribute("data-expand")) {
