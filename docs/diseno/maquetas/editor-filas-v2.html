@@ -80,7 +80,6 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .comment p{flex:1}
 .comment .acts{flex:none}
 .comment.cl{padding:2px 8px 8px 100px;border-bottom:1px solid var(--rule);margin-top:-1px}
-.comment.cl p::before,.comment.ck p::before,.comment.cs p::before,.comment.cp p::before{content:"";display:inline-block;width:3px;height:1em;background:var(--green);margin-right:8px;vertical-align:-2px}
 .comment.ck{padding:8px 12px;border-top:1px solid var(--rule);border-bottom:0}
 .comment.cp{background:var(--band);border-top:1px solid var(--rule)}
 .comment.cl .icon,.comment .icon{min-width:26px;min-height:26px;font-size:12px}
@@ -89,7 +88,7 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .where select{width:100%;flex:none}
 .menu.right{left:auto;right:0}
 .r.part .acts .dd>summary.icon{text-transform:none;letter-spacing:0;padding:0 8px}
-@container ed (max-width:980px){.comment.cl{padding-left:8px}}
+@container ed (max-width:480px){.comment.cl{padding-left:8px}}
 .addform{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 8px;border-bottom:1px solid var(--rule);background:#fbfcfa}
 .addform select,.addform input{border:1.5px solid var(--ink);min-height:36px;padding:6px 8px;width:auto}
 .addform select{flex:1 1 260px}.addform .grow{flex:1 1 220px}.addform .num{width:96px}
@@ -330,6 +329,7 @@ const NOTE = {
   line0: "Tendido por la bandeja existente; no incluye bandeja nueva.",
   k1: "Bombas suministradas por el cliente: solo se incluye su montaje.",
   k1l2: "Longitud estimada: se ajusta a la medida real en obra.",
+  k2l0: "Motor existente en planta: se reutiliza, solo se revisa y se reconecta.",
   sub: COMMENT,
   part: "Trabajos en horario de parada de línea (fines de semana).",
 };
@@ -349,7 +349,7 @@ function vA() {
   const comForm = `<div class="addform" data-form="A-com" hidden><span class="ttl">Añadir comentario</span>${where}
     <textarea placeholder="Se verá en cursiva justo debajo de lo que elijas, en el editor y en el PDF"></textarea><button class="btn pri">Guardar</button><button class="icon cancel" data-cancel title="Cancelar" aria-label="Cancelar">✕</button></div>`;
   const subMenu = `<div class="menu">${ADD.map(([k, t, s]) => `<button data-open="A-${k}">${t}<small>${k === "com" ? "debajo de un producto, un conjunto o la subpartida" : s}</small></button>`).join("")}</div>`;
-  const partActs = `<button class="icon">↑</button><button class="icon">↓</button><details class="dd"><summary class="icon" title="Añadir a la partida">+ Añadir ▾</summary><div class="menu right"><button data-open="A-sub">Subpartida<small>nueva subpartida al final de la partida</small></button><button data-open="A-pcom"${NOTE.part ? " disabled" : ""}>Comentario de la partida<small>${NOTE.part ? "ya tiene uno: edítalo al pie de la partida" : "al pie de la partida"}</small></button></div></details><button class="icon" title="Eliminar">Eliminar</button>`;
+  const partActs = `<button class="icon">↑</button><button class="icon">↓</button><details class="dd"><summary class="icon" title="Añadir a la partida" aria-label="Añadir a la partida">＋</summary><div class="menu right"><button data-open="A-sub">Subpartida<small>nueva subpartida al final de la partida</small></button><button data-open="A-pcom"${NOTE.part ? " disabled" : ""}>Comentario de la partida<small>${NOTE.part ? "ya tiene uno: edítalo al pie de la partida" : "al pie de la partida"}</small></button></div></details><button class="icon" title="Eliminar">Eliminar</button>`;
   const cancel = `<button class="icon cancel" data-cancel title="Cancelar" aria-label="Cancelar">✕</button>`;
   return `
   <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
