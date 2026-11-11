@@ -1,0 +1,481 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filas del editor · variantes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+/* Tokens y piezas copiados de src/app/globals.css («Esquema unifilar»). */
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--sheet:#fff;--rule:#d5dbd6;--band:#eceeea;--green:#004742;--green-deep:#00332f;--green-ink:#cfe0db;--amber:#8f5600;--amber-line:#b86e00;--amber-bg:#fff3dc;--ok:#1d7a4a;--red:#a3261e;--mut:#56645f;--font-archivo:"Archivo"}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-archivo),sans-serif;color:var(--ink);background:var(--paper);font-variant-numeric:tabular-nums;font-size:14px;line-height:1.4;padding:24px 16px 80px}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+h1{font-size:34px;font-weight:700;font-stretch:88%;letter-spacing:-.01em;line-height:1.1}
+h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700}
+.mut{color:var(--mut)}
+.btn{font:600 14px var(--font-archivo),sans-serif;padding:9px 14px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:8px;min-height:40px}
+.btn:hover{background:var(--band)}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}.btn.pri:hover{background:var(--green-deep)}
+.btn.warn{border-color:var(--amber-line);color:var(--amber);background:var(--amber-bg)}
+.btn.sm{min-height:32px;padding:4px 10px;font-size:13px}
+.icon{font:600 14px var(--font-archivo),sans-serif;min-width:30px;min-height:30px;padding:0 6px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);cursor:pointer;display:inline-grid;place-items:center;list-style:none}
+.icon:hover{border-color:var(--ink)}.icon[disabled]{opacity:.35;cursor:default}
+.badge{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border:1px solid currentColor;white-space:nowrap}
+.badge.amber{color:var(--amber);background:var(--amber-bg)}
+.check.small{display:flex;align-items:center;min-height:30px;font-size:12px;gap:4px;font-weight:600}.check.small input{width:16px;height:16px;accent-color:var(--green)}
+.amber{color:var(--amber);font-weight:600}
+input,select,textarea{font:inherit;color:var(--ink);border:1px solid var(--rule);background:var(--sheet);padding:5px 7px;min-height:32px;min-width:0;width:100%}
+input:focus,select:focus,textarea:focus{border-color:var(--ink);outline:none}
+.num{text-align:right}
+details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-marker{display:none}
+/* Esquema del conjunto (igual que la app) */
+.diagram{display:flex;align-items:center;padding:26px 16px 22px;overflow-x:auto}
+.node{width:48px;height:48px;border:2px solid var(--ink);display:grid;place-items:center;font-weight:800;flex:none}
+.wire{flex:1 1 140px;min-width:120px;position:relative;height:2px;background:var(--ink)}
+.wire::after{content:"";position:absolute;right:-1px;top:-23px;width:44px;height:44px;border:2px solid var(--ink);border-radius:50%;background:var(--sheet)}
+.wire.miss{background:none;height:0;border-top:3px dashed var(--amber-line)}.wire.miss::after{border-color:var(--amber-line);border-style:dashed}
+.wire label{position:absolute;left:40%;transform:translateX(-50%);top:-24px;font-size:12px;font-weight:700;white-space:nowrap;background:var(--sheet);padding:0 4px}
+.wire.miss label{color:var(--amber)}
+.wire small{position:absolute;left:40%;transform:translateX(-50%);top:8px;font-size:12px;color:var(--mut);white-space:nowrap}
+.mult{font-weight:800;margin-left:56px;flex:none}
+.kitsum{padding:0 12px 10px}
+.kitfoot{display:flex;gap:10px;flex-wrap:wrap;padding:10px 12px}
+
+/* ---------- Página de maquetas ---------- */
+.intro{max-width:1250px;margin:0 auto 18px}
+.intro p{max-width:80ch;margin-top:8px}
+.toolbar{position:sticky;top:0;z-index:50;background:var(--paper);border-bottom:1.5px solid var(--ink);padding:10px 0;margin:0 auto 24px;max-width:1250px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.toolbar b{font-size:12px;letter-spacing:.12em;text-transform:uppercase;margin-right:6px}
+.toolbar .btn.on{background:var(--ink);color:#fff}
+.toolbar .hint{font-size:12px;color:var(--mut);margin-left:auto}
+.variant{max-width:1250px;margin:0 auto 44px}
+.vhead{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;margin-bottom:6px}
+.vhead .letter{font-size:40px;font-weight:800;font-stretch:80%;line-height:1;color:var(--green)}
+.vhead h2{font-size:15px}
+.aspects{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:8px 0 12px}
+.aspects>div{border:1px solid var(--rule);background:var(--sheet);padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.aspects h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.aspects .like{align-self:flex-start;font:600 12px var(--font-archivo),sans-serif;border:1px solid var(--ink);background:var(--sheet);padding:3px 8px;cursor:pointer}
+.aspects .like.selected{background:var(--green);border-color:var(--green);color:#fff}
+.aspects .like.selected::before{content:"✓ "}
+@media (max-width:760px){.aspects{grid-template-columns:1fr}}
+.frame{width:var(--w,1250px);max-width:100%;container:ed/inline-size;background:var(--sheet);border:1.5px solid var(--ink);transition:width .2s}
+.framecap{font-size:12px;color:var(--mut);margin-top:6px}
+
+/* Piezas comunes de las variantes */
+.r{display:grid;gap:8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--rule)}
+.r .n{text-align:right;white-space:nowrap}
+.r.part{background:var(--band);font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.r.part input{text-transform:uppercase;font-weight:700}
+.r.sub{font-weight:700}
+.r.head{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;border-bottom:1.5px solid var(--ink);padding-top:9px;padding-bottom:9px}
+.acts{display:flex;gap:4px;align-items:center;justify-content:flex-end}
+.code{font-size:12px;color:var(--mut);overflow-wrap:anywhere}
+.qty{display:flex;gap:6px;align-items:center}.qty input{width:72px;text-align:right;flex:none}.qty span{font-size:12px;color:var(--mut)}
+.subtitle{display:flex;gap:6px;align-items:center}.subtitle select{width:auto;flex:none}
+.comment{font-style:italic;padding:8px 8px 10px;border-bottom:1px solid var(--rule);display:flex;gap:8px;align-items:flex-start}
+.comment p{flex:1}
+.comment .acts{flex:none}
+.addform{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 8px;border-bottom:1px solid var(--rule);background:#fbfcfa}
+.addform select,.addform input{border:1.5px solid var(--ink);min-height:36px;padding:6px 8px;width:auto}
+.addform select{flex:1 1 260px}.addform .grow{flex:1 1 220px}.addform .num{width:96px}
+.addform textarea{flex:1 1 100%;border:1.5px solid var(--ink);min-height:60px;font-style:italic}
+.addform .cancel{margin-left:auto}
+.addform .ttl{flex-basis:100%;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.menu{position:absolute;z-index:20;top:calc(100% + 4px);left:0;background:var(--sheet);border:1.5px solid var(--ink);min-width:260px;display:flex;flex-direction:column}
+.menu button{font:600 14px var(--font-archivo),sans-serif;text-align:left;background:none;border:0;border-bottom:1px solid var(--rule);padding:9px 12px;cursor:pointer;display:flex;flex-direction:column;gap:1px;color:var(--ink)}
+.menu button:last-child{border-bottom:0}
+.menu button small{font-weight:400;font-size:12px;color:var(--mut)}
+.menu button:hover{background:var(--band)}
+.menu button[disabled]{opacity:.45;cursor:default}.menu button[disabled]:hover{background:none}
+.dd{position:relative;display:inline-block}
+.dd[open]>summary{background:var(--band)}
+.kitlines{border-top:1px solid var(--rule)}
+
+/* ===== A · Dos pisos ===== */
+.vA .r{grid-template-columns:84px minmax(0,1fr) 128px 84px 104px 214px;grid-template-areas:"code desc qty price amt acts"}
+.vA .r>*:nth-child(1){grid-area:code}.vA .r>*:nth-child(2){grid-area:desc}.vA .r>*:nth-child(3){grid-area:qty}.vA .r>*:nth-child(4){grid-area:price}.vA .r>*:nth-child(5){grid-area:amt}.vA .r>*:nth-child(6){grid-area:acts}
+@container ed (max-width:980px){
+  .vA .r{grid-template-columns:84px minmax(0,1fr) 84px 104px auto;grid-template-areas:"code desc desc desc desc" ". qty price amt acts";row-gap:6px}
+  .vA .r.head{display:none}
+}
+@container ed (max-width:480px){
+  .vA .r{grid-template-columns:1fr 1fr;grid-template-areas:"desc desc" "code amt" "qty price" "acts acts"}
+  .vA .r .acts{justify-content:flex-start}
+}
+.vA .adders{padding:8px 8px 12px 100px;border-bottom:1px solid var(--rule)}
+@container ed (max-width:980px){.vA .adders{padding-left:8px}}
+.vA .kit{margin:8px 8px 8px 100px;border:1.5px solid var(--ink)}
+@container ed (max-width:980px){.vA .kit{margin-left:8px}}
+.vA .kit>summary{display:flex;gap:12px;align-items:center;padding:9px 12px;flex-wrap:wrap}
+.vA .kit>summary::before{content:"▸";font-weight:800;transition:transform .15s}
+.vA .kit[open]>summary::before{transform:rotate(90deg)}
+.vA .kit[open]>summary{border-bottom:1px solid var(--rule)}
+.vA .kit>summary b{text-transform:uppercase;letter-spacing:.04em}
+.vA .kit>summary .sum{flex:1;min-width:180px}
+.vA .kit.inc{border-color:var(--amber-line)}
+
+/* ===== B · Acciones en «⋯» ===== */
+.vB .r{grid-template-columns:84px minmax(0,1fr) 128px 84px 104px 36px;grid-template-areas:"code desc qty price amt more"}
+.vB .r>*:nth-child(1){grid-area:code}.vB .r>*:nth-child(2){grid-area:desc}.vB .r>*:nth-child(3){grid-area:qty}.vB .r>*:nth-child(4){grid-area:price}.vB .r>*:nth-child(5){grid-area:amt}.vB .r>*:nth-child(6){grid-area:more}
+@container ed (max-width:820px){
+  .vB .r{grid-template-columns:minmax(0,1fr) 84px 104px 36px;grid-template-areas:"desc desc desc more" "qty price amt more";row-gap:6px}
+  .vB .r>*:nth-child(1){display:none}.vB .r.head{display:none}
+}
+.vB .more .menu{left:auto;right:0;min-width:210px}
+.vB .more .menu button{flex-direction:row;justify-content:space-between;align-items:center}
+.vB .more .menu .del{color:var(--red)}
+.vB .addline{display:block;width:100%;text-align:left;font:600 14px var(--font-archivo),sans-serif;border:0;border-bottom:1px solid var(--rule);background:repeating-linear-gradient(90deg,var(--rule) 0 6px,transparent 6px 10px) top/100% 1px no-repeat,var(--sheet);padding:10px 8px 10px 100px;cursor:pointer;color:var(--green)}
+.vB .addline:hover{background-color:#f3f6f4}
+@container ed (max-width:820px){.vB .addline{padding-left:8px}.vB .dd.full .menu{left:8px}}
+.vB .dd.full{display:block}.vB .dd.full .menu{left:100px}
+.vB .kit{border-bottom:1px solid var(--rule)}
+.vB .kit>summary{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 100px;flex-wrap:wrap}
+@container ed (max-width:820px){.vB .kit>summary{padding-left:8px}}
+.vB .kit>summary:hover{background:#f9faf8}
+.vB .mini{display:flex;align-items:center;flex:none}
+.vB .mini i{width:22px;height:22px;border:1.5px solid var(--ink);display:grid;place-items:center;font:800 10px var(--font-archivo);font-style:normal}
+.vB .mini s{display:block;width:34px;height:1.5px;background:var(--ink);position:relative}
+.vB .mini s::after{content:"";position:absolute;right:-1px;top:-6px;width:12px;height:12px;border:1.5px solid var(--ink);border-radius:50%;background:var(--sheet)}
+.vB .mini s.miss{background:none;border-top:2px dashed var(--amber-line);height:0}.vB .mini s.miss::after{border-color:var(--amber-line);border-style:dashed;top:-7px}
+.vB .kit>summary b{text-transform:uppercase;letter-spacing:.04em}
+.vB .kit>summary .sum{flex:1;min-width:160px}
+.vB .kit>summary .chev{font-weight:800}
+.vB .kit[open]>summary .chev{transform:rotate(90deg)}
+.vB .kit .body{margin:0 8px 10px 100px;border:1.5px solid var(--ink)}
+@container ed (max-width:820px){.vB .kit .body{margin-left:8px}}
+
+/* ===== C · Añadir en la cabecera ===== */
+.vC .r{grid-template-columns:84px minmax(0,1fr) 128px 84px 104px 214px;grid-template-areas:"code desc qty price amt acts";align-items:start}
+.vC .r>*:nth-child(1){grid-area:code;padding-top:6px}.vC .r>*:nth-child(2){grid-area:desc}.vC .r>*:nth-child(3){grid-area:qty}.vC .r>*:nth-child(4){grid-area:price;padding-top:6px}.vC .r>*:nth-child(5){grid-area:amt;padding-top:6px}.vC .r>*:nth-child(6){grid-area:acts}
+.vC textarea.desc{field-sizing:content;resize:none;min-height:32px;line-height:1.35}
+.vC .r.part textarea.desc{text-transform:uppercase;font-weight:700}
+@container ed (max-width:820px){
+  .vC .r{grid-template-columns:minmax(0,1fr) 84px 104px;grid-template-areas:"desc desc desc" "qty price amt" "code acts acts";row-gap:6px}
+  .vC .r.head{display:none}
+}
+.vC .acts .dd .menu{left:auto;right:0}
+.vC .tree{margin-left:92px;border-left:3px solid var(--green)}
+@container ed (max-width:820px){.vC .tree{margin-left:8px}}
+.vC .kit>summary{display:grid;grid-template-columns:84px minmax(0,1fr) 104px 30px;gap:8px;align-items:center;padding:8px;border-bottom:1px solid var(--rule)}
+.vC .kit>summary .tagcj{font:800 11px var(--font-archivo);letter-spacing:.1em;border:1.5px solid var(--green);color:var(--green);padding:2px 6px;justify-self:start}
+.vC .kit>summary b{text-transform:uppercase;letter-spacing:.04em}
+.vC .kit>summary .chev{font-weight:800;text-align:center}
+.vC .kit[open]>summary .chev{transform:rotate(90deg)}
+.vC .kit.inc .tree{border-left-color:var(--amber-line)}
+
+/* ===== D · Fichas y barra segmentada ===== */
+.vD .card{display:grid;grid-template-columns:minmax(0,1fr) 120px auto;grid-template-areas:"desc amt acts" "meta amt acts";gap:2px 12px;align-items:center;padding:9px 10px;border-bottom:1px solid var(--rule)}
+.vD .card .d{grid-area:desc;font-size:15px;display:flex;gap:6px;align-items:center}
+.vD .card .d input{font-size:15px}
+.vD .card .m{grid-area:meta;font-size:12px;color:var(--mut);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.vD .card .m input{width:64px;min-height:26px;padding:2px 6px;text-align:right}
+.vD .card .a{grid-area:amt;text-align:right;font-weight:600}
+.vD .card .acts{grid-area:acts;opacity:0;transition:opacity .1s}
+.vD .card:hover .acts,.vD .card:focus-within .acts{opacity:1}
+@media (hover:none){.vD .card .acts{opacity:1}}
+@container ed (max-width:560px){.vD .card{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"desc desc" "meta amt" "acts acts"}.vD .card .acts{opacity:1;justify-content:flex-start}}
+.vD .card.part{background:var(--band)}.vD .card.part .d{font-weight:700;text-transform:uppercase;letter-spacing:.03em}
+.vD .card.sub .d{font-weight:700}
+.vD .edit{border:0;background:none;cursor:pointer;color:var(--mut);font-size:13px}
+.vD .seg{display:flex;flex-wrap:wrap;padding:10px;gap:0;border-bottom:1px solid var(--rule)}
+.vD .seg .tabs{display:flex;flex-wrap:wrap;border:1.5px solid var(--ink)}
+.vD .seg .tabs button{font:600 13px var(--font-archivo),sans-serif;border:0;border-right:1px solid var(--rule);background:var(--sheet);padding:8px 12px;cursor:pointer;min-height:36px}
+.vD .seg .tabs button:last-child{border-right:0}
+.vD .seg .tabs button:hover{background:var(--band)}
+.vD .seg .tabs button.on{background:var(--ink);color:#fff}
+.vD .seg .tabs button[disabled]{opacity:.45;cursor:default}
+.vD .kit{margin:8px 10px;border:1px solid var(--rule);border-left:4px solid var(--green)}
+.vD .kit.inc{border-left-color:var(--amber-line)}
+.vD .kit>summary{display:flex;gap:12px;align-items:center;padding:9px 12px;flex-wrap:wrap;background:#f9faf8}
+.vD .kit>summary b{text-transform:uppercase;letter-spacing:.04em}
+.vD .kit>summary .sum{flex:1;min-width:160px;font-size:13px}
+.vD .kit>summary .tog{font-size:12px;font-weight:700;color:var(--green);text-decoration:underline}
+.vD .kit[open]>summary .tog::after{content:" ocultar"}.vD .kit:not([open])>summary .tog::after{content:" ver detalle"}
+
+/* ===== E · Hoja compacta ===== */
+.vE .r{grid-template-columns:96px minmax(0,1fr) 112px 80px 100px 150px;grid-template-areas:"code desc qty price amt acts";padding:3px 8px;min-height:34px}
+.vE .r>*:nth-child(1){grid-area:code}.vE .r>*:nth-child(2){grid-area:desc}.vE .r>*:nth-child(3){grid-area:qty}.vE .r>*:nth-child(4){grid-area:price}.vE .r>*:nth-child(5){grid-area:amt}.vE .r>*:nth-child(6){grid-area:acts}
+.vE .r input,.vE .r textarea{border-color:transparent;background:transparent;min-height:28px;padding:3px 6px}
+.vE .r:hover input,.vE .r:hover textarea{border-color:var(--rule)}
+.vE .r input:focus,.vE .r textarea:focus{border-color:var(--ink);background:var(--sheet)}
+.vE textarea.desc{field-sizing:content;resize:none;line-height:1.35}
+.vE .r .acts{opacity:.25}.vE .r:hover .acts,.vE .r:focus-within .acts{opacity:1}
+.vE .r .icon{min-width:26px;min-height:26px;font-size:13px}
+.vE .r.line{border-bottom-color:#eceeea}
+@container ed (max-width:760px){
+  .vE .r{grid-template-columns:minmax(0,1fr) 112px 100px;grid-template-areas:"desc desc desc" "code qty amt" "price acts acts";row-gap:2px;padding:6px 8px}
+  .vE .r.head{display:none}.vE .r .acts{opacity:1;justify-content:flex-start}
+}
+.vE .tw{font-weight:800;cursor:pointer;color:var(--green)}
+.vE .kit>summary{list-style:none}
+.vE .kit>summary .r{background:#f9faf8;font-weight:600}
+.vE .kit>summary .r b{text-transform:uppercase;letter-spacing:.04em;font-size:13px}
+.vE .kit .tree .code::before{content:"└ ";color:var(--rule)}
+.vE .kit[open] .tw{transform:rotate(90deg);display:inline-block}
+.vE .kit .tw{display:inline-block}
+.vE .addrow{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;align-items:center;padding:4px 8px;border-bottom:1px solid var(--rule)}
+.vE .addrow select{border:1px dashed var(--mut);color:var(--green);font-weight:600;min-height:30px}
+.vE .addrow span{color:var(--green);font-weight:800;text-align:center}
+@container ed (max-width:760px){.vE .addrow{grid-template-columns:24px minmax(0,1fr)}}
+</style>
+</head>
+<body>
+
+<div class="intro">
+  <h1>Filas del editor: cinco formas</h1>
+  <p class="mut">La misma subpartida (dos líneas de catálogo, una línea específica, un comentario, un conjunto completo y otro incompleto) dibujada de cinco maneras. Cada variante propone tres cosas: <b>cómo se ven las filas</b> (para que no se corten los textos), <b>cómo se añade</b> (el «+ Añadir» con desplegable y el ✕ para cancelar) y <b>cómo se pliega el conjunto</b>. Se puede mezclar: marca «Me gusta» en lo que te convenza de cada una. Todo es interactivo: abre los desplegables, elige qué añadir, cancela, pliega y despliega los conjuntos. Datos ficticios.</p>
+</div>
+
+<div class="toolbar" role="group" aria-label="Ancho del editor">
+  <b>Ancho del editor</b>
+  <button class="btn sm" data-w="1250">Pantalla 1920 px</button>
+  <button class="btn sm" data-w="930">1600 px con panel</button>
+  <button class="btn sm on" data-w="748">1440 px con panel</button>
+  <button class="btn sm" data-w="358">Móvil</button>
+  <span class="hint">A 1440 px con el panel al lado es donde hoy se cortan los nombres.</span>
+</div>
+
+<div id="variants"></div>
+
+<script>
+// Datos de ejemplo (ficticios). Importes cuadrados: 1.488,00 + 857,60 + 170,00 + 6.842,50 = 9.358,10.
+const P = {n:"1", title:"BOMBEO DE LA LÍNEA DE ENVASADO", amt:"9.358,10 €"};
+const S = {n:"1.1", title:"Cuadro de mando y protección para bombas de trasiego", amt:"9.358,10 €"};
+const LINES = [
+  {code:"ELE-0412", desc:"Cable RV-K 0,6/1 kV 4x25 mm² Cu, libre de halógenos, tendido en bandeja", qty:"120", unit:"m", price:"12,40", amt:"1.488,00 €"},
+  {code:"CUA-0107", desc:"Cuadro de mando y protección con variador para bomba de 7,5 kW, IP65", qty:"1", unit:"ud", price:"857,60", amt:"857,60 €", flag:"Sin validar"},
+  {code:"", desc:"Desplazamiento del técnico a planta (ida y vuelta)", qty:"2", unit:"viaje", price:"85,00", amt:"170,00 €"},
+];
+const COMMENT = "Incluye pruebas de funcionamiento en vacío y con carga. No incluye obra civil ni bancadas.";
+const KITS = [
+  {id:"k1", name:"Bomba con variador", sum:"2 × Bomba centrífuga 7,5 kW · manguera 15 m", amt:"6.842,50 €", node:"BO",
+   wires:[{l:"Variador 7,5 kW", s:"2 ud"}, {l:"Manguera 4G6 mm²", s:"30 m"}],
+   lines:[{code:"BOM-075", desc:"Bomba centrífuga 7,5 kW", qty:"2", unit:"ud", price:"2.450,00", amt:"4.900,00 €"},
+          {code:"VAR-075", desc:"Variador de frecuencia 7,5 kW", qty:"2", unit:"ud", price:"780,00", amt:"1.560,00 €"},
+          {code:"MAN-4G6", desc:"Manguera 4G6 mm²", qty:"30", unit:"m", price:"12,75", amt:"382,50 €"}],
+   calc:"2 ud × 2.450,00 + 2 ud × 780,00 + 30 m × 12,75"},
+  {id:"k2", name:"Motor con arrancador", sum:"1 × Motor 4 kW", node:"MO", missing:"manguera",
+   wires:[{l:"Arrancador 4 kW", s:"1 ud"}, {l:"Falta manguera", miss:true}],
+   lines:[{code:"MOT-040", desc:"Motor trifásico 4 kW", qty:"1", unit:"ud", price:"610,00", amt:"—"},
+          {code:"ARR-040", desc:"Arrancador suave 4 kW", qty:"1", unit:"ud", price:"295,00", amt:"—"}]},
+];
+const ADD = [
+  ["cat", "Del catálogo", "concepto con su precio"],
+  ["line", "Línea específica", "texto y precio a mano"],
+  ["com", "Comentario", "nota en cursiva al pie"],
+  ["kit", "Conjunto", "cuadro, manguera y carga"],
+];
+const hasComment = {};
+
+const esc = (s) => String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;");
+const lineActs = (sm) => `<label class="check small" title="Visible en el documento"><input type="checkbox" checked>Ver</label><button class="icon" title="Ajustar precio">€</button><button class="icon" aria-label="Subir">↑</button><button class="icon" aria-label="Bajar">↓</button><button class="icon" aria-label="Eliminar">✕</button>`;
+const kitLineActs = `<label class="check small"><input type="checkbox" checked>Ver</label><button class="icon">€</button>`;
+const sectActs = (plus) => `<button class="icon">↑</button><button class="icon">↓</button>${plus ? `<button class="icon" title="Añadir subpartida">＋</button>` : ""}<button class="icon" title="Eliminar">Eliminar</button>`;
+const qtyCell = (l) => `<span class="qty"><input class="num" value="${l.qty}" aria-label="Cantidad"><span>${l.unit}</span></span>`;
+const flag = (l) => l.flag ? ` <span class="badge amber">${l.flag}</span>` : "";
+const diagram = (k) => `<div class="diagram" aria-hidden="true"><span class="node">${k.node}</span>${k.wires.map(w => `<span class="wire${w.miss ? " miss" : ""}"><label>${w.l}</label>${w.s ? `<small>${w.s}</small>` : ""}</span>`).join("")}<span class="mult">× ${k.sum[0]}</span></div>`;
+const kitSum = (k) => k.missing ? `<p class="kitsum amber">Sin valorar hasta completar: ${k.missing}</p>` : `<p class="kitsum">${k.calc} = <b>${k.amt}</b></p>`;
+const kitFoot = (k) => `<div class="kitfoot">${k.missing ? `<button class="btn warn">Completar conjunto</button>` : `<button class="btn">Editar conjunto</button>`}<button class="btn">Quitar conjunto</button></div>`;
+const kitRight = (k) => k.missing ? `<span class="badge amber">Incompleto</span>` : `<b>${k.amt}</b>`;
+
+// Formularios de añadir: comunes a todas las variantes, cada uno con ✕ Cancelar.
+function forms(v) {
+  const cancel = `<button class="icon cancel" data-cancel title="Cancelar" aria-label="Cancelar">✕</button>`;
+  return `
+  <div class="addform" data-form="${v}-cat" hidden><span class="ttl">Añadir del catálogo</span>
+    <select><option>Elige un concepto…</option><option>ELE-0412 · Cable RV-K 4x25 mm² · 12,40 €/m</option><option>MAN-4G6 · Manguera 4G6 mm² · 12,75 €/m</option></select>
+    <input class="num" placeholder="Cantidad"><button class="btn pri">Añadir</button>${cancel}</div>
+  <div class="addform" data-form="${v}-line" hidden><span class="ttl">Añadir línea específica</span>
+    <input class="grow" placeholder="Descripción"><input class="num" placeholder="Cantidad"><input style="width:80px" placeholder="Unidad"><input class="num" placeholder="Precio"><select style="flex:none;width:auto"><option>IVA 21 %</option></select><button class="btn pri">Añadir</button>${cancel}</div>
+  <div class="addform" data-form="${v}-com" hidden><span class="ttl">Comentario al pie de la subpartida</span>
+    <textarea placeholder="Se verá en cursiva al pie de la subpartida, en el editor y en el PDF"></textarea><button class="btn pri" data-savecom="${v}">Guardar</button>${cancel}</div>
+  <div class="addform" data-form="${v}-kit" hidden><span class="ttl">Añadir conjunto</span>
+    <select><option>Elige un conjunto…</option><option>Bomba con variador</option><option>Motor con arrancador</option></select>
+    <input class="num" placeholder="Cantidad (N)"><button class="btn pri">Añadir</button>${cancel}</div>`;
+}
+const menu = (v) => `<div class="menu">${ADD.map(([k, t, s]) => `<button data-open="${v}-${k}"${k === "com" && hasComment[v] ? " disabled" : ""}>${t}<small>${k === "com" && hasComment[v] ? "ya hay uno: edítalo abajo" : s}</small></button>`).join("")}</div>`;
+const commentBlock = (v) => `<div class="comment" data-comment="${v}"><p>${COMMENT}</p><span class="acts"><button class="icon" title="Editar comentario">✎</button><button class="icon" title="Quitar comentario" data-delcom="${v}">✕</button></span></div>`;
+
+/* ---------- A ---------- */
+function vA() {
+  const v = "A";
+  const row = (l, inKit) => `<div class="r line"><span class="code">${l.code}</span><span><input value="${esc(l.desc)}" aria-label="Descripción">${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${inKit ? kitLineActs : lineActs()}</span></div>`;
+  const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary><b>Conjunto · ${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}</summary>${diagram(k)}${kitSum(k)}<div class="kitlines">${k.lines.map(l => row(l, true)).join("")}</div>${kitFoot(k)}</details>`;
+  return `
+  <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
+  <div class="r part"><span>${P.n}</span><span><input value="${P.title}"></span><span></span><span></span><span class="n">${P.amt}</span><span class="acts">${sectActs(true)}</span></div>
+  <div class="r sub"><span>${S.n}</span><span class="subtitle"><input value="${esc(S.title)}"><select><option>por suma</option></select></span><span></span><span></span><span class="n">${S.amt}</span><span class="acts">${sectActs()}</span></div>
+  ${LINES.map(l => row(l)).join("")}
+  ${KITS.map(kit).join("")}
+  ${commentBlock(v)}
+  <div class="adders"><details class="dd"><summary class="btn">+ Añadir ▾</summary>${menu(v)}</details></div>
+  ${forms(v)}`;
+}
+
+/* ---------- B ---------- */
+function vB() {
+  const v = "B";
+  const more = (inKit) => `<details class="dd more"><summary class="icon" title="Más acciones" aria-label="Más acciones">⋯</summary><div class="menu"><button>Visible en el documento <input type="checkbox" checked style="width:16px;min-height:16px;accent-color:var(--green)"></button><button>Ajustar precio <span>€</span></button>${inKit ? "" : `<button>Subir <span>↑</span></button><button>Bajar <span>↓</span></button><button class="del">Eliminar línea <span>✕</span></button>`}</div></details>`;
+  const row = (l, inKit) => `<div class="r line"><span class="code">${l.code}</span><span><input value="${esc(l.desc)}" aria-label="Descripción">${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span>${more(inKit)}</div>`;
+  const sectMore = (plus) => `<details class="dd more"><summary class="icon" aria-label="Más acciones">⋯</summary><div class="menu"><button>Subir <span>↑</span></button><button>Bajar <span>↓</span></button>${plus ? `<button>Añadir subpartida <span>＋</span></button>` : ""}<button class="del">Eliminar <span>✕</span></button></div></details>`;
+  const mini = (k) => `<span class="mini" aria-hidden="true"><i>${k.node}</i>${k.wires.map(w => `<s class="${w.miss ? "miss" : ""}"></s>`).join("")}</span>`;
+  const kit = (k) => `<details class="kit"${k.missing ? " open" : ""}><summary><span class="chev">▸</span>${mini(k)}<b>${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}</summary><div class="body">${diagram(k)}${kitSum(k)}<div class="kitlines">${k.lines.map(l => row(l, true)).join("")}</div>${kitFoot(k)}</div></details>`;
+  return `
+  <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
+  <div class="r part"><span>${P.n}</span><span><input value="${P.title}"></span><span></span><span></span><span class="n">${P.amt}</span>${sectMore(true)}</div>
+  <div class="r sub"><span>${S.n}</span><span class="subtitle"><input value="${esc(S.title)}"><select><option>por suma</option></select></span><span></span><span></span><span class="n">${S.amt}</span>${sectMore()}</div>
+  ${LINES.map(l => row(l)).join("")}
+  ${KITS.map(kit).join("")}
+  ${commentBlock(v)}
+  <details class="dd full"><summary class="addline">＋ Añadir a ${S.n} ▾</summary>${menu(v)}</details>
+  ${forms(v)}`;
+}
+
+/* ---------- C ---------- */
+function vC() {
+  const v = "C";
+  const row = (l, inKit) => `<div class="r line"><span class="code">${l.code}</span><span><textarea class="desc" rows="1" aria-label="Descripción">${esc(l.desc)}</textarea>${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${inKit ? kitLineActs : lineActs()}</span></div>`;
+  const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary><span class="tagcj">CONJUNTO</span><span><b>${k.name}</b> <span class="mut">· ${k.sum}</span></span><span class="n">${kitRight(k)}</span><span class="chev">▸</span></summary><div class="tree">${diagram(k)}${kitSum(k)}<div class="kitlines">${k.lines.map(l => row(l, true)).join("")}</div>${kitFoot(k)}</div></details>`;
+  return `
+  <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
+  <div class="r part"><span>${P.n}</span><span><textarea class="desc" rows="1">${P.title}</textarea></span><span></span><span></span><span class="n">${P.amt}</span><span class="acts">${sectActs(true)}</span></div>
+  <div class="r sub"><span>${S.n}</span><span class="subtitle"><textarea class="desc" rows="1">${esc(S.title)}</textarea><select><option>por suma</option></select></span><span></span><span></span><span class="n">${S.amt}</span><span class="acts"><details class="dd"><summary class="btn pri sm">+ Añadir ▾</summary>${menu(v)}</details>${sectActs()}</span></div>
+  ${forms(v)}
+  ${LINES.map(l => row(l)).join("")}
+  ${KITS.map(kit).join("")}
+  ${commentBlock(v)}`;
+}
+
+/* ---------- D ---------- */
+function vD() {
+  const v = "D";
+  const card = (l, inKit) => `<div class="card"><span class="d"><span class="txt">${esc(l.desc)}</span><button class="edit" data-edit title="Editar">✎</button>${flag(l)}</span><span class="m">${l.code ? `<b>${l.code}</b>` : "Línea específica"}<span><input value="${l.qty}" aria-label="Cantidad"> ${l.unit} × ${l.price} €</span></span><span class="a">${l.amt}</span><span class="acts">${inKit ? kitLineActs : lineActs()}</span></div>`;
+  const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary><b>Conjunto · ${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}<span class="tog"></span></summary>${diagram(k)}${kitSum(k)}<div class="kitlines">${k.lines.map(l => card(l, true)).join("")}</div>${kitFoot(k)}</details>`;
+  return `
+  <div class="card part"><span class="d"><span class="txt">${P.n} · ${P.title}</span><button class="edit" data-edit>✎</button></span><span class="m">Partida</span><span class="a">${P.amt}</span><span class="acts">${sectActs(true)}</span></div>
+  <div class="card sub"><span class="d"><span class="txt">${S.n} · ${esc(S.title)}</span><button class="edit" data-edit>✎</button></span><span class="m">Subpartida · por suma</span><span class="a">${S.amt}</span><span class="acts">${sectActs()}</span></div>
+  ${LINES.map(l => card(l)).join("")}
+  ${KITS.map(kit).join("")}
+  ${commentBlock(v)}
+  <div class="seg"><div class="tabs" data-tabs="${v}"><button class="btn-add" data-expand>+ Añadir</button></div></div>
+  ${forms(v)}`;
+}
+
+/* ---------- E ---------- */
+function vE() {
+  const v = "E";
+  const row = (l, inKit) => `<div class="r line"><span class="code">${l.code}</span><span><textarea class="desc" rows="1" aria-label="Descripción">${esc(l.desc)}</textarea>${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${inKit ? kitLineActs : lineActs()}</span></div>`;
+  const kit = (k) => `<details class="kit"${k.missing ? " open" : ""}><summary><div class="r"><span><span class="tw">▸</span> <span class="mut">CJ</span></span><span><b>${k.name}</b> <span class="mut">· ${k.sum}</span></span><span></span><span></span><span class="n">${kitRight(k)}</span><span></span></div></summary><div class="tree">${k.lines.map(l => row(l, true)).join("")}${kitSum(k)}${kitFoot(k)}</div></details>`;
+  return `
+  <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
+  <div class="r part"><span>${P.n}</span><span><textarea class="desc" rows="1">${P.title}</textarea></span><span></span><span></span><span class="n">${P.amt}</span><span class="acts">${sectActs(true)}</span></div>
+  <div class="r sub"><span>${S.n}</span><span class="subtitle"><textarea class="desc" rows="1">${esc(S.title)}</textarea><select><option>por suma</option></select></span><span></span><span></span><span class="n">${S.amt}</span><span class="acts">${sectActs()}</span></div>
+  ${LINES.map(l => row(l)).join("")}
+  ${KITS.map(kit).join("")}
+  ${commentBlock(v)}
+  <div class="addrow"><span>＋</span><select data-addselect="${v}"><option value="">Añadir a ${S.n}…</option>${ADD.map(([k, t, s]) => `<option value="${v}-${k}"${k === "com" && hasComment[v] ? " disabled" : ""}>${t} · ${s}</option>`).join("")}</select></div>
+  ${forms(v)}`;
+}
+
+const VARIANTS = [
+  {id:"A", fn:vA, name:"Dos pisos",
+   fila:"Una sola fila mientras cabe; si el editor se estrecha, la denominación sube a un piso propio a todo el ancho y debajo van cantidad, precio, importe y botones.",
+   add:"Un único botón «+ Añadir ▾» bajo las líneas, donde hoy están los tres. Abre un menú con una línea de ayuda por opción.",
+   kit:"Recuadro plegado en una línea: ▸ «Conjunto · nombre», resumen e importe. Al abrirlo, el esquema y sus líneas. El incompleto sale abierto y con borde ámbar."},
+  {id:"B", fn:vB, name:"Menos botones",
+   fila:"Las acciones de cada fila (Ver, €, ↑, ↓, ✕) se recogen en un botón «⋯». La denominación gana unos 180 px; si el editor se estrecha, pasa a su propio piso.",
+   add:"Una fila punteada al final, como una línea vacía: «＋ Añadir a 1.1 ▾».",
+   kit:"Plegado en una línea con un esquema unifilar en miniatura (cuadro → cables), que avisa en ámbar de lo que falta sin abrirlo."},
+  {id:"C", fn:vC, name:"Añadir arriba",
+   fila:"La denominación es un cuadro que crece hacia abajo: el texto largo baja de línea y se lee entero, sin cortarse. En móvil, todo apilado.",
+   add:"«+ Añadir ▾» en verde en la cabecera de la subpartida, junto a ↑ ↓; el formulario se abre justo debajo de la cabecera.",
+   kit:"Se ve como una fila más, con la etiqueta CONJUNTO y ▸ a la derecha. Al abrirlo, su contenido cuelga de un filete verde (ámbar si está incompleto)."},
+  {id:"D", fn:vD, name:"Fichas",
+   fila:"Cada línea es una ficha de dos pisos: la descripción en grande y debajo, en pequeño, el código, la cantidad y el precio. Se edita con ✎. Los botones solo aparecen al pasar el ratón.",
+   add:"«+ Añadir» se despliega en una barra de pestañas rectangulares (Del catálogo | Línea específica | Comentario | Conjunto), sin menú flotante.",
+   kit:"Banda con filete verde a la izquierda (ámbar si está incompleto) y el enlace «ver detalle / ocultar»."},
+  {id:"E", fn:vE, name:"Hoja compacta",
+   fila:"Más densa, como una hoja de cálculo: los campos no tienen borde hasta que pasas el ratón, la denominación baja de línea si no cabe y los botones se ven tenues hasta que pasas por la fila.",
+   add:"Una última fila con ＋ y un selector «Añadir a 1.1…»: eliges qué y aparece el formulario.",
+   kit:"Como un árbol: ▸ en la columna del código y sus líneas colgando con └. Sin esquema dibujado al abrirlo."},
+];
+
+function render() {
+  document.getElementById("variants").innerHTML = VARIANTS.map(V => `
+  <section class="variant v${V.id}" id="v${V.id}">
+    <div class="vhead"><span class="letter">${V.id}</span><h2>${V.name}</h2></div>
+    <div class="aspects">
+      <div><h3>Filas</h3><span>${V.fila}</span><button class="like" data-choice="${V.id}-filas" onclick="this.classList.toggle('selected')">Me gusta</button></div>
+      <div><h3>Añadir</h3><span>${V.add}</span><button class="like" data-choice="${V.id}-anadir" onclick="this.classList.toggle('selected')">Me gusta</button></div>
+      <div><h3>Conjunto</h3><span>${V.kit}</span><button class="like" data-choice="${V.id}-conjunto" onclick="this.classList.toggle('selected')">Me gusta</button></div>
+    </div>
+    <div class="frame" data-v="${V.id}">${V.fn()}</div>
+  </section>`).join("");
+}
+VARIANTS.forEach(V => hasComment[V.id] = true);
+render();
+
+const setW = (w) => {
+  document.querySelectorAll(".frame").forEach(f => f.style.setProperty("--w", w + "px"));
+  document.querySelectorAll("[data-w]").forEach(b => b.classList.toggle("on", b.dataset.w == w));
+};
+document.querySelectorAll("[data-w]").forEach(b => b.onclick = () => setW(b.dataset.w));
+setW(748);
+
+const frameOf = (el) => el.closest(".frame");
+function openForm(frame, key) {
+  frame.querySelectorAll("[data-form]").forEach(f => f.hidden = f.dataset.form !== key);
+  frame.querySelectorAll("details.dd[open]").forEach(d => d.open = false);
+  const f = frame.querySelector(`[data-form="${key}"]`);
+  f && f.querySelector("input,select,textarea")?.focus();
+  // D: marcar la pestaña elegida
+  frame.querySelectorAll(".tabs button[data-open]").forEach(b => b.classList.toggle("on", b.dataset.open === key));
+}
+function closeForms(frame) {
+  frame.querySelectorAll("[data-form]").forEach(f => { f.hidden = true; f.querySelectorAll("input,textarea").forEach(i => i.value = ""); f.querySelectorAll("select").forEach(s => s.selectedIndex = 0); });
+  frame.querySelectorAll(".tabs button.on").forEach(b => b.classList.remove("on"));
+  frame.querySelectorAll("[data-addselect]").forEach(s => s.value = "");
+}
+function rerenderFrame(v) {
+  const frame = document.querySelector(`.frame[data-v="${v}"]`);
+  frame.innerHTML = VARIANTS.find(V => V.id === v).fn();
+  if (!hasComment[v]) frame.querySelector("[data-comment]")?.remove();
+}
+
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("button");
+  if (!t) return;
+  const frame = frameOf(t);
+  if (!frame) return;
+  if (t.dataset.open) { e.preventDefault(); openForm(frame, t.dataset.open); }
+  else if (t.hasAttribute("data-cancel")) { e.preventDefault(); closeForms(frame); }
+  else if (t.dataset.delcom) { hasComment[t.dataset.delcom] = false; rerenderFrame(t.dataset.delcom); }
+  else if (t.dataset.savecom) { hasComment[t.dataset.savecom] = true; rerenderFrame(t.dataset.savecom); }
+  else if (t.hasAttribute("data-expand")) {
+    const v = frame.dataset.v;
+    const tabs = frame.querySelector(`[data-tabs]`);
+    tabs.innerHTML = ADD.map(([k, txt]) => `<button data-open="${v}-${k}"${k === "com" && hasComment[v] ? " disabled title=\"Ya hay un comentario\"" : ""}>${txt}</button>`).join("") + `<button data-collapse title="Cancelar" aria-label="Cancelar">✕</button>`;
+  }
+  else if (t.hasAttribute("data-collapse")) {
+    closeForms(frame);
+    frame.querySelector("[data-tabs]").innerHTML = `<button data-expand>+ Añadir</button>`;
+  }
+  else if (t.hasAttribute("data-edit")) {
+    const txt = t.parentElement.querySelector(".txt");
+    if (txt) { const i = document.createElement("input"); i.value = txt.textContent; txt.replaceWith(i); i.focus(); t.textContent = "✓"; }
+  }
+});
+document.addEventListener("change", (e) => {
+  const s = e.target.closest("[data-addselect]");
+  if (s && s.value) openForm(frameOf(s), s.value);
+});
+// Cerrar los menús al hacer clic fuera.
+document.addEventListener("click", (e) => {
+  document.querySelectorAll("details.dd[open]").forEach(d => { if (!d.contains(e.target)) d.open = false; });
+});
+</script>
+</body>
+</html>
