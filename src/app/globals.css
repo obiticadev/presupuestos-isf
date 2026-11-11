@@ -16,6 +16,9 @@ nav.rail a.on{background:var(--green-deep);color:#fff;box-shadow:inset 4px 0 0 #
 nav.rail a span{font-size:12px;color:#b9d3cc}
 nav.rail .sep{margin:18px 22px 6px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#b9d3cc}
 nav.rail .me{margin-top:auto;padding:16px 22px 0;border-top:1px solid #0d5e57;font-size:13px}
+/* En escritorio los enlaces siguen siendo hijos directos del rail; el botón «Menú» solo existe en móvil */
+nav.rail .links{display:contents}
+.menubtn{display:none}
 main{padding:26px 32px;min-width:0}
 .crumb{font-size:13px;color:var(--mut);margin-bottom:8px}
 .head{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap}
@@ -88,19 +91,22 @@ nav.rail .me button:hover{background:#003c38}
 .rowhead{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:8px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600;padding:6px 0;border-bottom:1.5px solid var(--ink)}
 .flexrow{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}.flexrow .field{min-width:0}.flexrow .grow{flex:1 1 220px}
 .check{display:flex;gap:8px;align-items:center;font-weight:600;min-height:40px}.check input{width:18px;height:18px;accent-color:var(--green)}
-/* Móvil: el rail pasa a ser una barra superior con los mismos enlaces */
+/* Móvil: barra superior con la marca y «Menú», que despliega los enlaces y «Cerrar sesión» */
 @media (max-width:900px){
 .app{grid-template-rows:auto 1fr}
 .split{grid-template-columns:1fr}.panel{position:static;max-height:none}
 .rowform{grid-template-columns:1fr 1fr}.rowhead{display:none}
 .grid2{grid-template-columns:1fr}
 main{overflow-x:auto}
-nav.rail{position:sticky;top:0;z-index:10;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;padding:6px 10px;gap:2px}
-nav.rail .brand{padding:0 12px 0 4px;font-size:20px}nav.rail .brand small{display:none}
-nav.rail a{padding:10px 12px;font-size:14px}nav.rail a.on{box-shadow:inset 0 -3px 0 #7fd1b9}
-nav.rail a.off,nav.rail .sep{display:none}
-nav.rail .me{margin:0 0 0 auto;padding:0;border:0;display:flex;align-items:center;gap:8px}
-nav.rail .me br,nav.rail .me span{display:none}nav.rail .me form{margin:0}
+nav.rail{position:sticky;top:0;z-index:10;height:auto;max-height:100vh;flex-direction:row;flex-wrap:wrap;align-items:center;justify-content:space-between;padding:8px 12px;gap:0}
+nav.rail .brand{padding:0;font-size:20px}nav.rail .brand small{display:inline;margin-left:8px;font-size:10px}
+.menubtn{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;font:600 14px var(--font-archivo),sans-serif;color:#fff;background:none;border:1px solid #7fb3a7;cursor:pointer}
+nav.rail.open .menubtn{background:var(--green-deep)}
+nav.rail .links{display:none}
+nav.rail.open .links{display:flex;flex-direction:column;flex-basis:100%;margin-top:8px;border-top:1px solid #0d5e57}
+nav.rail.open a{padding:12px 4px}nav.rail a.on{box-shadow:inset 4px 0 0 #7fd1b9;padding-left:12px}
+nav.rail .sep{margin:14px 4px 4px}
+nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 }
 /* Inicio de sesión */
 .login{display:grid;grid-template-columns:1fr 1fr;min-height:100vh}
