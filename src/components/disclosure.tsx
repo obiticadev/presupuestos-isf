@@ -4,7 +4,17 @@ import { useEffect, useRef, type ReactNode } from "react";
 
 // Small client helpers around <details>: everything else in the editor stays a Server Component.
 
-/** A pop-up menu that closes when clicking outside it or choosing one of its buttons. */
+/** Opens the menu upwards when it does not fit below the summary in the window and there is more room above. */
+function placeMenu(d: HTMLDetailsElement) {
+  d.classList.remove("up");
+  const menu = d.querySelector<HTMLElement>(".menu");
+  if (!d.open || !menu || getComputedStyle(menu).position !== "absolute") return;
+  const below = window.innerHeight - d.getBoundingClientRect().bottom;
+  const above = d.getBoundingClientRect().top;
+  if (menu.offsetHeight + 8 > below && above > below) d.classList.add("up");
+}
+
+/** A pop-up menu that closes when clicking outside it or choosing one of its buttons, and opens upwards if it does not fit below. */
 export function Menu({ label, title, className = "", summaryClassName, children }: {
   label: ReactNode; title?: string; className?: string; summaryClassName: string; children: ReactNode;
 }) {
@@ -17,7 +27,7 @@ export function Menu({ label, title, className = "", summaryClassName, children 
     return () => document.removeEventListener("pointerdown", close);
   }, []);
   return (
-    <details ref={ref} className={`dd ${className}`}>
+    <details ref={ref} className={`dd ${className}`} onToggle={(e) => placeMenu(e.currentTarget)}>
       <summary className={summaryClassName} title={title} aria-label={title}>{label}</summary>
       <div className="menu" onClick={(e) => { if ((e.target as HTMLElement).closest("button") && ref.current) ref.current.open = false; }}>
         {children}
