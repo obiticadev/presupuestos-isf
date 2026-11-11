@@ -23,11 +23,12 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 
 - Ramas:
   - `master` tiene los planes 1 a 4 (PR #4 fusionado el 2026-11-10).
+  - `mejoras-uso-real`: mejoras tras el primer uso real (diseño `docs/superpowers/specs/2026-11-11-mejoras-uso-real-design.md`, 7 bloques). **Bloque 1 hecho**; sigue el Bloque 2. Se trabaja aquí, en local, con push a esta rama; `master` solo al final.
 - Plan 4 (PDF, Dokploy y copias): **terminado y desplegado** en `http://192.168.105.83:3100` (2026-11-10). Quedan comprobaciones en el servidor y errores por revisar.
   - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, `appName presupuestos-isf-app-oy9un2`, `composePath ./compose.yaml`. API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio. SSH: `ssh -i ~/.ssh/isf_dokploy isf@192.168.105.83`.
   - **Fusionar en `master` y desplegar en Dokploy exige el visto bueno explícito del usuario.**
-- **Para un chat nuevo: empieza por `docs/superpowers/progreso.md`, sección «Pendiente tras el despliegue (revisar)».** Resumen:
-  - interfaz: en el editor, entre ~1360 y ~1600 px de ancho, los nombres de partida y subpartida y las descripciones de línea se ven cortados;
+- **Para un chat nuevo: empieza por `docs/superpowers/progreso.md`, sección «Mejoras tras el uso real», y después «Pendiente tras el despliegue (revisar)».** Resumen de lo segundo:
+  - interfaz: textos cortados en el editor (resuelto en `mejoras-uso-real`, Bloque 1);
   - prueba intermitente en `tests/quotes/kit-instances.test.ts`;
   - menores aplazados de la revisión final del plan 4;
   - en el servidor: emisión de prueba, reinicio y redespliegue, estado del contenedor `backup` y prueba de restauración (el usuario SSH `isf` aún no está en el grupo `docker`);
@@ -45,6 +46,8 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - Las pruebas de interfaz se hacen con Claude in Chrome. El progreso se registra a mano en claude-mem y en `progreso.md`.
   - Al reescribir `AGENTS.md` o `progreso.md` desde un script, conserva sus saltos de línea CRLF.
   - Para matar el servidor desde Bash usa un patrón que no se encuentre a sí mismo: `pkill -f '[n]ext dev'`.
+  - No se borran pruebas existentes: solo se añaden (usuario, 2026-11-11).
+  - Para probar la interfaz a varios anchos, el editor va en un `<iframe>` dentro de `/api/health`: no sustituyas el `body` de una página React.
   - Con Playwright, `getByLabel(..., { exact: true })` no encuentra un `select` o un `textarea` con valor: la etiqueta envuelve al control y su texto incluye las opciones o el contenido. Localízalos por `name` o por el primer texto de la `label`.
 
 Actualiza esta sección cuando cambie el estado.

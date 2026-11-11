@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-10 (Tarea 7 cerrada tras la revisión con Claude in Chrome; falta la Tarea 8).
+Última actualización: 2026-11-11 (mejoras tras el uso real: Bloque 1 hecho en la rama `mejoras-uso-real`; sigue el Bloque 2).
 
 ## Cronología
 
@@ -24,6 +24,8 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
    - Tareas 1 a 5 terminadas y probadas en Chrome.
    - Tareas 6 y 7: servicios y pruebas hechos; la interfaz se terminó en el nuevo equipo (punto 5).
 5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos, los nombres del historial y el listado y la configuración; queda el cierre.
+
+6. **2026-11-11, mejoras tras el primer uso real.** Rama `mejoras-uso-real` (desde `master`). Diseño de 7 bloques aprobado (`specs/2026-11-11-mejoras-uso-real-design.md`); el aspecto del editor se eligió con maquetas en Chrome (`docs/diseno/maquetas/editor-filas*.html`). Bloque 1 (editor y móvil) terminado. Se trabaja bloque a bloque, con push a esta rama y pruebas en local; `master` y el despliegue, al final.
 
 ## Cómo retomar en otro equipo
 
@@ -68,6 +70,21 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - Toda escritura de un borrador pasa por `withDraft()`: bloquea la fila, comprueba que sigue en borrador y recalcula los totales.
 
 ## Pendiente
+
+### Mejoras tras el uso real (rama `mejoras-uso-real`) — en curso
+
+- **Forma de trabajo (usuario):** un plan por bloque (`superpowers:writing-plans`), ejecución, revisión en Chrome, commit y push a `mejoras-uso-real`. No se borran pruebas: solo se añaden. `master` y Dokploy no se tocan hasta que el usuario dé el visto bueno a la rama entera.
+- **Bloque 1, editor y móvil: hecho** (plan `plans/2026-11-11-mejoras-bloque-1-editor.md`). 231 pruebas en verde, `lint` sin errores, `build` correcto.
+  - Filas en rejilla con consultas de contenedor: una fila, dos pisos (≤ 980 px de tabla) o apiladas (≤ 480 px). Títulos y descripciones en cuadros que crecen; se guardan al salir del campo o con Enter.
+  - Botones en el orden de la maqueta; flechas en gris en los extremos; «+ Añadir ▾» con menú y ✕; «＋ ▾» en la partida; banda «＋ NUEVA PARTIDA».
+  - Comentario (`comment`) en `QuoteLine`, `KitInstance` y `QuoteSection`: servicio `setComment`, se copia en revisiones y duplicados, sale en el PDF en cursiva (filas `note`, que nunca abren hoja).
+  - Conjunto plegable con silueta, sin el esquema grande, pie en una línea con ✓; el incompleto sale abierto y el enlace de «Para emitir» lo abre.
+  - Móvil: barra superior con «Menú».
+  - Decisiones tomadas por el camino: en `.superpowers/sdd/2026-11-11-mejoras-bloque-1-editor/progress.md` (no se sube) y resumidas en el mensaje de cierre del bloque.
+- **Hallazgo sin tocar:** en el PDF, las líneas de los conjuntos salen antes que las líneas sueltas de su subpartida (en el editor, al revés). Ya pasaba; cambiarlo alteraría la regeneración de PDF emitidos.
+- **Siguiente:** plan del Bloque 2 (clientes e instalaciones).
+- **Datos de la BD de desarrollo:** el borrador «Ampliación del grupo de bombeo» (`cmw9urhye0012djm6hdo8szw4`) tiene nombres largos, comentarios y elementos «… de prueba UI» para revisar el editor.
+- **Pruebas de interfaz:** para simular anchos se mete el editor en un `<iframe>` dentro de `http://localhost:3000/api/health` (una página sin React). Sustituir el `body` de una página React provoca excepciones `removeChild` que no son de la app.
 
 ### Plan 3: terminado el 2026-11-10 (rama `plan-3-presupuestos`)
 
