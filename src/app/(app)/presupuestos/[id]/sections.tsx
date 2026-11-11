@@ -29,7 +29,7 @@ const qty = (v: Dec) => formatDecimalEs(v, { min: 0, max: 4 });
 function Move({ action, id, first, last }: { action: typeof moveSectionAction; id: string; first: boolean; last: boolean }) {
   return (
     <>
-      <ActionForm action={action}><input type="hidden" name="id" value={id} /><input type="hidden" name="dir" value="-1" /><button className="icon" disabled={first} aria-label="Subir">↑</button></ActionForm>
+      <ActionForm action={action} className="up"><input type="hidden" name="id" value={id} /><input type="hidden" name="dir" value="-1" /><button className="icon" disabled={first} aria-label="Subir">↑</button></ActionForm>
       <ActionForm action={action}><input type="hidden" name="id" value={id} /><input type="hidden" name="dir" value="1" /><button className="icon" disabled={last} aria-label="Bajar">↓</button></ActionForm>
     </>
   );
@@ -50,21 +50,20 @@ export function SectionHead({ ctx, section, number, amount, first, last }: {
 }) {
   return (
     <div className="qrow part">
-      <span>{number}</span>
+      <span className="c-code">{number}</span>
       {ctx.editable ? (
-        <ActionForm action={updateSectionAction} key={section.title} className="inline">
+        <ActionForm action={updateSectionAction} key={section.title} className="inline c-desc">
           <input type="hidden" name="id" value={section.id} />
-          <SubmitOnBlur><input name="title" defaultValue={section.title} placeholder="Nombre de la partida" aria-label={`Nombre de la partida ${number}`} /></SubmitOnBlur>
+          <SubmitOnBlur><textarea name="title" defaultValue={section.title} rows={1} placeholder="Nombre de la partida" aria-label={`Nombre de la partida ${number}`} /></SubmitOnBlur>
         </ActionForm>
-      ) : <span>{section.title || <span className="mut">Partida {number}</span>}</span>}
-      <span /><span />
-      <span className="n">{money(amount)}</span>
-      <span className="acts">
+      ) : <span className="c-desc">{section.title || <span className="mut">Partida {number}</span>}</span>}
+      <span className="n c-amt">{money(amount)}</span>
+      <span className="acts c-acts">
         {ctx.editable && (
           <>
-            <Move action={moveSectionAction} id={section.id} first={first} last={last} />
-            <ActionForm action={addSectionAction}><input type="hidden" name="quoteId" value={ctx.quoteId} /><input type="hidden" name="parentId" value={section.id} /><input type="hidden" name="title" value="" /><button className="icon" title="Añadir subpartida" aria-label="Añadir subpartida">＋</button></ActionForm>
             <ActionForm action={removeSectionAction}><input type="hidden" name="id" value={section.id} /><ConfirmButton label="Eliminar" className="icon" confirm="¿Eliminar la partida con todo su contenido?" /></ActionForm>
+            <Move action={moveSectionAction} id={section.id} first={first} last={last} />
+            <ActionForm action={addSectionAction} className="last"><input type="hidden" name="quoteId" value={ctx.quoteId} /><input type="hidden" name="parentId" value={section.id} /><input type="hidden" name="title" value="" /><button className="icon" title="Añadir subpartida" aria-label="Añadir subpartida">＋</button></ActionForm>
           </>
         )}
       </span>
@@ -79,11 +78,11 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
   return (
     <div className="subblock" id={`seccion-${sub.id}`}>
       <div className="qrow sub">
-        <span>{number}</span>
+        <span className="c-code">{number}</span>
         {ctx.editable ? (
-          <ActionForm action={updateSectionAction} key={`${sub.title}-${sub.mode}-${sub.globalQty}-${sub.globalPrice}-${sub.taxName}`} className="inline subform">
+          <ActionForm action={updateSectionAction} key={`${sub.title}-${sub.mode}-${sub.globalQty}-${sub.globalPrice}-${sub.taxName}`} className="inline subform c-desc">
             <input type="hidden" name="id" value={sub.id} />
-            <SubmitOnBlur><input name="title" defaultValue={sub.title} placeholder="Nombre de la subpartida" aria-label={`Nombre de la subpartida ${number}`} /></SubmitOnBlur>
+            <SubmitOnBlur><textarea name="title" defaultValue={sub.title} rows={1} placeholder="Nombre de la subpartida" aria-label={`Nombre de la subpartida ${number}`} /></SubmitOnBlur>
             <SubmitOnChange>
               <select name="mode" defaultValue={sub.mode} aria-label="Modo de la subpartida">
                 <option value="SUM">por suma</option>
@@ -103,16 +102,17 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
             )}
           </ActionForm>
         ) : (
-          <span>{sub.title || <span className="mut">Subpartida {number}</span>} <span className="mut">· {global ? "precio global" : "por suma"}</span></span>
+          <span className="c-desc">{sub.title || <span className="mut">Subpartida {number}</span>} <span className="mut">· {global ? "precio global" : "por suma"}</span></span>
         )}
-        {!ctx.editable && global ? <span className="n">{sub.globalQty ? qty(sub.globalQty) : ""}</span> : <span />}
-        {!ctx.editable && global ? <span className="n">{price(sub.globalPrice)}</span> : <span />}
-        <span className="n">{money(amount)}</span>
-        <span className="acts">
+        {!ctx.editable && global && <span className="n c-qty">{sub.globalQty ? qty(sub.globalQty) : ""}</span>}
+        {!ctx.editable && global && <span className="n c-price">{price(sub.globalPrice)}</span>}
+        <span className="n c-amt">{money(amount)}</span>
+        <span className="acts c-acts">
           {ctx.editable && (
             <>
-              <Move action={moveSectionAction} id={sub.id} first={first} last={last} />
               <ActionForm action={removeSectionAction}><input type="hidden" name="id" value={sub.id} /><ConfirmButton label="Eliminar" className="icon" confirm="¿Eliminar la subpartida con sus líneas?" /></ActionForm>
+              <Move action={moveSectionAction} id={sub.id} first={first} last={last} />
+              <span className="slot last" aria-hidden />
             </>
           )}
         </span>
@@ -141,24 +141,25 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
   const editableText = ctx.editable && !inKit;
   return (
     <div id={`linea-${line.id}`} className={`qrow line${line.visible ? "" : " hidden"}`}>
-      <span className="mut">{line.concept?.code ?? ""}</span>
+      <span className="mut c-code">{line.concept?.code ?? ""}</span>
       {editableText ? (
-        <ActionForm action={updateLineAction} key={`${line.description}-${line.quantity}`} className="inline lineform">
+        <ActionForm action={updateLineAction} key={`${line.description}-${line.quantity}`} className="lineform">
           <input type="hidden" name="id" value={line.id} />
           <SubmitOnBlur>
-            <input name="description" defaultValue={line.description} aria-label="Descripción" />
-            <input name="quantity" defaultValue={qty(line.quantity)} inputMode="decimal" aria-label="Cantidad" className="num" />
+            <textarea name="description" defaultValue={line.description} rows={1} aria-label="Descripción" className="c-desc" />
+            <span className="c-qty">
+              <input name="quantity" defaultValue={qty(line.quantity)} inputMode="decimal" aria-label="Cantidad" className="num" />
+              <span className="mut unit">{line.unitName}</span>
+            </span>
           </SubmitOnBlur>
-          <span className="mut unit">{line.unitName}</span>
-          <button className="icon" aria-label="Guardar línea">✓</button>
         </ActionForm>
       ) : (
-        <span>{line.description}</span>
+        <span className="c-desc">{line.description}</span>
       )}
-      {!editableText && <span className="n">{qty(line.quantity)} {line.unitName}</span>}
-      <span className="n">{global ? "" : price(line.unitPrice)}</span>
-      <span className="n">{global ? "" : money(amount)}</span>
-      <span className="acts">
+      {!editableText && <span className="n c-qty">{qty(line.quantity)} {line.unitName}</span>}
+      <span className="n c-price">{global ? "" : price(line.unitPrice)}</span>
+      <span className="n c-amt">{global ? "" : money(amount)}</span>
+      <span className="acts c-acts">
         {ctx.editable && (
           <>
             <ActionForm action={updateLineAction} className="vis">
@@ -185,7 +186,7 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
             {!inKit && (
               <>
                 <Move action={moveLineAction} id={line.id} first={!!first} last={!!last} />
-                <ActionForm action={removeLineAction}><input type="hidden" name="id" value={line.id} /><button className="icon" aria-label="Eliminar línea">✕</button></ActionForm>
+                <ActionForm action={removeLineAction} className="last"><input type="hidden" name="id" value={line.id} /><button className="icon" aria-label="Eliminar línea">✕</button></ActionForm>
               </>
             )}
           </>

@@ -58,14 +58,21 @@ export function ConfirmButton({ label, confirm, className = "btn" }: { label: st
   );
 }
 
-/** Submits the enclosing form when a text field inside it loses focus with a changed value. */
+/**
+ * Submits the enclosing form when a text field inside it loses focus with a changed value.
+ * In a textarea, Enter (without Shift) saves instead of adding a line break.
+ */
 export function SubmitOnBlur({ children }: { children: ReactNode }) {
   return (
     <span
       style={{ display: "contents" }}
       onBlur={(e) => {
-        const t = e.target as HTMLInputElement;
-        if (t.tagName === "INPUT" && t.type !== "hidden" && t.value !== t.defaultValue) t.form?.requestSubmit();
+        const t = e.target as HTMLInputElement | HTMLTextAreaElement;
+        if ((t.tagName === "TEXTAREA" || (t.tagName === "INPUT" && t.type !== "hidden")) && t.value !== t.defaultValue) t.form?.requestSubmit();
+      }}
+      onKeyDown={(e) => {
+        const t = e.target as HTMLElement;
+        if (t.tagName === "TEXTAREA" && e.key === "Enter" && !e.shiftKey) { e.preventDefault(); t.blur(); }
       }}
     >
       {children}
