@@ -17,7 +17,7 @@ const FRAME = "box-sizing:border-box;width:calc(100% - 36mm);margin:0 18mm;font-
 const joinDot = (parts: string[]) => parts.map((p) => p.trim()).filter(Boolean).join(" · ");
 
 const row = (r: PdfRow) =>
-  r.kind === "note" ? html`<tr class="note"><td></td><td colspan="3">${r.text}</td></tr>`
+  r.kind === "note" ? html`<tr class="note ${r.of}"><td></td><td colspan="3">${r.text}</td></tr>`
   : r.kind === "line"
     ? html`<tr class="line"><td></td><td>${r.text}</td><td class="n">${r.quantity}</td><td></td></tr>`
     : html`<tr class="${r.kind}"><td class="p">${r.number}</td><td>${r.title}</td><td></td><td class="n">${r.total}</td></tr>`;

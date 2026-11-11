@@ -19,11 +19,18 @@ test("el cuerpo escapa el asunto y lleva thead y break-inside: avoid", () => {
   expect(body).toContain("break-inside:avoid");
 });
 
-test("una nota sale escapada, en su propia fila y en cursiva", () => {
-  const d = { ...doc(), rows: [{ kind: "note" as const, text: "<b>Medida</b> en obra" }] };
+test("una nota sale escapada, en su propia fila, en cursiva y conserva sus saltos de línea", () => {
+  const d = { ...doc(), rows: [{ kind: "note" as const, of: "line" as const, text: "<b>Medida</b> en obra" }] };
   const body = TEMPLATES.v1.body(d);
-  expect(body).toContain('<tr class="note"><td></td><td colspan="3">&lt;b&gt;Medida&lt;/b&gt; en obra</td></tr>');
+  expect(body).toContain('<tr class="note line"><td></td><td colspan="3">&lt;b&gt;Medida&lt;/b&gt; en obra</td></tr>');
   expect(body).toMatch(/tr\.note td\{[^}]*font-style:italic/);
+  expect(body).toMatch(/tr\.note td\{[^}]*white-space:pre-line/);
+});
+
+test("la nota de la partida lleva fondo de banda y la de la subpartida no lleva sangría de línea", () => {
+  const body = TEMPLATES.v1.body(doc());
+  expect(body).toMatch(/tr\.note\.part td\{[^}]*background:var\(--band\)/);
+  expect(body).toMatch(/tr\.note\.line td:nth-child\(2\),tr\.note\.kit td:nth-child\(2\)\{padding-left:6mm\}/);
 });
 
 test("la marca de agua solo en el borrador", () => {

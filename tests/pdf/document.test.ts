@@ -99,6 +99,23 @@ describe("buildDocument", () => {
     ]);
   });
 
+  it("each note says whose comment it is: line, kit, subpartida or partida", () => {
+    const s = src();
+    const part = s.quote.sections[0];
+    part.comment = "P";
+    part.children[0].comment = "S";
+    part.children[0].kits = [{ id: "k1", comment: "K" }];
+    part.children[0].lines = [
+      { description: "Bomba", quantity: "2", unitName: "ud", visible: true, kitInstanceId: "k1" },
+      { description: "Cuadro", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null, comment: "L" },
+    ];
+    const notes = buildDocument(s, { draft: false }).rows.filter((r) => r.kind === "note");
+    expect(notes).toEqual([
+      { kind: "note", of: "kit", text: "K" }, { kind: "note", of: "line", text: "L" },
+      { kind: "note", of: "sub", text: "S" }, { kind: "note", of: "part", text: "P" },
+    ]);
+  });
+
   it("a hidden line hides its comment, an empty comment adds nothing, and a kit with every line hidden hides its own", () => {
     const s = src();
     const c1 = s.quote.sections[0].children[0];
