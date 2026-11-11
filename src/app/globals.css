@@ -175,6 +175,9 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .menu button:last-child{border-bottom:0}
 .menu button small{font-weight:400;font-size:12px;color:var(--mut)}
 .menu button:hover{background:var(--band)}
+.menu button[disabled]{cursor:default;background:var(--band)}
+/* Estado del emitido: el desplegable ocupa el ancho del panel */
+.dd.status{display:block}.dd.status>summary{width:100%;justify-content:space-between}.dd.status .menu{right:0}
 .addpanel>summary{display:none}
 .addform{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 8px;border-bottom:1px solid var(--rule);background:#fbfcfa}
 .addform select,.addform input{font:inherit;border:1.5px solid var(--ink);background:var(--sheet);min-height:36px;padding:6px 8px;min-width:0}
@@ -205,7 +208,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .comment .acts{flex:none}
 .comment.cl{padding:2px 8px 8px 100px}
 .qrow.line:has(+ .comment){border-bottom:0}
-.kit .comment.cl{padding-right:12px}
+.kit .comment.cl,.kit .qrow{padding-right:12px}
 .comment.ck{padding:8px 12px;border-top:1px solid var(--rule);border-bottom:0}
 .comment.cp{background:var(--band)}
 .comment:has(+ .addpanel[open]){display:none}

@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ActionForm, SubmitOnChange } from "@/components/action-form";
+import { ActionForm } from "@/components/action-form";
+import { Menu } from "@/components/disclosure";
 import type { AuditEntry } from "@/modules/audit/service";
 import { createRevisionAction, duplicateAction, refreshPricesAction, setStatusAction } from "@/modules/quotes/actions";
-import { STATUS_LABEL } from "@/modules/quotes/labels";
+import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
 import { isExpired } from "@/modules/quotes/lifecycle";
 import type { QuoteDetail } from "@/modules/quotes/service";
 
@@ -21,11 +22,14 @@ export function IssuedPanel({ q }: { q: QuoteDetail }) {
       ) : (
         <ActionForm action={setStatusAction} key={q.status}>
           <input type="hidden" name="id" value={q.id} />
-          <SubmitOnChange>
-            <select name="status" defaultValue={q.status} aria-label="Estado del presupuesto">
-              {Object.entries(STATUS_LABEL).filter(([s]) => s !== "DRAFT").map(([s, label]) => <option key={s} value={s}>{label}</option>)}
-            </select>
-          </SubmitOnChange>
+          <Menu className="status" summaryClassName="btn" label={<><span className={`st ${STATUS_CLASS[q.status]}`}><i />{STATUS_LABEL[q.status]}</span><span aria-hidden>▾</span></>}>
+            {(Object.keys(STATUS_LABEL) as (keyof typeof STATUS_LABEL)[]).filter((s) => s !== "DRAFT").map((s) => (
+              <button key={s} name="status" value={s} disabled={s === q.status}>
+                <span className={`st ${STATUS_CLASS[s]}`}><i />{STATUS_LABEL[s]}</span>
+                {s === q.status && <small>estado actual</small>}
+              </button>
+            ))}
+          </Menu>
         </ActionForm>
       )}
       {isExpired(q) && <p className="warnbox">Validez vencida: han pasado más de {q.validityDays} días desde la emisión.</p>}
