@@ -74,14 +74,15 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 ### Mejoras tras el uso real (rama `mejoras-uso-real`) — en curso
 
 - **Forma de trabajo (usuario):** un plan por bloque (`superpowers:writing-plans`), ejecución, revisión en Chrome, commit y push a `mejoras-uso-real`. No se borran pruebas: solo se añaden. `master` y Dokploy no se tocan hasta que el usuario dé el visto bueno a la rama entera.
-- **Bloque 1, editor y móvil: hecho** (plan `plans/2026-11-11-mejoras-bloque-1-editor.md`). 231 pruebas en verde, `lint` sin errores, `build` correcto.
+- **Bloque 1, editor y móvil: hecho** (plan `plans/2026-11-11-mejoras-bloque-1-editor.md`). 231 pruebas en verde al cerrar la ejecución, `lint` sin errores, `build` correcto.
   - Filas en rejilla con consultas de contenedor: una fila, dos pisos (≤ 980 px de tabla) o apiladas (≤ 480 px). Títulos y descripciones en cuadros que crecen; se guardan al salir del campo o con Enter.
   - Botones en el orden de la maqueta; flechas en gris en los extremos; «+ Añadir ▾» con menú y ✕; «＋ ▾» en la partida; banda «＋ NUEVA PARTIDA».
   - Comentario (`comment`) en `QuoteLine`, `KitInstance` y `QuoteSection`: servicio `setComment`, se copia en revisiones y duplicados, sale en el PDF en cursiva (filas `note`, que nunca abren hoja).
   - Conjunto plegable con silueta, sin el esquema grande, pie en una línea con ✓; el incompleto sale abierto y el enlace de «Para emitir» lo abre.
   - Móvil: barra superior con «Menú».
   - Decisiones tomadas por el camino: en `.superpowers/sdd/2026-11-11-mejoras-bloque-1-editor/progress.md` (no se sube) y resumidas en el mensaje de cierre del bloque.
-- **Hallazgo sin tocar:** en el PDF, las líneas de los conjuntos salen antes que las líneas sueltas de su subpartida (en el editor, al revés). Ya pasaba; cambiarlo alteraría la regeneración de PDF emitidos.
+- **Ajustes tras la revisión del usuario (2026-11-11):** botones del conjunto alineados con el ✓; estado del emitido con el desplegable de la app; «Recalcular» cierra la edición; los desplegables se abren hacia arriba si no caben; y, de la auditoría y la revisión final: las líneas sueltas van antes que las de los conjuntos (en el editor y en los PDF que se emitan desde ahora; los ya emitidos no cambian), «Actualizar precios» copia también unidad y nombre del impuesto, los saltos de línea pegados en títulos y descripciones pasan a espacios, el conjunto recién completado sigue abierto, un solo formulario abierto en la página, Escape cierra los menús y el foco se ve en los cuadros de texto. 238 pruebas.
+- **Pendientes menores:** una nota de la última partida puede quedarse sola al principio de la hoja del cierre (muy improbable); «Validez vencida» cuenta horas en vez de días de Madrid (lo sustituye el Bloque 4).
 - **Siguiente:** plan del Bloque 2 (clientes e instalaciones).
 - **Datos de la BD de desarrollo:** el borrador «Ampliación del grupo de bombeo» (`cmw9urhye0012djm6hdo8szw4`) tiene nombres largos, comentarios y elementos «… de prueba UI» para revisar el editor.
 - **Pruebas de interfaz:** para simular anchos se mete el editor en un `<iframe>` dentro de `http://localhost:3000/api/health` (una página sin React). Sustituir el `body` de una página React provoca excepciones `removeChild` que no son de la app.
