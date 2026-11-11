@@ -82,7 +82,6 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .comment.cl{padding:2px 8px 8px 100px;border-bottom:1px solid var(--rule);margin-top:-1px}
 .comment.ck{padding:8px 12px;border-top:1px solid var(--rule);border-bottom:0}
 .comment.cp{background:var(--band);border-top:1px solid var(--rule)}
-.comment.cl .icon,.comment .icon{min-width:26px;min-height:26px;font-size:12px}
 .r.line:has(+ .slot:not(:empty)){border-bottom:0}
 .slot:empty{display:none}
 .comment.editing{font-style:normal;flex-wrap:wrap}.comment.editing textarea{flex:1 1 100%;font-style:italic;border:1.5px solid var(--ink);min-height:56px}
@@ -92,7 +91,13 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .where select{width:100%;flex:none}
 .menu.right{left:auto;right:0}
 .r.part .acts .dd>summary.icon{text-transform:none;letter-spacing:0;padding:0 8px}
-@container ed (max-width:480px){.comment.cl{padding-left:8px}}
+@container ed (max-width:480px){.comment.cl{padding-left:8px}
+  /* Móvil: visibilidad, precio y comentario a la izquierda; subir y bajar a la derecha; eliminar aparte, al final */
+  .vA .r.line .acts{width:100%;gap:6px}
+  .vA .r.line .acts .icon{min-width:38px;min-height:38px}
+  .vA .r.line .acts .up{margin-left:auto}
+  .vA .r.line .acts .del{margin-left:14px}
+}
 .addform{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 8px;border-bottom:1px solid var(--rule);background:#fbfcfa}
 .addform select,.addform input{border:1.5px solid var(--ink);min-height:36px;padding:6px 8px;width:auto}
 .addform select{flex:1 1 260px}.addform .grow{flex:1 1 220px}.addform .num{width:96px}
@@ -345,7 +350,7 @@ const slot = (key, cls) => { SLOT_CLS[key] = cls; return `<div class="slot" data
 const bub = (key, label) => `<button class="icon bub" data-addcom="${key}" title="${label}" aria-label="${label}"${NOTE[key] ? " hidden" : ""}>${BUB}</button>`;
 function vA() {
   const v = "A";
-  const acts = (inKit, key) => `<label class="check small" title="Visible en el documento"><input type="checkbox" checked>Ver</label><button class="icon" title="Ajustar precio">€</button>${bub(key, "Añadir comentario a este producto")}${inKit ? "" : `<button class="icon" aria-label="Subir">↑</button><button class="icon" aria-label="Bajar">↓</button><button class="icon" aria-label="Eliminar">✕</button>`}`;
+  const acts = (inKit, key) => `<label class="check small" title="Visible en el documento"><input type="checkbox" checked>Ver</label><button class="icon" title="Ajustar precio">€</button>${bub(key, "Añadir comentario a este producto")}${inKit ? "" : `<button class="icon up" aria-label="Subir">↑</button><button class="icon" aria-label="Bajar">↓</button><button class="icon del" aria-label="Eliminar">✕</button>`}`;
   const row = (l, inKit, key) => `<div class="r line"><span class="code">${l.code}</span><span><textarea class="desc" rows="1" aria-label="Descripción">${esc(l.desc)}</textarea>${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${acts(inKit, key)}</span></div>${slot(key, "cl")}`;
   const mini = (k) => `<span class="mini" title="${k.mainLabel}${k.wires.map(w => " → " + w.l).join("")}" aria-hidden="true"><i>${k.node}</i>${k.wires.map(w => `<s class="${w.miss ? "miss" : ""}"></s>`).join("")}</span>`;
   const foot = (k) => `<div class="kitfoot"><div class="kbtns">${k.missing ? `<button class="btn warn" title="Completar conjunto">Completar</button>` : `<button class="btn" title="Editar conjunto">Editar</button>`}<button class="btn" title="Quitar conjunto">Quitar</button>${bub(k.id, "Añadir comentario al conjunto")}</div><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
