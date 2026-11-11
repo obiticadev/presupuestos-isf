@@ -15,6 +15,7 @@ import { listQuoteHistory, priceWarnings } from "@/modules/quotes/lifecycle";
 import { getQuote, listRequiredConcepts, quoteLabel, type QuoteDetail } from "@/modules/quotes/service";
 import { getSettings, listTaxes } from "@/modules/settings/service";
 import { listActiveUserNames } from "@/modules/users/service";
+import { OpenKitFromHash } from "@/components/disclosure";
 import { IssuePanel } from "./issue-panel";
 import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory } from "./lifecycle-panel";
 import { Subsection, SectionHead, AddSection, type EditorContext } from "./sections";
@@ -134,8 +135,9 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
             </div>
           ))}
           {q.sections.length === 0 && <p className="mut" style={{ padding: 12 }}>Sin partidas.</p>}
+          {editable && <AddSection quoteId={q.id} />}
         </div>
-        {editable && <AddSection quoteId={q.id} />}
+        <OpenKitFromHash />
         <QuoteHistory entries={history} />
       </div>
 
