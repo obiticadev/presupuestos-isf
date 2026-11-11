@@ -10,6 +10,7 @@ import { renderDocument } from "@/pdf/templates";
 import { getConcept, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
 import { ensureIssuedPdf, pdfFileName, pdfResponse, readIssuedPdf } from "@/modules/quotes/pdf";
+import { getQuote, setComment } from "@/modules/quotes/service";
 import { updateSettings } from "@/modules/settings/service";
 import { completeDraft, conceptFields, makeDraft } from "../helpers/quotes";
 
@@ -135,6 +136,22 @@ test("pdfResponse del borrador: vista previa con BORRADOR y sin guardar nada", a
   expect(await text(new Uint8Array(await res.arrayBuffer()))).toContain(norm("BORRADOR"));
   await expect(readdir(abs("pdf"))).rejects.toThrow();
   expect(await prisma.issuedDocument.count()).toBe(0);
+});
+
+test("los comentarios del borrador salen en la vista previa y en el PDF emitido", async () => {
+  const { actor, quote } = await completeDraft();
+  const q = await getQuote(quote.id);
+  const sub = q.sections[0].children[0];
+  await setComment(actor, { kind: "line", id: sub.lines[0].id, comment: "Kilómetros desde Alcalá" });
+  await setComment(actor, { kind: "section", id: sub.id, comment: "Programación en planta" });
+  await setComment(actor, { kind: "section", id: q.sections[0].id, comment: "Trabajos en fin de semana" });
+  const preview = await text(new Uint8Array(await (await pdfResponse(actor, quote.id)).arrayBuffer()));
+  await issueQuote(actor, quote.id);
+  const issuedPdf = await text(await readFile(abs((await ensureIssuedPdf(actor, quote.id)).path)));
+  for (const c of ["Kilómetros desde Alcalá", "Programación en planta", "Trabajos en fin de semana"]) {
+    expect(preview).toContain(norm(c));
+    expect(issuedPdf).toContain(norm(c));
+  }
 });
 
 test("pdfResponse devuelve 500 si falla la generación", async () => {

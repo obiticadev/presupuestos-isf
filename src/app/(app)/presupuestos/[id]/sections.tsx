@@ -3,6 +3,7 @@
 import { ActionForm, ConfirmButton, SubmitOnBlur, SubmitOnChange } from "@/components/action-form";
 import type { ReactNode } from "react";
 import { CloseButton, CollapseKitButton, Menu, OpenButton } from "@/components/disclosure";
+import { Comment, CommentButton } from "./comment";
 import { formatDecimalEs } from "@/lib/decimal";
 import type { ConceptOption } from "@/modules/catalog/service";
 import { kitDefinition, refCategoryId, refConceptId } from "@/modules/kits/definition";
@@ -81,6 +82,7 @@ export function SectionHead({ ctx, section, number, amount, first, last }: {
             <Move action={moveSectionAction} id={section.id} first={first} last={last} />
             <Menu className="last" summaryClassName="icon" title="Añadir a la partida" label="＋">
               <OpenButton target={`nueva-subpartida-${section.id}`}>Subpartida<small>nueva subpartida al final de la partida</small></OpenButton>
+              <OpenButton target={`comentario-${section.id}`}>Comentario de la partida<small>al pie de la partida</small></OpenButton>
             </Menu>
           </>
         )}
@@ -143,7 +145,7 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
             <>
               <ActionForm action={removeSectionAction}><input type="hidden" name="id" value={sub.id} /><ConfirmButton label="Eliminar" className="icon" confirm="¿Eliminar la subpartida con sus líneas?" /></ActionForm>
               <Move action={moveSectionAction} id={sub.id} first={first} last={last} />
-              <span className="slot last" aria-hidden />
+              <CommentButton id={sub.id} has={!!sub.comment} reserve label="Añadir comentario a la subpartida" className="icon bub last" />
             </>
           )}
         </span>
@@ -152,6 +154,7 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
 
       {loose.map((l, i) => <LineRow key={l.id} ctx={ctx} line={l} global={global} first={i === 0} last={i === loose.length - 1} />)}
       {sub.kits.map((k) => <KitBlock key={k.id} ctx={ctx} kit={k} lines={sub.lines.filter((l) => l.kitInstanceId === k.id)} />)}
+      <Comment kind="section" id={sub.id} text={sub.comment} editable={ctx.editable} variant="cs" />
       {ctx.editable && <AddToSubsection ctx={ctx} sub={sub} />}
     </div>
   );
@@ -171,6 +174,7 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
   );
   const editableText = ctx.editable && !inKit;
   return (
+    <>
     <div id={`linea-${line.id}`} className={`qrow line${line.visible ? "" : " hidden"}`}>
       <span className="mut c-code">{line.concept?.code ?? ""}</span>
       {editableText ? (
@@ -214,6 +218,7 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
                 </ActionForm>
               </details>
             )}
+            <CommentButton id={line.id} has={!!line.comment} label="Añadir comentario a este producto" />
             {!inKit && (
               <>
                 <Move action={moveLineAction} id={line.id} first={!!first} last={!!last} />
@@ -225,6 +230,8 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
       </span>
       <span className="flags">{flags}</span>
     </div>
+    <Comment kind="line" id={line.id} text={line.comment} editable={ctx.editable} variant="cl" />
+    </>
   );
 }
 
@@ -274,6 +281,7 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
           : <>{lines.map((l) => `${qty(l.quantity)} ${l.unitName} × ${price(l.unitPrice)}`).join(" + ")} = <b>{money(amount)}</b></>}
       </p>
       {lines.map((l) => <LineRow key={l.id} ctx={ctx} line={l} global={false} inKit />)}
+      <Comment kind="kit" id={kit.id} text={kit.comment} editable={ctx.editable} variant="ck" />
       {ctx.editable && (
         <>
           <Panel id={`editar-conjunto-${kit.id}`}>
@@ -310,6 +318,7 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
                 {missing.length ? "Completar" : "Editar"}
               </OpenButton>
               <ActionForm action={removeKitAction}><input type="hidden" name="id" value={kit.id} /><ConfirmButton label="Quitar" confirm="¿Quitar el conjunto? Se quitan sus líneas." /></ActionForm>
+              <CommentButton id={kit.id} has={!!kit.comment} label="Añadir comentario al conjunto" />
             </div>
             <CollapseKitButton />
           </div>
@@ -329,6 +338,7 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
         <Menu label="+ Añadir ▾" summaryClassName="btn">
           <OpenButton target={`del-catalogo-${sub.id}`}>Del catálogo<small>concepto con su precio</small></OpenButton>
           <OpenButton target={`linea-especifica-${sub.id}`}>Línea específica<small>texto y precio a mano</small></OpenButton>
+          <OpenButton target={`comentario-${sub.id}`}>Comentario de la subpartida<small>al pie de la subpartida</small></OpenButton>
           {kits && <OpenButton target={`nuevo-conjunto-${sub.id}`}>Conjunto<small>varios elementos que se calculan juntos</small></OpenButton>}
         </Menu>
       </div>

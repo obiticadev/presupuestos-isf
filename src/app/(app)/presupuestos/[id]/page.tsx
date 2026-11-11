@@ -18,6 +18,7 @@ import { listActiveUserNames } from "@/modules/users/service";
 import { OpenKitFromHash } from "@/components/disclosure";
 import { IssuePanel } from "./issue-panel";
 import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory } from "./lifecycle-panel";
+import { Comment } from "./comment";
 import { Subsection, SectionHead, AddSection, type EditorContext } from "./sections";
 
 export const metadata: Metadata = { title: "Presupuesto · ISF Presupuestos" };
@@ -132,6 +133,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
               {s.children.map((sub, j) => (
                 <Subsection key={sub.id} ctx={ctx} sub={sub} number={`${i + 1}.${j + 1}`} first={j === 0} last={j === s.children.length - 1} />
               ))}
+              <Comment kind="section" id={s.id} text={s.comment} editable={editable} variant="cp" />
             </div>
           ))}
           {q.sections.length === 0 && <p className="mut" style={{ padding: 12 }}>Sin partidas.</p>}

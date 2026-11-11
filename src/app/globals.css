@@ -193,6 +193,21 @@ nav.rail .me br,nav.rail .me span{display:none}nav.rail .me form{margin:0}
 .kit>summary b{text-transform:uppercase;letter-spacing:.04em}
 .kit>summary .sum{flex:1;min-width:160px}
 .kit .kitsum{padding-top:10px}
+/* Comentarios (spec 1.6): en cursiva, pegados a su elemento; mientras se editan, el texto deja paso al cuadro */
+.comment{font-style:italic;padding:8px 8px 10px;border-bottom:1px solid var(--rule);display:flex;gap:8px;align-items:flex-start}
+.comment p{flex:1;white-space:pre-line}
+.comment .acts{flex:none}
+.comment.cl{padding:2px 8px 8px 100px}
+.qrow.line:has(+ .comment){border-bottom:0}
+.kit .comment.cl{padding-right:12px}
+.comment.ck{padding:8px 12px;border-top:1px solid var(--rule);border-bottom:0}
+.comment.cp{background:var(--band)}
+.comment:has(+ .addpanel[open]){display:none}
+.comment.editing{font-style:normal;flex-wrap:wrap;align-items:center}
+.comment.editing textarea{flex:1 1 100%;font:inherit;font-style:italic;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);min-height:56px;padding:6px 8px;resize:vertical}
+.icon.bub svg{display:block}
+.icon.bub.keep{visibility:hidden}
+.kbtns .bub{min-width:40px;min-height:40px;border:1.5px solid var(--ink)}
 .mini{display:flex;align-items:center;flex:none}
 .mini i{width:22px;height:22px;border:1.5px solid var(--ink);display:grid;place-items:center;font:800 10px var(--font-archivo),sans-serif;font-style:normal}
 .mini s{display:block;width:34px;height:1.5px;background:var(--ink);position:relative}
@@ -238,4 +253,5 @@ nav.rail .me br,nav.rail .me span{display:none}nav.rail .me form{margin:0}
   .qrow .c-acts .icon,.qrow .c-acts .slot{min-width:38px;min-height:38px}
   .qrow .c-acts .up{margin-left:auto}
   .qrow .c-acts .last{margin-left:14px}
+  .comment.cl{padding-left:8px}
 }
