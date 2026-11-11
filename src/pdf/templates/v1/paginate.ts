@@ -15,7 +15,8 @@ export function paginate(sheetHeightPx: number): void {
   const is = (r: Element, kind: string) => r.classList.contains(kind);
   // A heading must not be split from what it introduces: a part from its sub or first line, a sub from its first line.
   // A sub without lines (hidden lines, a GLOBAL subsection) introduces nothing and may end a sheet.
-  const leads = (a: Element, b: Element) => (is(a, "part") && (is(b, "sub") || is(b, "line"))) || (is(a, "sub") && is(b, "line"));
+  // A note (comment) never opens a sheet: it goes with the row it comments.
+  const leads = (a: Element, b: Element) => (is(a, "part") && (is(b, "sub") || is(b, "line"))) || (is(a, "sub") && is(b, "line")) || is(b, "note");
   const newSheet = (after: HTMLElement) => {
     const s = document.createElement("section");
     s.className = "sheet";
@@ -61,6 +62,11 @@ export function paginate(sheetHeightPx: number): void {
   sheet.append(close);
   for (let i = rs.length - 1; i >= from; i--) {
     target.prepend(rs[i]);
-    if (i < rs.length - 1 && over(sheet)) { tbody.append(rs[i]); break; }
+    if (i < rs.length - 1 && over(sheet)) {
+      tbody.append(rs[i]);
+      // A comment that would now open the sheet goes back with the row it comments (it fitted there before).
+      while (target.children.length > 1 && is(target.firstElementChild!, "note")) tbody.append(target.firstElementChild!);
+      break;
+    }
   }
 }

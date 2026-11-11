@@ -6,9 +6,13 @@ export type SnapshotQuote = {
   client: { legalName: string; fiscalAddress: string };
   location: { name: string; address: string; city: string; province: string } | null;
   contact: { name: string } | null;
+  // Comments, kit ids and kits arrived with the 2026-11 improvements: older snapshots lack them.
   sections: {
-    id: string; title: string;
-    children: { id: string; title: string; mode: "SUM" | "GLOBAL"; lines: { description: string; quantity: string; unitName: string; visible: boolean }[] }[];
+    id: string; title: string; comment?: string;
+    children: {
+      id: string; title: string; mode: "SUM" | "GLOBAL"; comment?: string; kits?: { id: string; comment?: string }[];
+      lines: { description: string; quantity: string; unitName: string; visible: boolean; kitInstanceId?: string | null; comment?: string }[];
+    }[];
   }[];
   totals: {
     sections: Record<string, string>; subsections: Record<string, string>; base: string; total: string;
@@ -26,7 +30,8 @@ export type PdfSource = {
 
 export type PdfRow =
   | { kind: "part" | "sub"; number: string; title: string; total: string }
-  | { kind: "line"; text: string; quantity: string };
+  | { kind: "line"; text: string; quantity: string }
+  | { kind: "note"; text: string };
 
 export type PdfDocument = {
   draft: boolean; reference: string; shortDate: string; longDate: string;
@@ -39,6 +44,7 @@ export type PdfDocument = {
   place: string;
 };
 
+const note = (rows: PdfRow[], comment: string | undefined) => { if (comment?.trim()) rows.push({ kind: "note", text: comment.trim() }); };
 const money = (x: string) => `${formatDecimalEs(x)} €`;
 const textLines = (s: string) => s.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 const LONG_DATE = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -55,11 +61,17 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
     rows.push({ kind: "part", number: `${i + 1}`, title: s.title.trim() || "Sin título", total: money(q.totals.sections[s.id] ?? "0") });
     s.children.forEach((c, j) => {
       rows.push({ kind: "sub", number: `${i + 1}.${j + 1}`, title: c.title.trim() || "Sin título", total: money(q.totals.subsections[c.id] ?? "0") });
-      for (const l of c.lines.filter((x) => x.visible)) {
+      const visible = c.lines.filter((x) => x.visible);
+      visible.forEach((l, k) => {
         const qty = formatDecimalEs(l.quantity, { min: 0, max: 4 });
         rows.push({ kind: "line", text: l.description, quantity: l.unitName ? `${qty} ${l.unitName}` : qty });
-      }
+        note(rows, l.comment);
+        // A kit's comment follows the last of its visible lines.
+        if (l.kitInstanceId && visible[k + 1]?.kitInstanceId !== l.kitInstanceId) note(rows, c.kits?.find((x) => x.id === l.kitInstanceId)?.comment);
+      });
+      note(rows, c.comment);
     });
+    note(rows, s.comment);
   });
 
   return {

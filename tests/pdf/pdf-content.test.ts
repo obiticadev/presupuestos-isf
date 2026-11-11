@@ -34,7 +34,7 @@ test("PDF corto: todo el texto visible aparece y nada oculto", async () => {
   const src = pdfSource();
   const doc = buildDocument(src, { draft: false });
   const all = (await pages(src)).join(" ");
-  for (const r of doc.rows) expect(all).toContain(norm(r.kind === "line" ? r.text : r.title));
+  for (const r of doc.rows) expect(all).toContain(norm("text" in r ? r.text : r.title));
   for (const s of ["1.474,99 €", "Transferencia a 60 días", "Asunto: PR-2026000002-R00"]) expect(all).toContain(norm(s));
   expect(all).not.toContain(norm("Línea oculta"));
 });
@@ -44,7 +44,7 @@ test("PDF largo: 45 líneas con descripciones largas, ninguna se pierde y hay al
   const p = await pages(src);
   const all = p.join(" ");
   expect(p.length).toBeGreaterThanOrEqual(3);
-  for (const r of buildDocument(src, { draft: false }).rows) expect(all).toContain(norm(r.kind === "line" ? r.text : r.title));
+  for (const r of buildDocument(src, { draft: false }).rows) expect(all).toContain(norm("text" in r ? r.text : r.title));
   p.slice(1).forEach((page) => expect(has(page, "Denominación")).toBe(true));
 });
 
@@ -89,7 +89,7 @@ test("paginación: 60 subpartidas sin líneas (GLOBAL u ocultas) no se pierden y
   const p = await pages(src);
   const all = p.join(" ");
   expect(p.length).toBeGreaterThanOrEqual(3);
-  for (const r of buildDocument(src, { draft: false }).rows) if (r.kind !== "line") expect(all).toContain(norm(`${r.number}${r.title}`));
+  for (const r of buildDocument(src, { draft: false }).rows) if (r.kind === "part" || r.kind === "sub") expect(all).toContain(norm(`${r.number}${r.title}`));
   for (const s of ["1.474,99 €", "Firma y sello"]) expect(has(p.at(-1)!, s)).toBe(true);
   const s = await sheets(src);
   expect(s.length).toBeGreaterThanOrEqual(2);
@@ -99,4 +99,22 @@ test("paginación: 60 subpartidas sin líneas (GLOBAL u ocultas) no se pierden y
 test("borrador: BORRADOR en la cabecera y como marca de agua", async () => {
   const p = await pages(withParts(longParts()), true);
   p.forEach((page) => expect(page.match(/borrador/g)?.length ?? 0).toBeGreaterThanOrEqual(2));
+});
+
+test("paginación: con un comentario en cada línea, ninguna hoja empieza por un comentario, sea cual sea el alto de la hoja", async () => {
+  const src = withParts(longParts());
+  for (const s of src.quote.sections) for (const c of s.children) c.lines.forEach((l, i) => { l.comment = `Comentario ${c.id}-${i}: tendido por bandeja existente.`; });
+  const body = TEMPLATES.v1.body(buildDocument(src, { draft: false }));
+  // Many sheet heights, so that some cut falls right before a comment.
+  const firsts = await withPage(async (page) => {
+    const out: string[] = [];
+    for (let h = SHEET_PX - 300; h <= SHEET_PX; h += 6) {
+      await page.setContent(body);
+      await page.evaluate(paginate, h);
+      out.push(...await page.evaluate(() => [...document.querySelectorAll(".sheet tbody")].slice(1).map((t) => t.firstElementChild?.className ?? "")));
+    }
+    return out;
+  });
+  expect(firsts.length).toBeGreaterThan(50);
+  expect(firsts.filter((c) => c === "note")).toEqual([]);
 });

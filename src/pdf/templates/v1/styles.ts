@@ -31,6 +31,9 @@ tr{break-inside:avoid}
 tr.part td{background:var(--band);font-weight:800;text-transform:uppercase;font-size:9.5pt;padding-top:1.1mm;padding-bottom:1.1mm}
 tr.sub td{font-weight:700}
 tr.line td:nth-child(2){padding-left:6mm}
+tr.note td{font-style:italic;color:var(--mut);padding-top:0}
+tr.note td:nth-child(2){padding-left:6mm}
+tr:has(+ tr.note) td{border-bottom:none}
 
 /* Cierre al pie de la última hoja: condiciones y fecha | totales y firma y sello. */
 .close{display:grid;grid-template-columns:1fr 78mm;gap:8mm;margin-top:auto;padding-top:4mm;break-inside:avoid;flex:none}

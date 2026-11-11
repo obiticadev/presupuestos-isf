@@ -80,6 +80,40 @@ describe("buildDocument", () => {
     expect(buildDocument(s, { draft: false }).totals.taxes.map((t) => t.label)).toEqual(["IVA 21 %", "IVA 10 % prueba", "IGIC 7 %"]);
   });
 
+  it("comments become notes right after their element", () => {
+    const s = src();
+    const part = s.quote.sections[0];
+    part.comment = "De la partida";
+    const c1 = part.children[0];
+    c1.comment = "De la subpartida";
+    c1.kits = [{ id: "k1", comment: "Del conjunto" }];
+    c1.lines = [
+      { description: "Bomba", quantity: "2", unitName: "ud", visible: true, kitInstanceId: "k1" },
+      { description: "Manguera", quantity: "40", unitName: "m", visible: true, kitInstanceId: "k1", comment: "Medida en obra" },
+      { description: "Cuadro", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null, comment: "Con variador" },
+    ];
+    const rows = buildDocument(s, { draft: false }).rows.map((r) => (r.kind === "note" ? `note:${r.text}` : r.kind === "line" ? r.text : r.title));
+    expect(rows).toEqual([
+      "Grupo de bombeo", "Equipos", "Bomba", "Manguera", "note:Medida en obra", "note:Del conjunto",
+      "Cuadro", "note:Con variador", "note:De la subpartida", "Montaje", "note:De la partida",
+    ]);
+  });
+
+  it("a hidden line hides its comment, an empty comment adds nothing, and a kit with every line hidden hides its own", () => {
+    const s = src();
+    const c1 = s.quote.sections[0].children[0];
+    c1.kits = [{ id: "k1", comment: "Del conjunto" }];
+    c1.lines = [
+      { description: "Bomba", quantity: "2", unitName: "ud", visible: false, kitInstanceId: "k1", comment: "Oculto" },
+      { description: "Cuadro", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null, comment: "" },
+    ];
+    expect(buildDocument(s, { draft: false }).rows.filter((r) => r.kind === "note")).toEqual([]);
+  });
+
+  it("an old snapshot without comments gives the same rows as before", () => {
+    expect(buildDocument(src(), { draft: false }).rows.some((r) => r.kind === "note")).toBe(false);
+  });
+
   it("toPdfSource round-trips through JSON", () => {
     expect(toPdfSource({ d: new Date("2026-01-01T00:00:00Z") }, { q: 2 })).toEqual({ company: { d: "2026-01-01T00:00:00.000Z" }, quote: { q: 2 } });
   });
