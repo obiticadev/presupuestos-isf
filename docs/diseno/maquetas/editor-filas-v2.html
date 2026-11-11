@@ -86,6 +86,16 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
 .slot:empty{display:none}
 .comment.editing{font-style:normal;flex-wrap:wrap}.comment.editing textarea{flex:1 1 100%;font-style:italic;border:1.5px solid var(--ink);min-height:56px}
 .icon.bub svg{display:block}
+/* Botones de cancelar (✕) a la altura de «Guardar» / «Añadir» */
+.addform .cancel,.comment.editing [data-cancelnote]{min-width:40px;min-height:40px;border:1.5px solid var(--ink);margin-left:auto}
+.comment.editing [data-cancelnote]{margin-left:0}
+/* Comentarios de las líneas de un conjunto: botones alineados con los del comentario del conjunto y el ✓ */
+.vA .kit .comment.cl{padding-right:12px}
+/* Partida y subpartida: «Eliminar» primero; las flechas caen bajo las de los productos */
+.vA .r.part .acts .last>summary,.vA .r.sub .acts .last{width:30px;min-width:30px;padding:0}
+.vA .r.sub .acts .bub.last[hidden]{display:inline-grid!important;visibility:hidden}
+.icon[disabled]{color:var(--mut);background:var(--band);border-color:var(--rule)}
+
 .kbtns .bub{min-width:40px;min-height:40px;border:1.5px solid var(--ink)}
 .where{display:flex;flex-direction:column;gap:4px;flex:1 1 100%;font-size:12px;font-weight:600;color:var(--mut);font-style:normal}
 .where select{width:100%;flex:none}
@@ -97,6 +107,11 @@ details>summary{list-style:none;cursor:pointer}details>summary::-webkit-details-
   .vA .r.line .acts .icon{min-width:38px;min-height:38px}
   .vA .r.line .acts .up{margin-left:auto}
   .vA .r.line .acts .del{margin-left:14px}
+  .vA .r.part .acts,.vA .r.sub .acts{width:100%;gap:6px}
+  .vA .r.part .acts .icon,.vA .r.sub .acts .icon,.vA .r.part .acts .dd>summary{min-width:38px;min-height:38px}
+  .vA .r.part .acts .up,.vA .r.sub .acts .up{margin-left:auto}
+  .vA .r.part .acts .last,.vA .r.sub .acts .last{margin-left:14px}
+  .vA .r.part .acts .last>summary,.vA .r.sub .acts .last{width:38px}
 }
 .addform{display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 8px;border-bottom:1px solid var(--rule);background:#fbfcfa}
 .addform select,.addform input{border:1.5px solid var(--ink);min-height:36px;padding:6px 8px;width:auto}
@@ -350,23 +365,23 @@ const slot = (key, cls) => { SLOT_CLS[key] = cls; return `<div class="slot" data
 const bub = (key, label) => `<button class="icon bub" data-addcom="${key}" title="${label}" aria-label="${label}"${NOTE[key] ? " hidden" : ""}>${BUB}</button>`;
 function vA() {
   const v = "A";
-  const acts = (inKit, key) => `<label class="check small" title="Visible en el documento"><input type="checkbox" checked>Ver</label><button class="icon" title="Ajustar precio">€</button>${bub(key, "Añadir comentario a este producto")}${inKit ? "" : `<button class="icon up" aria-label="Subir">↑</button><button class="icon" aria-label="Bajar">↓</button><button class="icon del" aria-label="Eliminar">✕</button>`}`;
-  const row = (l, inKit, key) => `<div class="r line"><span class="code">${l.code}</span><span><textarea class="desc" rows="1" aria-label="Descripción">${esc(l.desc)}</textarea>${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${acts(inKit, key)}</span></div>${slot(key, "cl")}`;
+  const acts = (inKit, key, first, last) => `<label class="check small" title="Visible en el documento"><input type="checkbox" checked>Ver</label><button class="icon" title="Ajustar precio">€</button>${bub(key, "Añadir comentario a este producto")}${inKit ? "" : `<button class="icon up" aria-label="Subir"${first ? " disabled" : ""}>↑</button><button class="icon" aria-label="Bajar"${last ? " disabled" : ""}>↓</button><button class="icon del" aria-label="Eliminar">✕</button>`}`;
+  const row = (l, inKit, key, first, last) => `<div class="r line"><span class="code">${l.code}</span><span><textarea class="desc" rows="1" aria-label="Descripción">${esc(l.desc)}</textarea>${flag(l)}</span>${qtyCell(l)}<span class="n">${l.price}</span><span class="n">${l.amt}</span><span class="acts">${acts(inKit, key, first, last)}</span></div>${slot(key, "cl")}`;
   const mini = (k) => `<span class="mini" title="${k.mainLabel}${k.wires.map(w => " → " + w.l).join("")}" aria-hidden="true"><i>${k.node}</i>${k.wires.map(w => `<s class="${w.miss ? "miss" : ""}"></s>`).join("")}</span>`;
   const foot = (k) => `<div class="kitfoot"><div class="kbtns">${k.missing ? `<button class="btn warn" title="Completar conjunto">Completar</button>` : `<button class="btn" title="Editar conjunto">Editar</button>`}<button class="btn" title="Quitar conjunto">Quitar</button>${bub(k.id, "Añadir comentario al conjunto")}</div><button class="btn pri done" data-done title="Listo: recoger el conjunto" aria-label="Listo: recoger el conjunto">✓</button></div>`;
   const kit = (k) => `<details class="kit${k.missing ? " inc" : ""}"${k.missing ? " open" : ""}><summary>${mini(k)}<b>Conjunto · ${k.name}</b><span class="sum mut">${k.sum}</span>${kitRight(k)}</summary>${kitSum(k)}<div class="kitlines">${k.lines.map((l, i) => row(l, true, k.id + "l" + i)).join("")}</div>${slot(k.id, "ck")}${foot(k)}</details>`;
   const subMenu = `<div class="menu">${ADD.map(([k, t, s]) => k === "com"
       ? `<button data-addcom="sub">Comentario de la subpartida<small>al pie de la subpartida; para un producto o un conjunto, usa su botón de comentario</small></button>`
       : `<button data-open="A-${k}">${t}<small>${s}</small></button>`).join("")}</div>`;
-  const partActs = `<button class="icon">↑</button><button class="icon">↓</button><details class="dd"><summary class="icon" title="Añadir a la partida" aria-label="Añadir a la partida">＋</summary><div class="menu right"><button data-open="A-sub">Subpartida<small>nueva subpartida al final de la partida</small></button><button data-addcom="part">Comentario de la partida<small>al pie de la partida</small></button></div></details><button class="icon" title="Eliminar">Eliminar</button>`;
-  const subActs = `<button class="icon">↑</button><button class="icon">↓</button>${bub("sub", "Añadir comentario a la subpartida")}<button class="icon" title="Eliminar">Eliminar</button>`;
+  const partActs = `<button class="icon delsec" title="Eliminar la partida">Eliminar</button><button class="icon up" disabled title="No hay otra partida con la que cambiarla">↑</button><button class="icon" disabled title="No hay otra partida con la que cambiarla">↓</button><details class="dd last"><summary class="icon" title="Añadir a la partida" aria-label="Añadir a la partida">＋</summary><div class="menu right"><button data-open="A-sub">Subpartida<small>nueva subpartida al final de la partida</small></button><button data-addcom="part">Comentario de la partida<small>al pie de la partida</small></button></div></details>`;
+  const subActs = `<button class="icon delsec" title="Eliminar la subpartida">Eliminar</button><button class="icon up" disabled title="No hay otra subpartida con la que cambiarla">↑</button><button class="icon" disabled title="No hay otra subpartida con la que cambiarla">↓</button>${bub("sub", "Añadir comentario a la subpartida").replace('class="icon bub"', 'class="icon bub last"')}`;
   const cancel = `<button class="icon cancel" data-cancel title="Cancelar" aria-label="Cancelar">✕</button>`;
   return `
   <div class="r head"><span>Código</span><span>Denominación</span><span class="n">Cantidad</span><span class="n">Precio</span><span class="n">Importe</span><span></span></div>
   <div class="r part"><span>${P.n}</span><span><input value="${P.title}"></span><span></span><span></span><span class="n">${P.amt}</span><span class="acts">${partActs}</span></div>
   <div class="addform" data-form="A-sub" hidden><span class="ttl">Nueva subpartida en la partida ${P.n}</span><input class="grow" placeholder="Nombre de la subpartida"><button class="btn pri">Añadir subpartida</button>${cancel}</div>
   <div class="r sub"><span>${S.n}</span><span class="subtitle"><input value="${esc(S.title)}"><select><option>por suma</option></select></span><span></span><span></span><span class="n">${S.amt}</span><span class="acts">${subActs}</span></div>
-  ${LINES.map((l, i) => row(l, false, "line" + i)).join("")}
+  ${LINES.map((l, i) => row(l, false, "line" + i, i === 0, i === LINES.length - 1)).join("")}
   ${KITS.map(kit).join("")}
   ${slot("sub", "cs")}
   <div class="adders"><details class="dd"><summary class="btn">+ Añadir ▾</summary>${subMenu}</details></div>
