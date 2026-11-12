@@ -166,7 +166,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .inline{display:flex;gap:6px;align-items:center;flex-wrap:wrap;min-width:0}
 .inline>input[name=title],.inline>input[name=description]{flex:1 1 200px}
 .subform>.btn{margin-left:auto}/* «Guardar» siempre a la derecha, también cuando baja de línea */
-.subform>input,.subform>select[name=taxId]{flex:1 1 auto}/* cada fila llena el ancho: bordes derechos alineados */
+.qrow.part .c-code,.qrow.sub .c-code{align-self:start;padding-top:6px}/* el número, a la altura de la primera fila */
 .inline .unit{min-width:24px}
 .acts{display:flex;gap:4px;align-items:center;justify-content:flex-end}
 
@@ -269,9 +269,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 @container ed (max-width:480px){
   .qrow{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"desc desc" "code amt" "qty price" "acts acts"}
   /* Partidas y subpartidas: el número en línea con el nombre, como en los demás anchos */
-  .qrow.part,.qrow.sub{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);grid-template-areas:"code desc desc" "qty price amt" "acts acts acts"}
-  .qrow.part .c-code,.qrow.sub .c-code{align-self:start;padding-top:6px}
-  .qrow>.flags,.lineform>.formerr{grid-column:1/-1}
+  .qrow.part,.qrow.sub{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);grid-template-areas:"code desc desc" "qty price amt" "acts acts acts"}  .qrow>.flags,.lineform>.formerr{grid-column:1/-1}
   .qrow .c-acts{justify-content:flex-start;gap:6px}
   .qrow .c-acts .icon{min-width:38px;min-height:38px}
   .qrow .c-acts .up{margin-left:auto}
