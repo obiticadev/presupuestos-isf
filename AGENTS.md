@@ -23,7 +23,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
 
 - Ramas:
   - `master` tiene los planes 1 a 4 (PR #4 fusionado el 2026-11-10).
-  - `mejoras-uso-real`: mejoras tras el primer uso real (diseño `docs/superpowers/specs/2026-11-11-mejoras-uso-real-design.md`, 7 bloques). **Bloque 1 cerrado** (2026-11-12); sigue el plan del Bloque 2 (detalle de lo pendiente en `progreso.md`). Se trabaja aquí, en local, con push a esta rama; `master` y Dokploy solo al final, con visto bueno del usuario.
+  - `mejoras-uso-real`: mejoras tras el primer uso real (diseño `docs/superpowers/specs/2026-11-11-mejoras-uso-real-design.md`, 7 bloques). **Bloques 1 y 2 cerrados** (2026-11-12); sigue el plan del Bloque 3 (detalle de lo pendiente en `progreso.md`). Se trabaja aquí, en local, con push a esta rama; `master` y Dokploy solo al final, con visto bueno del usuario.
 - Plan 4 (PDF, Dokploy y copias): **terminado y desplegado** en `http://192.168.105.83:3100` (2026-11-10). Quedan comprobaciones en el servidor y errores por revisar.
   - Dokploy v0.31.0 en `192.168.105.83:3000`; servicio Compose «Presupuestos», `composeId F5SwbOFCyMb7tDSn0xQZk`, `appName presupuestos-isf-app-oy9un2`, `composePath ./compose.yaml`. API con la cabecera `x-api-key`; el token está en `~/.dokploy-token` del equipo del usuario, nunca en el repositorio. SSH: `ssh -i ~/.ssh/isf_dokploy isf@192.168.105.83`.
   - **Fusionar en `master` y desplegar en Dokploy exige el visto bueno explícito del usuario.**
@@ -48,6 +48,8 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - Para matar el servidor desde Bash usa un patrón que no se encuentre a sí mismo: `pkill -f '[n]ext dev'`.
   - No se borran pruebas existentes: solo se añaden (usuario, 2026-11-11).
   - Para probar la interfaz a varios anchos, el editor va en un `<iframe>` dentro de `/api/health`: no sustituyas el `body` de una página React.
+  - En Git Bash de Windows, `sed -i` quita los CR: usa `sed -b -i` o Python con `newline=''` en archivos CRLF.
+  - Si `pnpm dev` da `$$FORM_ACTION` de `undefined` tras añadir una Server Action a un archivo ya compilado, reinicia el servidor.
   - Con Playwright, `getByLabel(..., { exact: true })` no encuentra un `select` o un `textarea` con valor: la etiqueta envuelve al control y su texto incluye las opciones o el contenido. Localízalos por `name` o por el primer texto de la `label`.
 
 Actualiza esta sección cuando cambie el estado.
