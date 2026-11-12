@@ -119,3 +119,13 @@ test("los obligatorios se configuran; solo admin", async () => {
   expect((await listRequiredConcepts()).map((r) => r.conceptId)).toEqual(["concept-man-4x25", "concept-ser-prog"]);
   await expect(addRequiredConcept(p, "concept-ser-despl")).rejects.toThrow("permiso");
 });
+
+test("los avisos de «Para emitir» hablan de la instalación", async () => {
+  const { quote, location } = await completeDraft();
+  await prisma.clientLocation.update({ where: { id: location.id }, data: { active: false } });
+  expect(issueChecks(await getQuote(quote.id), await listRequiredConcepts()).find((p) => p.code === "location")?.message)
+    .toBe("La instalación ya no está activa en el cliente: elige otra");
+  const { actor, quote: other } = await makeDraft();
+  await updateHeader(actor, other.id, { locationId: "" });
+  expect(issueChecks(await getQuote(other.id), await listRequiredConcepts()).find((p) => p.code === "location")?.message).toBe("Falta la instalación");
+});

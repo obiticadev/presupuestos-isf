@@ -15,9 +15,9 @@ export function issueChecks(q: QuoteDetail, required: (RequiredConcept & { conce
   const out: IssueProblem[] = [];
   const subs = q.sections.flatMap((s) => s.children);
   const lines = subs.flatMap((s) => s.lines.map((l) => ({ ...l, mode: s.mode })));
-  if (!q.locationId) out.push({ code: "location", message: "Falta la ubicación de trabajo", anchor: "#cabecera" });
+  if (!q.locationId) out.push({ code: "location", message: "Falta la instalación", anchor: "#cabecera" });
   else if (!q.location?.active || q.location.clientId !== q.clientId)
-    out.push({ code: "location", message: "La ubicación de trabajo ya no está activa en el cliente: elige otra", anchor: "#cabecera" });
+    out.push({ code: "location", message: "La instalación ya no está activa en el cliente: elige otra", anchor: "#cabecera" });
   if (!q.paymentTerms.trim()) out.push({ code: "paymentTerms", message: "Falta la forma de pago", anchor: "#cabecera" });
   const priced = lines.some((l) => l.mode === "SUM" && l.unitPrice !== null) || subs.some((s) => s.mode === "GLOBAL"); // an unpriced global one is reported below
   if (!priced) out.push({ code: "empty", message: "El presupuesto no tiene ninguna línea con precio", anchor: "#partidas" });

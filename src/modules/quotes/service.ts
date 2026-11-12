@@ -203,7 +203,7 @@ export async function updateHeader(actor: CurrentUser, id: string, raw: HeaderIn
     const locationId = data.locationId as string | null | undefined;
     if (clientId === quote.clientId && locationId && locationId !== quote.locationId) {
       const loc = await tx.clientLocation.findUnique({ where: { id: locationId } });
-      if (!loc || loc.clientId !== clientId || !loc.active) throw new ValidationError({ locationId: "Elige una ubicación de este cliente" });
+      if (!loc || loc.clientId !== clientId || !loc.active) throw new ValidationError({ locationId: "Elige una instalación de este cliente" });
     }
     const contactId = data.contactId as string | null | undefined;
     if (clientId === quote.clientId && contactId && contactId !== quote.contactId) {

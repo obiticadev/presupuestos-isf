@@ -7,6 +7,7 @@ import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
 import { requireUser } from "@/modules/auth/session";
 import { listConceptOptions } from "@/modules/catalog/service";
+import { installationLabel } from "@/modules/clients/labels";
 import { getClient, listClientOptions } from "@/modules/clients/service";
 import { listKits } from "@/modules/kits/service";
 import { deleteDraftAction, updateHeaderAction } from "@/modules/quotes/actions";
@@ -16,6 +17,7 @@ import { getQuote, listRequiredConcepts, quoteLabel, type QuoteDetail } from "@/
 import { getSettings, listTaxes } from "@/modules/settings/service";
 import { listActiveUserNames } from "@/modules/users/service";
 import { OpenKitFromHash } from "@/components/disclosure";
+import { InstallationFields } from "./installation-fields";
 import { IssuePanel } from "./issue-panel";
 import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory } from "./lifecycle-panel";
 import { Comment } from "./comment";
@@ -78,12 +80,10 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
                   {clients.map((c) => <option key={c.id} value={c.id}>{c.legalName}</option>)}
                 </select>
               </label>
-              <label className="field">Ubicación
-                <select name="locationId" defaultValue={q.locationId ?? ""}>
-                  <option value="">— Sin elegir —</option>
-                  {activeOrCurrent(client.locations, q.locationId).map((l) => <option key={l.id} value={l.id}>{l.name}{l.installation ? ` · ${l.installation}` : ""}</option>)}
-                </select>
-              </label>
+              <InstallationFields
+                options={activeOrCurrent(client.locations, q.locationId).map((l) => ({ id: l.id, name: l.name, label: installationLabel(l) }))}
+                current={q.locationId}
+              />
               <label className="field">Contacto
                 <select name="contactId" defaultValue={q.contactId ?? ""}>
                   <option value="">— Sin elegir —</option>
@@ -112,7 +112,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
             <div className="sheet">
               <dl>
                 <dt>Cliente</dt><dd><Link href={`/clientes/${q.clientId}`}>{q.client.legalName}</Link></dd>
-                <dt>Ubicación</dt><dd>{q.location ? `${q.location.name}${q.location.installation ? ` · ${q.location.installation}` : ""}` : "—"}</dd>
+                <dt>Nombre</dt><dd>{q.location?.name ?? "—"}</dd>
+                <dt>Instalación</dt><dd>{installationLabel(q.location)}</dd>
                 <dt>Contacto</dt><dd>{q.contact?.name ?? "—"}</dd>
                 <dt>Responsable</dt><dd>{q.owner.name}</dd>
                 <dt>Fecha</dt><dd>{formatDateEs(q.date)}</dd>
