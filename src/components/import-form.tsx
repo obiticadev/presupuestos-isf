@@ -2,20 +2,27 @@
 
 import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
-import { applyImportAction, previewImportAction, type ImportState } from "@/modules/catalog/actions";
 
-// One state for both steps; the clicked button decides whether the file is only checked or also saved.
-async function importStep(prev: ImportState, data: FormData): Promise<ImportState> {
-  return data.get("apply") === "1" ? applyImportAction(prev, data) : previewImportAction(prev, data);
-}
+type ImportRow = { sheet?: string; row: number; code: string; action: "create" | "update"; errors: string[] };
+export type ImportState =
+  | { ok: false; errors: Record<string, string> }
+  | { ok: true; error?: string; rows: ImportRow[]; created: number; updated: number; applied: boolean }
+  | null;
 
-export function ImportForm() {
-  const [state, action, pending] = useActionState<ImportState, FormData>(importStep, null);
+/**
+ * Review-then-confirm import of an .xlsx (catalog, clients). `step` gets the form with `apply=1` only on «Confirmar».
+ * `keyLabel` names the key column; with rows from several sheets a «Hoja» column is added.
+ */
+export function ImportForm({ step, keyLabel, doneHref, doneLabel }: {
+  step: (prev: ImportState, data: FormData) => Promise<ImportState>; keyLabel: string; doneHref: string; doneLabel: string;
+}) {
+  const [state, action, pending] = useActionState<ImportState, FormData>(step, null);
   const [changed, setChanged] = useState(false);
   const result = state?.ok ? state : null;
   const errors = state && !state.ok ? state.errors : {};
-  const rows = result ? [...result.rows].sort((a, b) => Number(b.errors.length > 0) - Number(a.errors.length > 0) || a.row - b.row) : [];
+  const rows = result ? [...result.rows].sort((a, b) => Number(b.errors.length > 0) - Number(a.errors.length > 0)) : []; // stable: file order otherwise
   const bad = rows.filter((r) => r.errors.length > 0).length;
+  const sheets = rows.some((r) => r.sheet);
   const canApply = result && !result.applied && !result.error && bad === 0 && rows.length > 0 && !changed;
 
   return (
@@ -45,7 +52,7 @@ export function ImportForm() {
       {result?.error && <p className="err" role="alert" style={{ marginTop: 16 }}>{result.error}</p>}
       {result?.applied && (
         <p role="status" style={{ marginTop: 16, fontWeight: 600 }}>
-          Importación guardada: {result.created} altas y {result.updated} cambios. <Link href="/catalogo">Ver el catálogo</Link>
+          Importación guardada: {result.created} altas y {result.updated} cambios. <Link href={doneHref}>{doneLabel}</Link>
         </p>
       )}
       {result && !result.error && (
@@ -57,17 +64,18 @@ export function ImportForm() {
           </p>
           <div style={{ overflowX: "auto" }}>
             <table>
-              <thead><tr><th className="n">Fila</th><th>Código</th><th>Acción</th><th>Errores</th></tr></thead>
+              <thead><tr>{sheets && <th>Hoja</th>}<th className="n">Fila</th><th>{keyLabel}</th><th>Acción</th><th>Errores</th></tr></thead>
               <tbody>
                 {rows.map((r) => (
-                  <tr key={r.row} style={r.errors.length ? { background: "#fbe8e6" } : undefined}>
+                  <tr key={`${r.sheet}-${r.row}`} style={r.errors.length ? { background: "#fbe8e6" } : undefined}>
+                    {sheets && <td>{r.sheet}</td>}
                     <td className="n">{r.row}</td>
                     <td className="code">{r.code || "—"}</td>
                     <td>{r.action === "create" ? "Alta" : "Cambio"}</td>
                     <td>{r.errors.length ? <ul style={{ margin: 0, paddingLeft: 18 }}>{r.errors.map((e) => <li key={e}>{e}</li>)}</ul> : <span className="mut">Correcta</span>}</td>
                   </tr>
                 ))}
-                {rows.length === 0 && <tr><td colSpan={4} className="mut">El archivo no tiene filas.</td></tr>}
+                {rows.length === 0 && <tr><td colSpan={sheets ? 5 : 4} className="mut">El archivo no tiene filas.</td></tr>}
               </tbody>
             </table>
           </div>

@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
+import type { ImportState } from "@/components/import-form";
+import { importFile } from "@/lib/import-file";
 import { requireUser } from "@/modules/auth/session";
+import { importClients } from "./import";
 import * as clients from "./service";
 
 export type ClientActionResult = ActionResult & { id?: string; outcome?: "deleted" | "deactivated" };
@@ -73,4 +76,10 @@ export async function removeContactAction(_prev: ActionResult | null, form: Form
 export async function removeLocationAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const actor = await requireUser();
   return run(s(form, "clientId"), () => clients.removeLocation(actor, s(form, "id")));
+}
+
+/** «Revisar» and «Confirmar importación» of the clients workbook (admin only, checked by importClients). */
+export async function importClientsAction(_prev: ImportState, form: FormData): Promise<ImportState> {
+  const actor = await requireUser();
+  return importFile(form, "/clientes", (bytes, apply) => importClients(actor, bytes, { apply }));
 }

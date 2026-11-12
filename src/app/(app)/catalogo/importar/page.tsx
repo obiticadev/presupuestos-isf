@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/modules/auth/session";
-import { ImportForm } from "./forms";
+import { ImportForm } from "@/components/import-form";
+import { importCatalogAction } from "@/modules/catalog/actions";
 
 export const metadata: Metadata = { title: "Importar catálogo · ISF Presupuestos" };
 
@@ -18,7 +19,7 @@ export default async function ImportarPage() {
         <li>Súbelo y pulsa «Revisar»: verás qué filas son altas, cuáles cambian conceptos existentes y qué errores hay.</li>
         <li>Si no hay errores, «Confirmar importación» lo guarda todo de una vez. Si hay alguno, no se guarda nada.</li>
       </ol>
-      <ImportForm />
+      <ImportForm step={importCatalogAction} keyLabel="Código" doneHref="/catalogo" doneLabel="Ver el catálogo" />
     </>
   );
 }
