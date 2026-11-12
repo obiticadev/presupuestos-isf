@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-11 (mejoras tras el uso real: Bloque 1 hecho y aprobado por el usuario en la rama `mejoras-uso-real`; trabajo en pausa, el siguiente paso es el plan del Bloque 2).
+Última actualización: 2026-11-12 (mejoras tras el uso real: Bloque 1 cerrado en la rama `mejoras-uso-real`; el siguiente paso es el plan del Bloque 2).
 
 ## Cronología
 
@@ -82,8 +82,9 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - Móvil: barra superior con «Menú».
   - Decisiones tomadas por el camino: en `.superpowers/sdd/2026-11-11-mejoras-bloque-1-editor/progress.md` (no se sube) y resumidas en el mensaje de cierre del bloque.
 - **Ajustes tras la revisión del usuario (2026-11-11):** botones del conjunto alineados con el ✓; estado del emitido con el desplegable de la app; «Recalcular» cierra la edición; los desplegables se abren hacia arriba si no caben; y, de la auditoría y la revisión final: las líneas sueltas van antes que las de los conjuntos (en el editor y en los PDF que se emitan desde ahora; los ya emitidos no cambian), «Actualizar precios» copia también unidad y nombre del impuesto, los saltos de línea pegados en títulos y descripciones pasan a espacios, el conjunto recién completado sigue abierto, un solo formulario abierto en la página, Escape cierra los menús y el foco se ve en los cuadros de texto. 238 pruebas.
+- **Cierre del Bloque 1 (2026-11-12), tras otra revisión del usuario:** los desplegables del conjunto ya no vuelven a «Elige…» al recalcular (`form.reset()` devolvía cada `<select>` a su primera opción y el siguiente «Recalcular» borraba lo guardado; se arregla con `key` = valor guardado); la silueta dibuja un círculo por dato del formulario (elemento principal, datos y componentes): borde negro si está, discontinuo ámbar si falta; todos los `<select>` usan `appearance: base-select` (Chrome 135+) con el aspecto de `.menu`, rectos y de una línea; en los del conjunto la opción lleva solo el código y la descripción sale en la lista con `option[data-d]::after` (en Firefox, la lista nativa solo muestra códigos). `next.config.ts` lleva `experimental.mcpServer: false`: su log en `.next/dev/logs` hacía que Turbopack recompilase y el navegador se recargase en bucle en Windows. 238 pruebas, `lint` sin errores. **Bloque 1 cerrado.**
 - **Pendientes menores:** una nota de la última partida puede quedarse sola al principio de la hoja del cierre (muy improbable); «Validez vencida» cuenta horas en vez de días de Madrid (lo sustituye el Bloque 4).
-- **Siguiente (en pausa por decisión del usuario):** plan del Bloque 2 con `superpowers:writing-plans`, a partir del diseño. Pendiente, en este orden:
+- **Siguiente:** plan del Bloque 2 con `superpowers:writing-plans`, a partir del diseño. Pendiente, en este orden:
   - Bloque 2, clientes e instalaciones: «Ubicaciones» → «Instalaciones» (`city` → `installation`, `province` → `country` con `RENAME COLUMN`); en la cabecera, selector «Nombre» y a su derecha «Instalación» con `instalación · país`; filas `.rowform` alineadas; clientes por Excel (tres hojas, CIF como clave).
   - Bloque 3, catálogo e importaciones: «Cambio» solo si algo cambia; importación completa (borrar o desactivar lo que falta); las revisiones salen con los precios al día (`refreshPricesFromCatalog` ya copia unidad e impuesto).
   - Bloque 4, ciclo y notas: caducado por tarea programada (`expireQuotes()` cada hora desde `instrumentation.ts`, por días de Madrid; sustituye a `isExpired`); notas internas `QuoteNote` en lugar de `travelNote`.
@@ -91,6 +92,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - Bloque 6, usuarios, historial y zona de peligro: eliminar usuarios conservando su nombre en el historial, historial filtrable, series de numeración y la zona de peligro.
   - Bloque 7, pendientes del despliegue en código: prueba intermitente de `kit-instances`, aviso si falla el PDF al emitir, encabezado huérfano y cierre más alto que una hoja en `paginate`, `tar` en `backup.sh`, versión de Playwright duplicada. Añadir aquí el caso improbable de una nota de la última partida sola en la hoja del cierre.
 - **Al retomar:** `git pull` en `mejoras-uso-real`, `mise x -- pnpm install`, `mise x -- pnpm exec prisma migrate deploy` (hay una migración nueva, `20261111205350_comments`), la suite, y arrancar con `mise x -- pnpm dev`. Al hacer commit desde el equipo Linux, los archivos que tienen CRLF se añaden con `git -c core.autocrlf=false add` (la configuración global de git usa `autocrlf=input`).
+- **Usuarios de prueba en local:** `admin@isf.test` (admin) y `p@isf.test` (presupuestador); la contraseña se fija con `ADMIN_PASSWORD=… pnpm admin reset-password --email <usuario>`.
 - **Datos de la BD de desarrollo:** el borrador «Ampliación del grupo de bombeo» (`cmw9urhye0012djm6hdo8szw4`) tiene nombres largos, comentarios y elementos «… de prueba UI» para revisar el editor.
 - **Pruebas de interfaz:** para simular anchos se mete el editor en un `<iframe>` dentro de `http://localhost:3000/api/health` (una página sin React). Sustituir el `body` de una página React provoca excepciones `removeChild` que no son de la app.
 

@@ -4,7 +4,7 @@ import { ActionForm, ConfirmButton, SubmitOnBlur, SubmitOnChange } from "@/compo
 import type { ReactNode } from "react";
 import { CloseButton, CollapseKitButton, Menu, OpenButton, OpenIfIncomplete } from "@/components/disclosure";
 import { Comment, CommentButton } from "./comment";
-import { formatDecimalEs } from "@/lib/decimal";
+import { formatDecimalEs, parseDecimalEs } from "@/lib/decimal";
 import type { ConceptOption } from "@/modules/catalog/service";
 import { kitDefinition, refCategoryId, refConceptId } from "@/modules/kits/definition";
 import {
@@ -235,7 +235,7 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
   );
 }
 
-/** The kit's outline in miniature: its first element's two letters and a circle per component, dashed when missing. */
+/** The kit's outline in miniature: its first element's two letters and a circle per element to fill in, dashed when missing. */
 function Silhouette({ main, parts }: { main: string; parts: { label: string; missing: boolean }[] }) {
   return (
     <span className="mini" title={[main, ...parts.map((p) => p.label)].join(" → ")} aria-hidden>
@@ -258,10 +258,18 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
     `${n} × ${name(refConceptId(def.main) ?? choices.main) ?? def.main.label}`,
     ...def.params.filter((p) => params[p.key]).map((p) => `${p.label.toLowerCase()} ${params[p.key]} ${p.unit}`.trim()),
   ].join(" · ");
-  const parts = def.components.map((c) => {
-    const line = lines.find((l) => l.kitSlot === c.slot);
-    return { label: line ? (name(line.conceptId ?? undefined) ?? c.label) : `Falta ${c.label.toLowerCase()}`, missing: !line };
-  });
+  // One circle per element of the form (main choice, data, components); optional ones left empty are not drawn.
+  const usable = (id: string | undefined) => ctx.allConcepts.some((c) => c.id === id && c.active && c.salePrice !== null);
+  const choice = (label: string, id: string | undefined) => ({ label: usable(id) ? (name(id) ?? label) : `Falta ${label.toLowerCase()}`, missing: !usable(id) });
+  const parts = [
+    choice(def.main.label, refConceptId(def.main) ?? choices.main),
+    ...def.params.filter((p) => p.required || params[p.key]).map((p) => {
+      const v = parseDecimalEs(params[p.key] ?? "");
+      const ok = v !== null && !v.startsWith("-");
+      return { label: ok ? `${p.label} ${params[p.key]} ${p.unit}`.trim() : `Falta ${p.label.toLowerCase()}`, missing: !ok };
+    }),
+    ...def.components.filter((c) => c.required || choices[c.slot] || refConceptId(c.ref)).map((c) => choice(c.label, refConceptId(c.ref) ?? choices[c.slot])),
+  ];
   const options = (ref: { conceptId: string } | { categoryId: string }, current: string | undefined) => {
     const cat = refCategoryId(ref);
     return ctx.allConcepts.filter((c) => c.categoryId === cat && ((c.active && c.salePrice !== null) || c.id === current));
@@ -291,9 +299,10 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
               <label className="field">{def.main.label}: cantidad (N)<input name="quantity" defaultValue={n} inputMode="decimal" required /></label>
               {refCategoryId(def.main) && (
                 <label className="field">{def.main.label}
-                  <select name="choice.main" defaultValue={choices.main ?? ""}>
+                  {/* key: a select keeps its first default on form.reset(); remount it with the saved choice */}
+                  <select key={choices.main ?? ""} name="choice.main" defaultValue={choices.main ?? ""}>
                     <option value="">Elige…</option>
-                    {options(def.main, choices.main).map((c) => <option key={c.id} value={c.id}>{c.code} · {c.description}{c.active ? "" : " (desactivado)"}</option>)}
+                    {options(def.main, choices.main).map((c) => <option key={c.id} value={c.id} data-d={`${c.description}${c.active ? "" : " (desactivado)"}`}>{c.code}</option>)}
                   </select>
                 </label>
               )}
@@ -304,9 +313,9 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
               ))}
               {def.components.filter((c) => refCategoryId(c.ref)).map((c) => (
                 <label key={c.slot} className="field">{c.label}{c.required ? "" : " · opcional"}
-                  <select name={`choice.${c.slot}`} defaultValue={choices[c.slot] ?? ""}>
+                  <select key={choices[c.slot] ?? ""} name={`choice.${c.slot}`} defaultValue={choices[c.slot] ?? ""}>
                     <option value="">{c.required ? "Elige…" : "Ninguno"}</option>
-                    {options(c.ref, choices[c.slot]).map((o) => <option key={o.id} value={o.id}>{o.code} · {o.description}{o.active ? "" : " (desactivado)"}</option>)}
+                    {options(c.ref, choices[c.slot]).map((o) => <option key={o.id} value={o.id} data-d={`${o.description}${o.active ? "" : " (desactivado)"}`}>{o.code}</option>)}
                   </select>
                 </label>
               ))}

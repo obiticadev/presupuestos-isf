@@ -39,6 +39,20 @@ h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)
 .field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut);font-weight:600;letter-spacing:.04em}
 .field input,.field select{width:100%;min-width:0;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px;min-width:150px}
 .field.grow{flex:1}.field.grow input{width:100%}
+/* Desplegables con el aspecto de .menu (Chrome 135+); los demás navegadores muestran la lista nativa */
+@supports (appearance:base-select){
+select,::picker(select){appearance:base-select;border-radius:0}
+select{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;white-space:nowrap;overflow:hidden}
+/* La opción solo lleva el código (lo que se ve cerrado); la descripción sale en la lista abierta */
+option[data-d]::after{content:" · " attr(data-d);font-weight:400}
+select::picker-icon{font-size:11px;color:var(--mut)}
+::picker(select){border:1.5px solid var(--ink);background:var(--sheet);padding:0;margin:4px 0;box-shadow:none}
+select option{font:600 14px var(--font-archivo),sans-serif;color:var(--ink);padding:9px 12px;border-bottom:1px solid var(--rule)}
+select option:last-child{border-bottom:0}
+select option::checkmark{display:none}
+select option:hover,select option:focus-visible,select option:checked{background:var(--band);outline:0}
+select option:disabled{color:var(--mut);font-weight:400}
+}
 table{width:100%;border-collapse:collapse;background:var(--sheet)}
 th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);text-align:left;font-weight:600;padding:9px 12px;border-bottom:1.5px solid var(--ink);white-space:nowrap}
 td{padding:11px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
@@ -215,7 +229,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .kbtns .bub{min-width:40px;min-height:40px;border:1.5px solid var(--ink)}
 .mini{display:flex;align-items:center;flex:none}
 .mini i{width:22px;height:22px;border:1.5px solid var(--ink);display:grid;place-items:center;font:800 10px var(--font-archivo),sans-serif;font-style:normal}
-.mini s{display:block;width:34px;height:1.5px;background:var(--ink);position:relative}
+.mini s{display:block;width:26px;height:1.5px;background:var(--ink);position:relative}
 .mini s::after{content:"";position:absolute;right:-1px;top:-6px;width:12px;height:12px;border:1.5px solid var(--ink);border-radius:50%;background:var(--sheet)}
 .mini s.miss{background:none;border-top:2px dashed var(--amber-line);height:0}.mini s.miss::after{border-color:var(--amber-line);border-style:dashed;top:-7px}
 .kitsum{padding:0 12px 10px;font-size:14px}.kitsum .amber,.amber{color:var(--amber);font-weight:600}
