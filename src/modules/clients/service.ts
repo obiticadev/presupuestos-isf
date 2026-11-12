@@ -43,6 +43,11 @@ export async function listClientOptions(): Promise<{ id: string; legalName: stri
   return prisma.client.findMany({ where: { active: true }, select: { id: true, legalName: true, taxId: true }, orderBy: { legalName: "asc" } });
 }
 
+/** Every client, active or not, with its contacts and installations: the Excel export. */
+export async function exportClients(): Promise<ClientDetail[]> {
+  return prisma.client.findMany({ include: DETAIL, orderBy: { legalName: "asc" } });
+}
+
 export async function getClient(id: string): Promise<ClientDetail> {
   const client = await prisma.client.findUnique({ where: { id }, include: DETAIL });
   if (!client) throw new NotFoundError("El cliente no existe");
