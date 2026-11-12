@@ -217,10 +217,10 @@ model ClientLocation {
   id       String  @id @default(cuid())
   clientId String
   client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  name     String
-  address  String  @default("")
-  city     String  @default("")
-  province String  @default("")
+  name         String
+  address      String  @default("")
+  installation String  @default("")
+  country      String  @default("")
   active   Boolean @default(true)
   quotes   Quote[]
 

@@ -83,7 +83,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<"/
 
       <h2>Contactos</h2>
       <EditableRows kind="contact" clientId={id} rows={client.contacts} />
-      <h2>Ubicaciones de trabajo</h2>
+      <h2>Instalaciones</h2>
       <EditableRows kind="location" clientId={id} rows={client.locations} />
 
       <h2>Presupuestos</h2>
@@ -111,7 +111,7 @@ export default async function ClientePage({ params, searchParams }: PageProps<"/
 
       <div style={{ marginTop: 28, paddingTop: 14, borderTop: "1px solid var(--rule)" }}>
         <ClientDangerZone client={v} />
-        <p className="mut" style={{ fontSize: 12, marginTop: 8 }}>«Eliminar cliente» lo borra con sus contactos y ubicaciones si no tiene presupuestos; si los tiene, lo desactiva.</p>
+        <p className="mut" style={{ fontSize: 12, marginTop: 8 }}>«Eliminar cliente» lo borra con sus contactos e instalaciones si no tiene presupuestos; si los tiene, lo desactiva.</p>
       </div>
     </>
   );

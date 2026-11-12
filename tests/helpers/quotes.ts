@@ -8,7 +8,7 @@ import { makeUser } from "./users";
 /** A client with one location and one contact. */
 export async function makeClient(actor: CurrentUser, over: { paymentTerms?: string; exclusions?: string; offerValidityDays?: string } = {}) {
   const client = await createClient(actor, { legalName: `Cliente ${randomUUID().slice(0, 6)}`, taxId: `B${randomUUID().replace(/\D/g, "").slice(0, 8).padEnd(8, "0")}`, ...over });
-  const location = await saveLocation(actor, client.id, { name: "Nave 3", city: "Torrejón de Ardoz" });
+  const location = await saveLocation(actor, client.id, { name: "Nave 3", installation: "Torrejón de Ardoz" });
   const contact = await saveContact(actor, client.id, { name: "Ana", email: "" });
   return { client, location, contact };
 }

@@ -38,7 +38,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
       </form>
       <div style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Razón social</th><th>Nombre comercial</th><th>CIF/NIF</th><th className="n">Ubicaciones</th><th></th></tr></thead>
+          <thead><tr><th>Razón social</th><th>Nombre comercial</th><th>CIF/NIF</th><th className="n">Instalaciones</th><th></th></tr></thead>
           <tbody>
             {items.map((c) => (
               <tr key={c.id} className={c.active ? undefined : "mut"}>

@@ -81,7 +81,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
               <label className="field">Ubicación
                 <select name="locationId" defaultValue={q.locationId ?? ""}>
                   <option value="">— Sin elegir —</option>
-                  {activeOrCurrent(client.locations, q.locationId).map((l) => <option key={l.id} value={l.id}>{l.name}{l.city ? ` · ${l.city}` : ""}</option>)}
+                  {activeOrCurrent(client.locations, q.locationId).map((l) => <option key={l.id} value={l.id}>{l.name}{l.installation ? ` · ${l.installation}` : ""}</option>)}
                 </select>
               </label>
               <label className="field">Contacto
@@ -112,7 +112,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
             <div className="sheet">
               <dl>
                 <dt>Cliente</dt><dd><Link href={`/clientes/${q.clientId}`}>{q.client.legalName}</Link></dd>
-                <dt>Ubicación</dt><dd>{q.location ? `${q.location.name}${q.location.city ? ` · ${q.location.city}` : ""}` : "—"}</dd>
+                <dt>Ubicación</dt><dd>{q.location ? `${q.location.name}${q.location.installation ? ` · ${q.location.installation}` : ""}` : "—"}</dd>
                 <dt>Contacto</dt><dd>{q.contact?.name ?? "—"}</dd>
                 <dt>Responsable</dt><dd>{q.owner.name}</dd>
                 <dt>Fecha</dt><dd>{formatDateEs(q.date)}</dd>

@@ -61,7 +61,7 @@ export async function saveLocationAction(_prev: ActionResult | null, form: FormD
   const actor = await requireUser();
   const clientId = s(form, "clientId");
   return run(clientId, () => clients.saveLocation(actor, clientId, {
-    id: s(form, "id") || undefined, name: s(form, "name"), address: s(form, "address"), city: s(form, "city"), province: s(form, "province"),
+    id: s(form, "id") || undefined, name: s(form, "name"), address: s(form, "address"), installation: s(form, "installation"), country: s(form, "country"),
   }));
 }
 

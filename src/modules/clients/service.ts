@@ -124,9 +124,9 @@ export async function saveLocation(actor: CurrentUser, clientId: string, raw: Lo
   return prisma.$transaction(async (tx) => {
     const client = await tx.client.findUnique({ where: { id: clientId } });
     if (!client) throw new NotFoundError("El cliente no existe");
-    if (id && !(await tx.clientLocation.findFirst({ where: { id, clientId } }))) throw new NotFoundError("La ubicación no existe");
+    if (id && !(await tx.clientLocation.findFirst({ where: { id, clientId } }))) throw new NotFoundError("La instalación no existe");
     const location = id ? await tx.clientLocation.update({ where: { id }, data }) : await tx.clientLocation.create({ data: { ...data, clientId } });
-    await log(tx, actor, clientId, id ? "update" : "create", `${client.legalName}: ubicación ${location.name} ${id ? "modificada" : "añadida"}`);
+    await log(tx, actor, clientId, id ? "update" : "create", `${client.legalName}: instalación ${location.name} ${id ? "modificada" : "añadida"}`);
     return location;
   });
 }
@@ -149,8 +149,8 @@ export async function removeContact(actor: CurrentUser, contactId: string): Prom
 
 export async function removeLocation(actor: CurrentUser, locationId: string): Promise<"deleted" | "deactivated"> {
   const location = await prisma.clientLocation.findUnique({ where: { id: locationId }, include: { client: true } });
-  if (!location) throw new NotFoundError("La ubicación no existe");
-  const summary = (what: string) => `${location.client.legalName}: ubicación ${location.name} ${what}`;
+  if (!location) throw new NotFoundError("La instalación no existe");
+  const summary = (what: string) => `${location.client.legalName}: instalación ${location.name} ${what}`;
   return deleteOrDeactivate(
     () => prisma.$transaction(async (tx) => {
       await tx.clientLocation.delete({ where: { id: locationId } });

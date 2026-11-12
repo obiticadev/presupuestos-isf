@@ -38,7 +38,7 @@ export const locationInput = z.object({
   id: z.string().optional(),
   name: text(100).min(1, "Escribe el nombre"),
   address: text(300).optional().default(""),
-  city: text(100).optional().default(""),
-  province: text(100).optional().default(""),
+  installation: text(100).optional().default(""),
+  country: text(100).optional().default(""),
 });
 export type LocationInput = z.input<typeof locationInput>;
