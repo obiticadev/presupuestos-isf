@@ -81,7 +81,7 @@ export async function createRevision(actor: CurrentUser, id: string): Promise<Qu
       if (q.status === "DRAFT") throw new ValidationError({ _: "Solo se revisa un presupuesto emitido" });
       if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: revisa la última" });
       const rev = await tx.quote.create({
-        data: { ...HEADER(q), seqYear: q.seqYear, seq: q.seq, revision: q.revision + 1, parentId: q.id, ownerId: q.ownerId, createdById: actor.id, date: todayMadrid() },
+        data: { ...HEADER(q), seqYear: q.seqYear, seq: q.seq, revision: q.revision + 1, parentId: q.id, ownerId: actor.id, createdById: actor.id, date: todayMadrid() },
       });
       await copyContent(tx, q.id, rev.id);
       await logQuote(tx, actor, q.id, "revision", `Borrador de revisión R${String(rev.revision).padStart(2, "0")} de ${q.reference}`);
@@ -178,6 +178,16 @@ export async function listQuotes(filter: QuoteFilter) {
   return { items, total, sum: agg._sum.total ?? new Prisma.Decimal(0), counts };
 }
 export type QuoteRow = Awaited<ReturnType<typeof listQuotes>>["items"][number];
+
+/** Every revision of the quote's number, newest first; empty while it has no number. */
+export async function listRevisions(id: string) {
+  const q = await prisma.quote.findUnique({ where: { id }, select: { seqYear: true, seq: true } });
+  if (!q || q.seq === null) return [];
+  return prisma.quote.findMany({
+    where: { seqYear: q.seqYear, seq: q.seq }, orderBy: { revision: "desc" },
+    select: { id: true, revision: true, status: true, reference: true, issuedAt: true, owner: { select: { name: true } } },
+  });
+}
 
 /** History of a quote and all its revisions, for any user (spec 5.9). */
 export async function listQuoteHistory(id: string): Promise<AuditEntry[]> {

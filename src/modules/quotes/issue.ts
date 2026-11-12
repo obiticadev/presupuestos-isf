@@ -75,7 +75,7 @@ function issueInTx(actor: CurrentUser, id: string): Promise<Quote> {
       if (parent.supersededById) throw new ValidationError({ _: "La revisión anterior ya está sustituida por otra" });
       await tx.quote.update({ where: { id: parent.id }, data: { supersededById: id } });
     }
-    const issued = await tx.quote.update({ where: { id }, data: { status: "ISSUED", issuedAt: now, seqYear, seq, reference } });
+    const issued = await tx.quote.update({ where: { id }, data: { status: "ISSUED", issuedAt: now, seqYear, seq, reference, ownerId: actor.id } }); // the issuer is the responsible
     // JSON round-trip: Decimals become strings and Dates ISO strings; the snapshot never changes afterwards.
     const { id: _id, updatedAt: _updated, ...company } = settings;
     const snapshot = JSON.parse(JSON.stringify({ company, quote: { ...q, ...issued } })) as Prisma.InputJsonValue;

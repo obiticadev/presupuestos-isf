@@ -71,6 +71,23 @@ export function PriceWarnings({ id, warnings }: { id: string; warnings: string[]
   );
 }
 
+/** Every revision of this number; each opens its own page (data, PDF, duplicate). Superseded ones are not in the quotes list. */
+export function Revisions({ current, revisions }: { current: string; revisions: { id: string; revision: number; status: keyof typeof STATUS_LABEL; issuedAt: Date | null; owner: { name: string } }[] }) {
+  if (revisions.length < 2) return null;
+  return (
+    <nav className="sheet revs" aria-label="Revisiones">
+      <h3>Revisiones</h3>
+      {revisions.map((r) => (
+        <Link key={r.id} href={`/presupuestos/${r.id}`} aria-current={r.id === current ? "page" : undefined}>
+          <b>{rev(r.revision)}</b>
+          <span className={`st ${STATUS_CLASS[r.status]}`}><i />{STATUS_LABEL[r.status]}</span>
+          <small className="mut">{r.issuedAt ? `${fmt.format(r.issuedAt)} · ${r.owner.name}` : r.owner.name}</small>
+        </Link>
+      ))}
+    </nav>
+  );
+}
+
 /** History of the quote and its revisions (spec 5.9). */
 export function QuoteHistory({ entries }: { entries: AuditEntry[] }) {
   return (

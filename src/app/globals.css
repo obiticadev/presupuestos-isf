@@ -41,6 +41,7 @@ h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)
 .field.grow{flex:1}.field.grow input{width:100%}
 .field .box{display:flex;align-items:center;font:400 14px var(--font-archivo),sans-serif;letter-spacing:0;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px;min-width:150px;cursor:default;user-select:none;caret-color:transparent}
 .field .box:focus{outline:2px solid var(--green);outline-offset:2px}
+.revs{display:grid;gap:2px}.revs a{display:grid;grid-template-columns:3.2em auto 1fr;gap:10px;align-items:center;padding:8px 6px;text-decoration:none;color:var(--ink);border-top:1px solid var(--rule)}.revs a:hover{background:var(--band)}.revs a[aria-current]{background:var(--band);box-shadow:inset 3px 0 var(--green)}.revs small{text-align:right}
 /* Desplegables con el aspecto de .menu (Chrome 135+); los demás navegadores muestran la lista nativa */
 @supports (appearance:base-select){
 select,::picker(select){appearance:base-select;border-radius:0}

@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
-import { createRevision, duplicateQuote, isExpired, listQuoteHistory, listQuotes, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
+import { createRevision, duplicateQuote, isExpired, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
 import { addCatalogLine, deleteDraft, getQuote, updateLine } from "@/modules/quotes/service";
 import { conceptFields, completeDraft } from "../helpers/quotes";
 
@@ -88,4 +88,22 @@ test("setStatus rechaza estados que no existen, aunque sean nombres heredados", 
   await issueQuote(actor, quote.id);
   for (const bad of ["constructor", "toString", "DRAFT", "x"])
     await expect(setStatus(actor, quote.id, bad as never)).rejects.toThrow("Estado no válido");
+});
+
+test("el responsable es quien emite: la revisión la lleva quien la abre y, al emitirla, quien la emite", async () => {
+  const { actor, admin, quote } = await completeDraft();
+  expect((await issueQuote(admin, quote.id)).ownerId).toBe(admin.id);
+  const r1 = await createRevision(actor, quote.id);
+  expect(r1.ownerId).toBe(actor.id);
+  expect((await issueQuote(admin, r1.id)).ownerId).toBe(admin.id);
+  expect((await getQuote(quote.id)).ownerId).toBe(admin.id); // la anterior conserva su responsable
+});
+
+test("listRevisions da todas las revisiones del número, de la más reciente a la primera", async () => {
+  const { actor, quote } = await completeDraft();
+  expect(await listRevisions(quote.id)).toEqual([]); // sin número aún
+  await issueQuote(actor, quote.id);
+  const r1 = await createRevision(actor, quote.id);
+  const revs = await listRevisions(r1.id);
+  expect(revs.map((r) => [r.id, r.revision, r.status])).toEqual([[r1.id, 1, "DRAFT"], [quote.id, 0, "ISSUED"]]);
 });

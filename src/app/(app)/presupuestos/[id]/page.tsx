@@ -12,14 +12,13 @@ import { getClient, listClientOptions } from "@/modules/clients/service";
 import { listKits } from "@/modules/kits/service";
 import { deleteDraftAction, updateHeaderAction } from "@/modules/quotes/actions";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
-import { listQuoteHistory, priceWarnings } from "@/modules/quotes/lifecycle";
+import { listQuoteHistory, listRevisions, priceWarnings } from "@/modules/quotes/lifecycle";
 import { getQuote, listRequiredConcepts, quoteLabel, type QuoteDetail } from "@/modules/quotes/service";
 import { getSettings, listTaxes } from "@/modules/settings/service";
-import { listActiveUserNames } from "@/modules/users/service";
 import { OpenKitFromHash } from "@/components/disclosure";
 import { InstallationFields } from "./installation-fields";
 import { IssuePanel } from "./issue-panel";
-import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory } from "./lifecycle-panel";
+import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory, Revisions } from "./lifecycle-panel";
 import { Comment } from "./comment";
 import { Subsection, SectionHead, AddSection, type EditorContext } from "./sections";
 
@@ -29,7 +28,7 @@ const money = (v: { toString(): string }) => `${formatDecimalEs(v)} €`;
 const text = (v: string) => (v ? <span style={{ whiteSpace: "pre-wrap" }}>{v}</span> : <span className="mut">—</span>);
 
 export default async function PresupuestoPage({ params }: PageProps<"/presupuestos/[id]">) {
-  await requireUser();
+  const me = await requireUser();
   const { id } = await params;
   let q: QuoteDetail;
   try {
@@ -45,9 +44,9 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
     );
   }
   const editable = q.status === "DRAFT";
-  const [client, clients, users, taxes, concepts, kits, settings, required, history, warnings] = await Promise.all([
-    getClient(q.clientId), listClientOptions(), listActiveUserNames(), listTaxes(), listConceptOptions(), listKits(), getSettings(), listRequiredConcepts(),
-    listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [],
+  const [client, clients, taxes, concepts, kits, settings, required, history, warnings, revisions] = await Promise.all([
+    getClient(q.clientId), listClientOptions(), listTaxes(), listConceptOptions(), listKits(), getSettings(), listRequiredConcepts(),
+    listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [], listRevisions(q.id),
   ]);
   const ctx: EditorContext = {
     editable, quoteId: q.id, totals: q.totals,
@@ -90,12 +89,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
                   {activeOrCurrent(client.contacts, q.contactId).map((c) => <option key={c.id} value={c.id}>{c.name}{c.role ? ` · ${c.role}` : ""}</option>)}
                 </select>
               </label>
-              <label className="field">Responsable
-                <select name="ownerId" defaultValue={q.ownerId}>
-                  {!users.some((u) => u.id === q.ownerId) && <option value={q.ownerId}>{q.owner.name}</option>}
-                  {users.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
-                </select>
-              </label>
+              {/* Whoever manages the draft; issuing records the issuer. Read-only box, like «Instalación». */}
+              <div className="field">Responsable<output className="box" tabIndex={0}>{me.name}</output></div>
               <label className="field">Fecha<input type="date" name="date" defaultValue={q.date.toISOString().slice(0, 10)} required /></label>
               <label className="field">Validez (días)<input name="validityDays" defaultValue={q.validityDays} inputMode="numeric" required /></label>
               <label className="field wide">Asunto («…en referencia a…»)<textarea name="subject" defaultValue={q.subject} rows={2} /></label>
@@ -144,7 +139,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
         <QuoteHistory entries={history} />
       </div>
 
-      <aside className="panel sheet" style={{ display: "grid", gap: 18 }}>
+      <div className="panel" style={{ display: "grid", gap: 16 }}>
+      <aside className="sheet" style={{ display: "grid", gap: 18 }}>
         <div className="tot">
           <h3>Totales</h3>
           <div><span>Base imponible</span><span>{money(q.totals.base)}</span></div>
@@ -177,6 +173,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
         )}
         {editable && <DuplicateButton id={q.id} />}
       </aside>
+      <Revisions current={q.id} revisions={revisions} />
+      </div>
     </div>
   );
 }
