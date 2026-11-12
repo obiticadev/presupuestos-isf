@@ -44,7 +44,9 @@ export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts:
   const book = await readClientsBook(bytes);
   if ("error" in book) return { error: book.error, rows: [], created: 0, updated: 0, applied: false };
 
-  const existing = new Map((await prisma.client.findMany({ include: { contacts: true, locations: true } })).map((c) => [c.taxId, c]));
+  // Same order as the export (exportClients), so repeated names pair up row by row.
+  const order = [{ active: "desc" }, { name: "asc" }, { id: "asc" }] satisfies Prisma.ClientContactOrderByWithRelationInput[];
+  const existing = new Map((await prisma.client.findMany({ include: { contacts: { orderBy: order }, locations: { orderBy: order } } })).map((c) => [c.taxId, c]));
   const results: ClientImportRow[] = [];
   const clientWrites: { id?: string; data: z.output<typeof clientInput> & { active: boolean } }[] = [];
   const inSheet = new Map<string, number>();
@@ -73,24 +75,30 @@ export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts:
   ) => {
     const what = sheet === "Contactos" ? "contactos" : "instalaciones";
     const writes: { cif: string; id?: string; data: T & { active: boolean } }[] = [];
-    const seen = new Map<string, number>();
+    const keyOf = (v: { CIF: string; Nombre: string }) => `${normCif(v.CIF)} · ${v.Nombre.trim().toLowerCase()}`;
+    const inFile = new Map<string, number>();
+    rows.forEach(({ values }) => inFile.set(keyOf(values), (inFile.get(keyOf(values)) ?? 0) + 1));
+    const seen = new Map<string, number[]>();
     for (const { row, values, cellErrors } of rows) {
       const errors = [...cellErrors];
       const cif = normCif(values.CIF);
       const name = values.Nombre.trim();
       if (!cif) errors.push("CIF: escribe el CIF del cliente");
       else if (!inSheet.has(cif) && !existing.has(cif)) errors.push(`El CIF ${cif} no está en la hoja Clientes ni en la base`);
-      const key = `${cif} · ${name.toLowerCase()}`;
-      if (seen.has(key)) errors.push(`Repetido en la fila ${seen.get(key)}`);
-      else seen.set(key, row);
+      const key = keyOf(values);
+      const before = seen.get(key) ?? [];
+      seen.set(key, [...before, row]);
       const active = yesNo(values.Activo, errors);
       const parsed = parse(values, name);
       if (!parsed.success) errors.push(...issues(parsed.error, CHILD_FIELD));
       const client = existing.get(cif);
       const matches = client ? list(client).filter((x) => sameName(x.name, name)) : [];
-      if (matches.length > 1) errors.push(`Hay varios ${what} con ese nombre en el cliente: renómbralos antes`);
-      results.push({ sheet, row, code: name ? `${cif} · ${name}` : cif, action: matches.length ? "update" : "create", errors });
-      if (parsed.success && errors.length === 0) writes.push({ cif, id: matches[0]?.id, data: { ...parsed.data, active } });
+      // Several stored with this name (say, one deactivated and a new one): the file must bring one row for each, in export order.
+      if (matches.length > 1 && inFile.get(key) !== matches.length) errors.push(`Hay varios ${what} con ese nombre en el cliente: renómbralos antes`);
+      else if (matches.length <= 1 && before.length > 0) errors.push(`Repetido en la fila ${before[0]}`);
+      const match = matches.length > 1 ? matches[before.length] : before.length === 0 ? matches[0] : undefined;
+      results.push({ sheet, row, code: name ? `${cif} · ${name}` : cif, action: match ? "update" : "create", errors });
+      if (parsed.success && errors.length === 0) writes.push({ cif, id: match?.id, data: { ...parsed.data, active } });
     }
     return writes;
   };

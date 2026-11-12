@@ -10,7 +10,7 @@ import { clientInput, contactInput, locationInput, type ClientInput, type Contac
 // Spec 5.1: every signed-in user manages clients, so these functions take the actor only for the history.
 
 export const CLIENTS_PAGE_SIZE = 50;
-const ACTIVE_FIRST = [{ active: "desc" }, { name: "asc" }] as const;
+const ACTIVE_FIRST = [{ active: "desc" }, { name: "asc" }, { id: "asc" }] as const; // same order as importClients matches repeated names
 const DETAIL = { contacts: { orderBy: [...ACTIVE_FIRST] }, locations: { orderBy: [...ACTIVE_FIRST] } } satisfies Prisma.ClientInclude;
 export type ClientDetail = Prisma.ClientGetPayload<{ include: typeof DETAIL }>;
 export type ClientRow = Prisma.ClientGetPayload<{ include: { _count: { select: { locations: true } } } }>;

@@ -162,3 +162,16 @@ test("la importación queda en el historial", async () => {
   const logs = await prisma.auditLog.findMany({ where: { entity: "client" }, select: { summary: true } });
   expect(logs.map((l) => l.summary)).toEqual(expect.arrayContaining(["Alta de Aguas del Sur, S.A. (B12345678) (importación)", "Importación de clientes: 1 altas, 0 cambios"]));
 });
+
+test("exportar e importar con dos contactos del mismo nombre (uno desactivado) no da errores", async () => {
+  const { admin, client, contact, quote } = await completeDraft();
+  await prisma.quote.update({ where: { id: quote.id }, data: { contactId: contact.id } });
+  await prisma.clientContact.update({ where: { id: contact.id }, data: { active: false, role: "Antigua" } });
+  await saveContact(admin, client.id, { name: contact.name, role: "Nueva", email: "" });
+  const before = await snapshot();
+  const r = await importClients(admin, await writeClientsBook(await exportClients()), { apply: true });
+  expect(r.rows.flatMap((x) => x.errors)).toEqual([]);
+  expect(r.created).toBe(0);
+  expect(await snapshot()).toEqual(before);
+  expect((await prisma.clientContact.findUniqueOrThrow({ where: { id: contact.id } })).role).toBe("Antigua");
+});
