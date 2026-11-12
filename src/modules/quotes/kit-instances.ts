@@ -29,7 +29,9 @@ async function regenerate(tx: Tx, actor: CurrentUser, quoteId: string, instance:
     id: c.id, code: c.code, categoryId: c.categoryId, description: c.description, unitName: c.unit.name,
     salePrice: c.salePrice, taxName: c.tax.name, taxRatePct: c.tax.ratePct, active: c.active,
   }]));
-  const expansion = expandKit(def, { quantity: instance.quantity.toString(), params: instance.params as Record<string, string>, choices }, concepts);
+  const section = await tx.quoteSection.findUniqueOrThrow({ where: { id: instance.sectionId }, select: { mode: true } });
+  const input = { quantity: instance.quantity.toString(), params: instance.params as Record<string, string>, choices };
+  const expansion = expandKit(def, input, concepts, section.mode === "GLOBAL");
 
   const existing = await tx.quoteLine.findMany({ where: { kitInstanceId: instance.id }, include: { adjustments: true } });
   const keep = new Set<string>();
@@ -67,7 +69,6 @@ export async function addKitInstance(actor: CurrentUser, subsectionId: string, r
   const sub = await prisma.quoteSection.findUnique({ where: { id: subsectionId } });
   if (!sub) throw new NotFoundError("La partida no existe");
   if (!sub.parentId) throw new ValidationError({ _: "Los conjuntos van dentro de una subpartida" });
-  if (sub.mode === "GLOBAL") throw new ValidationError({ _: "Una subpartida de precio global no lleva conjuntos: cámbiala a «por suma»" });
   const template = await prisma.kitTemplate.findUnique({ where: { id: raw.templateId } });
   if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
   const def = kitDefinition.parse(template.definition);

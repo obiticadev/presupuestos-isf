@@ -89,6 +89,9 @@ Referencia visual obligatoria: `docs/diseno/maquetas/editor-filas-v2.html` (vari
 - Abierto: el cálculo, sus líneas, su comentario y el pie. Ya no se dibuja el esquema grande.
 - Pie, separado de la última línea por un filete y en una sola línea también en móvil: «Editar» (o «Completar» en ámbar) · «Quitar» · comentario … ✓ verde a la derecha, que lo pliega y deja su título a la vista.
 - Los incompletos salen abiertos y con borde ámbar; el que se acaba de editar se abre por su ancla `#conjunto-…`.
+- Cambio del 2026-11-12 (usuario): la silueta lleva un círculo por dato del formulario (elemento principal, datos y componentes), con borde negro si está y discontinuo en ámbar si falta.
+
+**1.8 Conjuntos en subpartidas de precio global** (añadido el 2026-11-12, decisión del usuario). Una subpartida «precio global» también admite conjuntos (sustituye a «solo si va por suma» de 1.4). Sus líneas son descriptivas como las demás de esa subpartida: sin precio ni importe, y no suman. El conjunto sigue obligando a elegir cada pieza y dato: incompleto bloquea la emisión («Falta completar: …»). En global se pueden elegir piezas del catálogo sin precio de venta, como en las líneas sueltas.
 
 ### Bloque 2. Clientes e instalaciones
 

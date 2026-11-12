@@ -153,7 +153,7 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
       {global && <p className="mut subnote">Las líneas de esta subpartida describen el trabajo: no llevan precio y no suman.</p>}
 
       {loose.map((l, i) => <LineRow key={l.id} ctx={ctx} line={l} global={global} first={i === 0} last={i === loose.length - 1} />)}
-      {sub.kits.map((k) => <KitBlock key={k.id} ctx={ctx} kit={k} lines={sub.lines.filter((l) => l.kitInstanceId === k.id)} />)}
+      {sub.kits.map((k) => <KitBlock key={k.id} ctx={ctx} kit={k} global={global} lines={sub.lines.filter((l) => l.kitInstanceId === k.id)} />)}
       <Comment kind="section" id={sub.id} text={sub.comment} editable={ctx.editable} variant="cs" />
       {ctx.editable && <AddToSubsection ctx={ctx} sub={sub} />}
     </div>
@@ -245,7 +245,7 @@ function Silhouette({ main, parts }: { main: string; parts: { label: string; mis
   );
 }
 
-function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDetail; lines: LineDetail[] }) {
+function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitInstanceDetail; lines: LineDetail[]; global: boolean }) {
   const def = kitDefinition.parse(kit.definition);
   const params = kit.params as Record<string, string>;
   const choices = kit.choices as Record<string, string>;
@@ -259,7 +259,8 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
     ...def.params.filter((p) => params[p.key]).map((p) => `${p.label.toLowerCase()} ${params[p.key]} ${p.unit}`.trim()),
   ].join(" · ");
   // One circle per element of the form (main choice, data, components); optional ones left empty are not drawn.
-  const usable = (id: string | undefined) => ctx.allConcepts.some((c) => c.id === id && c.active && c.salePrice !== null);
+  // In a global-price subsection the lines are descriptive: a concept without sale price is fine.
+  const usable = (id: string | undefined) => ctx.allConcepts.some((c) => c.id === id && c.active && (global || c.salePrice !== null));
   const choice = (label: string, id: string | undefined) => ({ label: usable(id) ? (name(id) ?? label) : `Falta ${label.toLowerCase()}`, missing: !usable(id) });
   const parts = [
     choice(def.main.label, refConceptId(def.main) ?? choices.main),
@@ -272,7 +273,7 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
   ];
   const options = (ref: { conceptId: string } | { categoryId: string }, current: string | undefined) => {
     const cat = refCategoryId(ref);
-    return ctx.allConcepts.filter((c) => c.categoryId === cat && ((c.active && c.salePrice !== null) || c.id === current));
+    return ctx.allConcepts.filter((c) => c.categoryId === cat && ((c.active && (global || c.salePrice !== null)) || c.id === current));
   };
 
   return (
@@ -282,14 +283,13 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
         <Silhouette main={def.main.label} parts={parts} />
         <b>Conjunto · {kit.name}</b>
         <span className="sum mut">{summary}</span>
-        {missing.length ? <span className="badge amber">Incompleto</span> : <b>{money(amount)}</b>}
+        {missing.length ? <span className="badge amber">Incompleto</span> : !global && <b>{money(amount)}</b>}
       </summary>
-      <p className="kitsum">
-        {missing.length
-          ? <span className="amber">Sin valorar hasta completar: {missing.join(" · ")}</span>
-          : <>{lines.map((l) => `${qty(l.quantity)} ${l.unitName} × ${price(l.unitPrice)}`).join(" + ")} = <b>{money(amount)}</b></>}
-      </p>
-      {lines.map((l) => <LineRow key={l.id} ctx={ctx} line={l} global={false} inKit />)}
+      {missing.length > 0 && <p className="kitsum"><span className="amber">{global ? "Falta completar" : "Sin valorar hasta completar"}: {missing.join(" · ")}</span></p>}
+      {!missing.length && !global && (
+        <p className="kitsum">{lines.map((l) => `${qty(l.quantity)} ${l.unitName} × ${price(l.unitPrice)}`).join(" + ")} = <b>{money(amount)}</b></p>
+      )}
+      {lines.map((l) => <LineRow key={l.id} ctx={ctx} line={l} global={global} inKit />)}
       <Comment kind="kit" id={kit.id} text={kit.comment} editable={ctx.editable} variant="ck" />
       {ctx.editable && (
         <>
@@ -341,7 +341,7 @@ function KitBlock({ ctx, kit, lines }: { ctx: EditorContext; kit: KitInstanceDet
 function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDetail }) {
   const global = sub.mode === "GLOBAL";
   const concepts = ctx.concepts.filter((c) => global || c.salePrice !== null);
-  const kits = !global && ctx.kits.length > 0;
+  const kits = ctx.kits.length > 0;
   return (
     <>
       <div className="adders">
