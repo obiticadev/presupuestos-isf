@@ -116,7 +116,7 @@ function EditableRow({ kind, clientId, row }: { kind: RowKind; clientId: string;
         <input key={name} name={name} aria-label={label} placeholder={label} defaultValue={row ? String(row[name] ?? "") : ""}
           required={name === "name"} type={name === "email" ? "email" : "text"} />
       ))}
-      <span style={{ display: "flex", gap: 6 }}>
+      <span className="rowacts">
         <button className={row ? "btn" : "btn pri"} disabled={saving} style={{ minHeight: 36, padding: "4px 10px" }}>{row ? "Guardar" : "Añadir"}</button>
         {row && <button className="btn" name="op" value="remove" disabled={removing} style={{ minHeight: 36, padding: "4px 10px" }}>Eliminar</button>}
       </span>
