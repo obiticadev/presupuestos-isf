@@ -39,7 +39,8 @@ h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)
 .field{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--mut);font-weight:600;letter-spacing:.04em}
 .field input,.field select{width:100%;min-width:0;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px;min-width:150px}
 .field.grow{flex:1}.field.grow input{width:100%}
-.field .box{display:flex;align-items:center;font:400 14px var(--font-archivo),sans-serif;letter-spacing:0;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px;min-width:150px;cursor:default;user-select:text}
+.field .box{display:flex;align-items:center;font:400 14px var(--font-archivo),sans-serif;letter-spacing:0;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px;min-width:150px;cursor:default;user-select:none;caret-color:transparent}
+.field .box:focus{outline:2px solid var(--green);outline-offset:2px}
 /* Desplegables con el aspecto de .menu (Chrome 135+); los demás navegadores muestran la lista nativa */
 @supports (appearance:base-select){
 select,::picker(select){appearance:base-select;border-radius:0}

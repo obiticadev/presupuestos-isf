@@ -15,9 +15,9 @@ export function InstallationFields({ options, current }: { options: Installation
           {options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </label>
-      {/* Not an input: nothing to type here, so no caret and no focus. */}
+      {/* Not an input: nothing to type or select; it takes focus only to show the same outline as its neighbours. */}
       <div className="field">Instalación
-        <output className="box" aria-live="polite">{options.find((o) => o.id === id)?.label ?? "—"}</output>
+        <output className="box" aria-live="polite" tabIndex={0}>{options.find((o) => o.id === id)?.label ?? "—"}</output>
       </div>
     </>
   );
