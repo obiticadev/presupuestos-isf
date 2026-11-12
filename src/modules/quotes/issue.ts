@@ -18,6 +18,7 @@ export function issueChecks(q: QuoteDetail, required: (RequiredConcept & { conce
   if (!q.locationId) out.push({ code: "location", message: "Falta la instalación", anchor: "#cabecera" });
   else if (!q.location?.active || q.location.clientId !== q.clientId)
     out.push({ code: "location", message: "La instalación ya no está activa en el cliente: elige otra", anchor: "#cabecera" });
+  if (!q.subject.trim()) out.push({ code: "subject", message: "Falta el asunto", anchor: "#cabecera" }); // the letter reads «en referencia a {asunto}»
   if (!q.paymentTerms.trim()) out.push({ code: "paymentTerms", message: "Falta la forma de pago", anchor: "#cabecera" });
   const priced = lines.some((l) => l.mode === "SUM" && l.unitPrice !== null) || subs.some((s) => s.mode === "GLOBAL"); // an unpriced global one is reported below
   if (!priced) out.push({ code: "empty", message: "El presupuesto no tiene ninguna línea con precio", anchor: "#partidas" });

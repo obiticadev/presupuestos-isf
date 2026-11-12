@@ -29,9 +29,10 @@ export const conceptFields = (c: { code: string; categoryId: string; unitId: str
   code: c.code, categoryId: c.categoryId, unitId: c.unitId, taxId: c.taxId, description: c.description, validated: c.validated,
 });
 
-/** A draft that passes every issue check: location, conditions, required concepts (100 km + 20 h) and validated prices. */
+/** A draft that passes every issue check: location, subject, conditions, required concepts (100 km + 20 h) and validated prices. */
 export async function completeDraft() {
   const d = await makeDraft({ clientOver: { paymentTerms: "Transferencia a 30 días" } });
+  await prisma.quote.update({ where: { id: d.quote.id }, data: { subject: "ampliación del grupo de bombeo" } });
   await prisma.concept.updateMany({ data: { validated: true } });
   await addCatalogLine(d.actor, d.sub.id, { conceptId: "concept-ser-despl", quantity: "100" });
   await addCatalogLine(d.actor, d.sub.id, { conceptId: "concept-ser-prog", quantity: "20" });

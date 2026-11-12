@@ -15,9 +15,10 @@ export function InstallationFields({ options, current }: { options: Installation
           {options.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
         </select>
       </label>
-      <label className="field">Instalación
-        <input value={options.find((o) => o.id === id)?.label ?? "—"} readOnly tabIndex={-1} aria-live="polite" />
-      </label>
+      {/* Not an input: nothing to type here, so no caret and no focus. */}
+      <div className="field">Instalación
+        <output className="box" aria-live="polite">{options.find((o) => o.id === id)?.label ?? "—"}</output>
+      </div>
     </>
   );
 }

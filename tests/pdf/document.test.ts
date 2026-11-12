@@ -137,10 +137,35 @@ describe("buildDocument", () => {
 });
 
 describe("buildDocument: instalación", () => {
-  it("la dirección lleva la instalación y el país", () => {
+  it("el destinatario lleva «instalación, país» en lugar del nombre, y debajo solo la dirección", () => {
     const s = src();
     s.quote.location = { name: "Planta", address: "Ctra. de Toledo, km 4", installation: "28300 Aranjuez", country: "España" };
-    expect(buildDocument(s, { draft: false }).recipient.address).toEqual(["Ctra. de Toledo, km 4", "28300 Aranjuez (España)"]);
+    const d = buildDocument(s, { draft: false });
+    expect(d.recipient.place).toBe("28300 Aranjuez, España");
+    expect(d.recipient.address).toEqual(["Ctra. de Toledo, km 4"]);
+  });
+
+  it("la carta sigue el asunto con «en instalación, país»", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "", installation: "EDAR Sur", country: "España" };
+    expect(buildDocument(s, { draft: false }).letter.intro)
+      .toBe("Agradeciendo la confianza, presentamos oferta en referencia a ampliación del grupo de bombeo en EDAR Sur, España.");
+  });
+
+  it("sin país, o sin instalación, no quedan comas sueltas; sin ninguno de los dos no hay «en»", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "", installation: "EDAR Sur", country: "" };
+    expect(buildDocument(s, { draft: false }).letter.intro).toMatch(/bombeo en EDAR Sur\.$/);
+    expect(buildDocument(s, { draft: false }).recipient.place).toBe("EDAR Sur");
+    s.quote.location = { name: "Planta", address: "", installation: "", country: "" };
+    expect(buildDocument(s, { draft: false }).letter.intro).toMatch(/bombeo\.$/);
+    expect(buildDocument(s, { draft: false }).recipient.place).toBe("");
+  });
+
+  it("un snapshot antiguo conserva el nombre de la ubicación y la carta sin «en»", () => {
+    const d = buildDocument(src(), { draft: false });
+    expect(d.recipient.place).toBe("Planta");
+    expect(d.letter.intro).toBe("Agradeciendo la confianza, presentamos oferta en referencia a ampliación del grupo de bombeo.");
   });
 
   it("un snapshot antiguo con city y province se regenera igual", () => {

@@ -54,9 +54,12 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
   const [y, m, day] = q.date.slice(0, 10).split("-").map(Number);
   const longDate = LONG_DATE.format(new Date(q.date)); // a date without time stored at UTC midnight
   const loc = q.location;
-  const installation = loc?.installation ?? loc?.city ?? "";
-  const country = loc?.country ?? loc?.province ?? "";
-  const cityLine = loc ? [installation, country && `(${country})`].filter(Boolean).join(" ") : "";
+  // Snapshots from before 2026-11-12 (city/province) keep their layout: location name, address with «city (province)», no «en …».
+  const legacy = !!loc && loc.installation === undefined;
+  const installation = (loc?.installation ?? loc?.city ?? "").trim();
+  const country = (loc?.country ?? loc?.province ?? "").trim();
+  const where = legacy ? "" : [installation, country].filter(Boolean).join(", ");
+  const cityLine = legacy ? [installation, country && `(${country})`].filter(Boolean).join(" ") : "";
   const address = loc?.address.trim() ? [loc.address.trim(), cityLine].filter(Boolean) : textLines(q.client.fiscalAddress);
 
   const rows: PdfRow[] = [];
@@ -84,12 +87,12 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
     longDate,
     company,
     recipient: {
-      name: q.client.legalName, place: loc?.name ?? "", address,
+      name: q.client.legalName, place: legacy ? loc.name : where, address,
       attention: q.contact ? `A la atención de ${q.contact.name}` : null,
     },
     letter: {
       place: company.letterPlace, greeting: company.letterGreeting,
-      intro: `${company.letterIntro.trim()} ${q.subject.trim()}.`,
+      intro: `${company.letterIntro.trim()} ${q.subject.trim()}${where ? ` en ${where}` : ""}.`,
       closing: company.letterClosing.split(/\r?\n\s*\r?\n/).map((p) => p.trim()).filter(Boolean),
     },
     clientName: q.client.legalName,

@@ -83,7 +83,7 @@ test("issueChecks lista cada problema con su ancla y no deja emitir", async () =
   await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-despl", quantity: "100" });
   const kit = await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "1", params: {}, choices: {} });
   const problems = issueChecks(await getQuote(quote.id), await listRequiredConcepts());
-  expect(problems.map((p) => p.code)).toEqual(["location", "paymentTerms", "required", "kit", "unvalidated"]);
+  expect(problems.map((p) => p.code)).toEqual(["location", "subject", "paymentTerms", "required", "kit", "unvalidated"]);
   expect(problems.find((p) => p.code === "kit")?.anchor).toBe(`#conjunto-${kit.id}`);
   await expect(issueQuote(actor, quote.id)).rejects.toThrow(ValidationError);
 });
@@ -93,6 +93,7 @@ test("subpartida global sin precio bloquea; vacío bloquea; renuncia con motivo 
   await updateSection(c.actor, c.sub.id, { mode: "GLOBAL" });
   expect(issueChecks(await getQuote(c.quote.id), await listRequiredConcepts()).map((p) => p.code)).toEqual(["global"]);
   const e = await makeDraft({ clientOver: { paymentTerms: "Contado" } });
+  await updateHeader(e.actor, e.quote.id, { subject: "revisión de bombas" });
   await setWaiver(e.actor, e.quote.id, "concept-ser-despl", "En taller");
   await setWaiver(e.actor, e.quote.id, "concept-ser-prog", "Sin programación");
   expect(issueChecks(await getQuote(e.quote.id), await listRequiredConcepts()).map((p) => p.code)).toEqual(["empty"]);
@@ -128,4 +129,11 @@ test("los avisos de «Para emitir» hablan de la instalación", async () => {
   const { actor, quote: other } = await makeDraft();
   await updateHeader(actor, other.id, { locationId: "" });
   expect(issueChecks(await getQuote(other.id), await listRequiredConcepts()).find((p) => p.code === "location")?.message).toBe("Falta la instalación");
+});
+
+test("sin asunto no se puede emitir", async () => {
+  const { actor, quote } = await completeDraft();
+  await updateHeader(actor, quote.id, { subject: "   " });
+  const problems = issueChecks(await getQuote(quote.id), await listRequiredConcepts());
+  expect(problems).toEqual([{ code: "subject", message: "Falta el asunto", anchor: "#cabecera" }]);
 });
