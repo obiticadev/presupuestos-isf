@@ -135,3 +135,17 @@ describe("buildDocument", () => {
     expect(toPdfSource({ d: new Date("2026-01-01T00:00:00Z") }, { q: 2 })).toEqual({ company: { d: "2026-01-01T00:00:00.000Z" }, quote: { q: 2 } });
   });
 });
+
+describe("buildDocument: instalación", () => {
+  it("la dirección lleva la instalación y el país", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "Ctra. de Toledo, km 4", installation: "28300 Aranjuez", country: "España" };
+    expect(buildDocument(s, { draft: false }).recipient.address).toEqual(["Ctra. de Toledo, km 4", "28300 Aranjuez (España)"]);
+  });
+
+  it("un snapshot antiguo con city y province se regenera igual", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "Ctra. de Toledo, km 4", city: "28300 Aranjuez", province: "Madrid" };
+    expect(buildDocument(s, { draft: false }).recipient.address).toEqual(["Ctra. de Toledo, km 4", "28300 Aranjuez (Madrid)"]);
+  });
+});

@@ -4,7 +4,8 @@ import { formatDecimalEs } from "@/lib/decimal";
 export type SnapshotQuote = {
   reference: string | null; date: string; subject: string; paymentTerms: string; exclusions: string; validityDays: number;
   client: { legalName: string; fiscalAddress: string };
-  location: { name: string; address: string; city: string; province: string } | null;
+  // city and province: snapshots issued before 2026-11-12, when they were renamed to installation and country.
+  location: { name: string; address: string; installation?: string; country?: string; city?: string; province?: string } | null;
   contact: { name: string } | null;
   // Comments, kit ids and kits arrived with the 2026-11 improvements: older snapshots lack them.
   sections: {
@@ -53,7 +54,9 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
   const [y, m, day] = q.date.slice(0, 10).split("-").map(Number);
   const longDate = LONG_DATE.format(new Date(q.date)); // a date without time stored at UTC midnight
   const loc = q.location;
-  const cityLine = loc ? [loc.city, loc.province && `(${loc.province})`].filter(Boolean).join(" ") : "";
+  const installation = loc?.installation ?? loc?.city ?? "";
+  const country = loc?.country ?? loc?.province ?? "";
+  const cityLine = loc ? [installation, country && `(${country})`].filter(Boolean).join(" ") : "";
   const address = loc?.address.trim() ? [loc.address.trim(), cityLine].filter(Boolean) : textLines(q.client.fiscalAddress);
 
   const rows: PdfRow[] = [];
