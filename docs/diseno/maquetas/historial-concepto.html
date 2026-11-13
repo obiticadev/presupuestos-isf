@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bloque 3 · propuestas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--sheet:#fff;--rule:#d5dbd6;--band:#eceeea;--green:#004742;--amber:#8f5600;--amber-bg:#fff3dc;--mut:#56645f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Archivo",sans-serif;color:var(--ink);background:#dfe3df;font-size:14px}
+:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.bar{position:fixed;top:0;left:0;right:0;z-index:10;background:var(--paper);border-bottom:1.5px solid var(--ink);padding:10px 16px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.bar b{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.grp{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.btn{font:600 13px "Archivo",sans-serif;padding:7px 12px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);cursor:pointer;min-height:36px}
+.btn:hover{background:var(--band)}
+.btn[aria-pressed="true"]{background:var(--ink);color:#fff}
+.btn[disabled]{opacity:.35;cursor:default}
+.slide{padding:84px 16px 16px}
+.shead{max-width:1440px;margin:0 auto 12px;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap}
+.shead .l{font-size:44px;font-weight:800;font-stretch:80%;color:var(--green);line-height:1}
+.shead h1{font-size:22px;font-stretch:88%}
+.shead p{flex-basis:100%;max-width:95ch;color:var(--ink);line-height:1.5}
+.shead p em{font-style:normal;background:var(--amber-bg);color:var(--amber);font-weight:600;padding:0 4px}
+.dots{display:flex;gap:6px}
+.dots button{width:30px;height:30px;border:1.5px solid var(--ink);background:var(--sheet);font:700 13px "Archivo",sans-serif;cursor:pointer}
+.dots button[aria-current]{background:var(--green);border-color:var(--green);color:#fff}
+.stage{display:flex;justify-content:center}
+.device{background:var(--sheet);box-shadow:0 0 0 1.5px var(--ink),0 12px 30px rgba(0,0,0,.18);overflow:hidden;transform-origin:top left}
+.device iframe{border:0;display:block}
+.dim{font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<header class="bar">
+ <div class="grp"><b>Pantalla</b>
+  <button class="btn" data-res="desk">Escritorio · 1440</button>
+  <button class="btn" data-res="ipad">iPad · 1024</button>
+  <button class="btn" data-res="phone">Móvil · 390</button>
+  <button class="btn" id="rot" title="Girar el iPad">↻ Girar</button>
+ </div>
+ <div class="grp"><b>Historial</b>
+  <button class="btn" data-v="hist">Abierto</button>
+  <button class="btn" data-v="normal">Cerrado</button>
+ </div>
+ <div class="grp" style="margin-left:auto"><b>Propuesta</b>
+  <button class="btn" id="prev" aria-label="Anterior">‹</button>
+  <div class="dots" id="dots"></div>
+  <button class="btn" id="next" aria-label="Siguiente">›</button>
+ </div>
+</header>
+<section class="slide">
+ <div class="shead"><span class="l" id="letter"></span><h1 id="title"></h1><span class="dim" id="dim"></span><p id="desc"></p></div>
+ <div class="stage"><div class="device" id="device"><iframe id="frame" title="Maqueta"></iframe></div></div>
+</section>
+<script>
+const SLIDES = [
+ { k:"A", t:"Lista de versiones", src:"historial-concepto-app.html?p=A",
+   d:"El historial ocupa el sitio de la lista: cada versión es una fila con fecha, quién y qué cambió. Al elegir una, el panel del concepto muestra esos datos en solo lectura y marca en <em>ámbar</em> los campos que cambiaron, con el valor de antes. En móvil, las versiones pasan a una tira horizontal encima del panel. La X devuelve la lista y el panel editable." },
+ { k:"B", t:"Tabla de cambios", src:"historial-concepto-app.html?p=B",
+   d:"Igual que A, pero el historial es una tabla con cada campo «antes → después». Se lee todo sin pulsar nada; pulsar una fila lleva esa versión al panel. Más densa: pensada para quien revisa precios a menudo. En móvil, cada fila se apila." },
+ { k:"C", t:"Elegida: línea unifilar (C) y paso a paso en móvil (D)", src:"historial-concepto-app.html?p=C",
+   d:"Escritorio: línea vertical con los círculos centrados. iPad en vertical: la línea se tumba, sin barra de scroll, con flechas ‹ › que se apagan al llegar a cada extremo. Móvil: al pulsar un concepto se abre a pantalla completa con una X para volver al catálogo; el historial usa el paso a paso de D. Prueba «Cerrado» y pulsa un código de la lista." },
+ { k:"D", t:"Paso a paso", src:"historial-concepto-app.html?p=D",
+   d:"Una versión cada vez, con «‹ Antes» y «Después ›» y la lista de lo que cambió en esa versión. Lo más sencillo de usar con el dedo; para saltar lejos hay que pulsar varias veces." },
+ { k:"E", t:"Importación completa (clientes)", src:"importacion-completa-app.html", fixed:true,
+   d:"No es una alternativa al historial: es la propuesta única para la revisión de la importación. Elegir modo, contadores (incluidos «Sin cambios»), qué cambia en cada fila, aviso en rojo y, para cada cliente con presupuestos, «Desactivar» o «Dejar como está». Contactos e instalaciones siguen la regla sola." },
+ { k:"F", t:"Importación de un usuario no administrador", src:"importacion-completa-app.html?rol=usuario", fixed:true,
+   d:"Sin la opción «Completa»: solo «Añadir y actualizar» y el botón verde «Confirmar importación». En E, al marcar «Añadir y actualizar» desaparecen el botón rojo y la lista de bajas." },
+];
+const RES = { desk:[1440,900], ipad:[1024,768], phone:[390,844] };
+const qs = new URLSearchParams(location.search);
+let i = Math.max(0, SLIDES.findIndex(s=>s.k===(qs.get("p")||"A")));
+let res = qs.get("r") in RES ? qs.get("r") : "desk", v = qs.get("v")==="normal" ? "normal" : "hist", rot = false;
+
+const dots = document.getElementById("dots");
+SLIDES.forEach((s,n)=>{ const b=document.createElement("button"); b.textContent=s.k; b.title=s.t; b.onclick=()=>{i=n;draw();}; dots.append(b); });
+document.querySelectorAll("[data-res]").forEach(b=>b.onclick=()=>{res=b.dataset.res;rot=false;draw();});
+document.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{v=b.dataset.v;draw();});
+document.getElementById("rot").onclick=()=>{rot=!rot;draw();};
+document.getElementById("prev").onclick=()=>{i=(i+SLIDES.length-1)%SLIDES.length;draw();};
+document.getElementById("next").onclick=()=>{i=(i+1)%SLIDES.length;draw();};
+addEventListener("keydown",e=>{ if(e.key==="ArrowLeft") document.getElementById("prev").click(); if(e.key==="ArrowRight") document.getElementById("next").click(); });
+addEventListener("resize",()=>fit());
+
+let W, H;
+function draw(){
+ const s = SLIDES[i];
+ [W,H] = RES[res]; if(res==="ipad" && rot) [W,H]=[H,W];
+ document.getElementById("letter").textContent = s.k;
+ document.getElementById("title").textContent = s.t;
+ document.getElementById("desc").innerHTML = s.d;
+ document.getElementById("dim").textContent = `${W} × ${H} px`;
+ document.querySelectorAll("[data-res]").forEach(b=>b.setAttribute("aria-pressed", b.dataset.res===res));
+ document.querySelectorAll("[data-v]").forEach(b=>{ b.setAttribute("aria-pressed", b.dataset.v===v); b.disabled=!!s.fixed; });
+ document.getElementById("rot").hidden = res!=="ipad";
+ [...dots.children].forEach((b,n)=>n===i?b.setAttribute("aria-current","true"):b.removeAttribute("aria-current"));
+ const f = document.getElementById("frame");
+ f.width=W; f.height=H;
+ const src = s.src + (s.src.includes("?") ? "&" : "?") + `r=${res}${rot?"-rot":""}` + (s.fixed ? "" : `&v=${v}`); // otra URL por tamaño: la maqueta se pinta de nuevo a su ancho
+ if(f.getAttribute("src")!==src) f.src = src;
+ history.replaceState(null,"",`?p=${s.k}&r=${res}&v=${v}`);
+ fit();
+}
+// Escala el dispositivo para que quepa en la ventana sin cambiar su ancho real (las media queries ven 1440, 1024 o 390).
+function fit(){
+ const d = document.getElementById("device");
+ const avail = Math.min(innerWidth-32, 1600), k = Math.min(1, avail/W);
+ d.style.width = W+"px"; d.style.height = H+"px"; d.style.transform = `scale(${k})`;
+ d.parentElement.style.height = (H*k)+"px"; d.parentElement.style.width = (W*k)+"px"; d.parentElement.style.margin = "0 auto";
+}
+draw();
+</script>
+</body>
+</html>

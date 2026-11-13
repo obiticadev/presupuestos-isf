@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Importación completa · pantalla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+.err{color:var(--red);font-weight:600}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;border:0}
+.modes label{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--rule);background:var(--sheet);padding:12px;cursor:pointer}
+.modes label:has(input:checked){border-color:var(--ink);box-shadow:inset 4px 0 var(--green)}
+.modes label.danger:has(input:checked){border-color:var(--red);box-shadow:inset 4px 0 var(--red)}
+.modes input{width:18px;height:18px;accent-color:var(--green);margin-top:2px;flex:none}
+.modes small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.counts{display:grid;grid-template-columns:repeat(5,1fr);border:1.5px solid var(--ink);background:var(--sheet);margin:6px 0 18px}
+.counts div{padding:10px 12px;border-right:1px solid var(--rule)}.counts div:last-child{border:0}
+.counts b{display:block;font-size:24px;font-stretch:88%}
+.counts span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.counts .del b{color:var(--red)}.counts .off b{color:var(--amber)}
+.diff s{color:var(--mut)}.diff b{color:var(--amber)}
+.redbox{border:1.5px solid var(--red);background:#fbe8e6;color:var(--red);padding:12px 14px;font-weight:600;margin:18px 0 10px}
+.choice{display:flex;gap:6px;flex-wrap:wrap}
+.choice label{display:flex;gap:6px;align-items:center;border:1.5px solid var(--rule);padding:6px 10px;font-weight:600;font-size:13px;cursor:pointer;background:var(--sheet);white-space:nowrap}
+.choice label:has(input:checked){border-color:var(--ink);background:var(--band)}
+.choice input{accent-color:var(--green)}
+@media (max-width:900px){
+ .modes{grid-template-columns:1fr}
+ .counts{grid-template-columns:repeat(3,1fr)}.counts div{border-bottom:1px solid var(--rule)}
+ table.stack thead{display:none}
+ table.stack tr{display:grid;grid-template-columns:1fr;border-bottom:1px solid var(--rule)}
+ table.stack td{border:0;padding:6px 10px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+ <nav class="rail" aria-label="Principal">
+  <div class="brand">ISF<small>PRESUPUESTOS</small></div>
+  <button type="button" class="menubtn">Menú</button>
+  <div class="links">
+   <a href="#">Presupuestos <span>48</span></a>
+   <a class="on" href="#">Clientes <span>132</span></a>
+   <a href="#">Catálogo <span>214</span></a>
+   <a href="#">Conjuntos <span>9</span></a>
+   <div class="sep">Administración</div>
+   <a href="#">Usuarios</a><a href="#">Configuración</a><a href="#">Historial</a>
+   <div class="me">A. Gil<br><span style="color:#a9c6bf">Administrador</span></div>
+  </div>
+ </nav>
+ <main>
+  <div class="crumb"><a href="#">Clientes</a> / Importar</div>
+  <div class="head"><h1>Importar clientes</h1></div>
+
+  <form class="sheet" style="display:grid;gap:14px;margin-top:16px" onsubmit="return false">
+   <fieldset class="modes">
+    <label><input type="radio" name="mode" value="add"><span><b>Añadir y actualizar</b><small>Lo que no está en el Excel se queda como está.</small></span></label>
+    <label class="danger" id="fullopt"><input type="radio" name="mode" value="full" checked><span><b>Completa: dejar igual que el Excel</b><small>Además, lo que no está en el Excel se borra o se desactiva. Solo administradores.</small></span></label>
+   </fieldset>
+   <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+    <label class="field">Archivo .xlsx (hasta 2 MB)<input type="file"></label>
+    <button class="btn">Revisar</button>
+    <button class="btn pri" id="ok-add">Confirmar importación</button>
+    <button class="btn pri" id="ok-full" style="background:var(--red);border-color:var(--red)">Confirmar importación completa</button>
+   </div>
+  </form>
+
+  <h2>Revisión</h2>
+  <div class="counts" id="counts">
+   <div><b>3</b><span>Altas</span></div>
+   <div><b>2</b><span>Cambios</span></div>
+   <div><b>118</b><span>Sin cambios</span></div>
+   <div class="del"><b>4</b><span>Se borrarán</span></div>
+   <div class="off"><b>3</b><span>Se desactivarán</span></div>
+  </div>
+
+  <h3>Altas y cambios</h3>
+  <div style="overflow-x:auto;margin:8px 0 6px"><table class="stack">
+   <thead><tr><th>Hoja</th><th class="n">Fila</th><th>CIF · nombre</th><th>Acción</th><th>Qué cambia</th></tr></thead>
+   <tbody>
+    <tr><td>Clientes</td><td class="n">14</td><td class="code">B12345678</td><td>Cambio</td><td class="diff">Forma de pago: <s>Transferencia 30 días</s> → <b>Transferencia 60 días</b></td></tr>
+    <tr><td>Instalaciones</td><td class="n">9</td><td class="code">B12345678 · Planta norte</td><td>Cambio</td><td class="diff">País: <s>España</s> → <b>Portugal</b></td></tr>
+    <tr><td>Clientes</td><td class="n">131</td><td class="code">B99887766</td><td>Alta</td><td class="mut">Nuevo cliente</td></tr>
+    <tr><td>Contactos</td><td class="n">201</td><td class="code">B99887766 · Marta Ruiz</td><td>Alta</td><td class="mut">Nuevo contacto</td></tr>
+    <tr><td>Instalaciones</td><td class="n">88</td><td class="code">B99887766 · Almacén</td><td>Alta</td><td class="mut">Nueva instalación</td></tr>
+   </tbody></table></div>
+  <p class="mut" style="font-size:13px">118 filas sin cambios: no se escriben ni quedan en el historial.</p>
+
+  <div id="full">
+  <p class="redbox">Importación completa: lo siguiente no está en el Excel y se quitará de la base al confirmar.</p>
+
+  <h3>Clientes con presupuestos: decide uno a uno</h3>
+  <div style="overflow-x:auto;margin:8px 0 14px"><table class="stack">
+   <thead><tr><th>Cliente</th><th>Presupuestos</th><th>Qué hacer</th></tr></thead>
+   <tbody>
+    <tr><td><b>Instalaciones Levante, S.L.</b><div class="mut" style="font-size:12px">B11223344</div></td><td>7 (2 borradores)</td>
+     <td><div class="choice"><label><input type="radio" name="c1" checked>Desactivar</label><label><input type="radio" name="c1">Dejar como está</label></div></td></tr>
+    <tr><td><b>Frigoríficos del Sur, S.A.</b><div class="mut" style="font-size:12px">A55667788</div></td><td>1</td>
+     <td><div class="choice"><label><input type="radio" name="c2">Desactivar</label><label><input type="radio" name="c2" checked>Dejar como está</label></div></td></tr>
+   </tbody></table></div>
+
+  <h3>Lo demás se aplica solo</h3>
+  <div style="overflow-x:auto;margin:8px 0 14px"><table class="stack">
+   <thead><tr><th>Qué</th><th>Dónde</th><th>Resultado</th></tr></thead>
+   <tbody>
+    <tr><td>Cliente sin presupuestos</td><td><b>Talleres Ebro, S.L.</b> · B44556677</td><td class="err">Se borra</td></tr>
+    <tr><td>Contacto</td><td>B12345678 · <b>Luis Pérez</b></td><td class="err">Se borra (ningún presupuesto lo usa)</td></tr>
+    <tr><td>Contacto</td><td>B12345678 · <b>Ana Sanz</b></td><td class="amber">Se desactiva (está en 3 presupuestos)</td></tr>
+    <tr><td>Instalación</td><td>B12345678 · <b>Nave 2</b></td><td class="err">Se borra</td></tr>
+    <tr><td>Instalación</td><td>B12345678 · <b>Muelle</b></td><td class="amber">Se desactiva (está en 1 presupuesto)</td></tr>
+    <tr><td>Instalación</td><td>B33445566 · <b>Oficinas</b></td><td class="err">Se borra</td></tr>
+   </tbody></table></div>
+
+  </div>
+  <p class="mut" style="font-size:13px">En el catálogo es igual, sin decisión por fila: el concepto usado en algún borrador, presupuesto o conjunto se desactiva y el resto se borra. La revisión añade «Conjuntos que quedarán incompletos» con cada pieza afectada.</p>
+ </main>
+<script>
+// ?rol=usuario: sin la opción «Completa» (solo administradores).
+if (new URLSearchParams(location.search).get("rol") === "usuario") { document.getElementById("fullopt").remove(); document.querySelector('[value="add"]').checked = true; }
+// .btn y .counts div fijan su display: [hidden] solo no basta.
+const show = (el, on) => { el.style.display = on ? "" : "none"; };
+function sync(){
+ const full = document.querySelector('[name="mode"]:checked').value === "full";
+ show(document.getElementById("ok-add"), !full);
+ show(document.getElementById("ok-full"), full);
+ show(document.getElementById("full"), full);
+ document.querySelectorAll("#counts .del, #counts .off").forEach(e => show(e, full));
+ document.getElementById("counts").style.gridTemplateColumns = full ? "" : "repeat(3,1fr)";
+}
+document.querySelectorAll('[name="mode"]').forEach(r => r.onchange = sync); sync();
+</script>
+</div>
+</body>
+</html>
