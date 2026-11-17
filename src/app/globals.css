@@ -373,8 +373,8 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .phonesheet{display:contents}
 .onlyphone{display:none!important}
 .hcol{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
-.x{font-weight:600;font-size:18px;width:40px;height:40px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);text-decoration:none;display:grid;place-items:center;flex:none}
-.x:hover{background:var(--band)}
+:is(.hhead,.panelhead) .x{font-weight:600;font-size:18px;width:40px;height:40px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);text-decoration:none;display:grid;place-items:center;flex:none}
+:is(.hhead,.panelhead) .x:hover{background:var(--band)}
 .hhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .hhead h2{margin:0}
 .hhead p{font-size:13px;color:var(--mut);margin-top:4px}
