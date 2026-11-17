@@ -106,3 +106,12 @@ test("las notas nunca llegan a la instantánea ni al PDF", async () => {
   const doc = await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: quote.id } });
   expect(JSON.stringify(doc.snapshot)).not.toContain("SECRETO-INTERNO");
 });
+
+test("una nota no cuenta como cambio del presupuesto: no toca su fecha de modificación", async () => {
+  const { actor, quote } = await makeDraft();
+  const before = (await getQuote(quote.id)).updatedAt;
+  const note = await addNote(actor, quote.id, { text: "uno" });
+  await editNote(actor, note.id, { text: "dos" });
+  await deleteNote(actor, note.id);
+  expect((await getQuote(quote.id)).updatedAt).toEqual(before);
+});

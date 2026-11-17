@@ -64,7 +64,7 @@ export function toCalc(sections: CalcShape[]): CalcSection[] {
   }));
 }
 
-async function recalc(tx: Tx, quoteId: string, ownerId: string | undefined): Promise<void> {
+async function recalc(tx: Tx, quoteId: string, ownerId: string): Promise<void> {
   const sections = await tx.quoteSection.findMany({ where: { quoteId, parentId: null }, include: { children: { include: { lines: true } } } });
   const t = calculateQuote(toCalc(sections));
   await tx.quote.update({ where: { id: quoteId }, data: { base: t.base.toFixed(2), total: t.total.toFixed(2), ownerId } });
@@ -72,7 +72,7 @@ async function recalc(tx: Tx, quoteId: string, ownerId: string | undefined): Pro
 
 /**
  * Locks the quote row, refuses anything but a draft, runs `fn` and stores the new totals, in one transaction.
- * Whoever changes the draft becomes its responsible; `actor` null (internal notes) leaves it as it was.
+ * Whoever changes the draft becomes its responsible; `actor` null (internal notes) leaves the quote row as it was.
  */
 export async function withDraft<T>(actor: CurrentUser | null, quoteId: string, fn: (tx: Tx, quote: Quote) => Promise<T>): Promise<T> {
   return prisma.$transaction(async (tx) => {
@@ -81,7 +81,8 @@ export async function withDraft<T>(actor: CurrentUser | null, quoteId: string, f
     if (!quote) throw new NotFoundError("El presupuesto no existe");
     if (quote.status !== "DRAFT") throw new ValidationError({ _: LOCKED });
     const result = await fn(tx, quote);
-    await recalc(tx, quoteId, actor?.id);
+    // Notes (null actor) change neither totals nor the quote: leave its row, and its updatedAt, untouched.
+    if (actor) await recalc(tx, quoteId, actor.id);
     return result;
   });
 }

@@ -26,9 +26,10 @@ export function Notes({ groups, meId }: { groups: NoteGroup[]; meId: string }) {
   const current = groups.at(-1);
   const canWrite = !!current?.editable;
 
-  // A save or a delete refreshes the notes: leave the edit mode (state adjusted while rendering, as React recommends).
+  // A save or a delete refreshes the notes: leave the edit mode and close the menu and the versions card
+  // (state adjusted while rendering, as React recommends).
   const [seen, setSeen] = useState(groups);
-  if (seen !== groups) { setSeen(groups); setEditing(null); }
+  if (seen !== groups) { setSeen(groups); setEditing(null); setMenu(null); setVersions(null); }
   useEffect(() => {
     if (open && chat.current) chat.current.scrollTop = chat.current.scrollHeight;
   }, [open, groups]);
