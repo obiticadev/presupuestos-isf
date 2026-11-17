@@ -13,13 +13,15 @@ import { listKits } from "@/modules/kits/service";
 import { deleteDraftAction, updateHeaderAction } from "@/modules/quotes/actions";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
 import { listQuoteHistory, listRevisions, priceWarnings } from "@/modules/quotes/lifecycle";
+import { listNotes } from "@/modules/quotes/notes";
 import { getQuote, listRequiredConcepts, quoteLabel, type QuoteDetail } from "@/modules/quotes/service";
-import { getSettings, listTaxes } from "@/modules/settings/service";
+import { listTaxes } from "@/modules/settings/service";
 import { OpenKitFromHash } from "@/components/disclosure";
 import { InstallationFields } from "./installation-fields";
 import { IssuePanel } from "./issue-panel";
 import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory, Revisions } from "./lifecycle-panel";
 import { Comment } from "./comment";
+import { Notes } from "./notes";
 import { Subsection, SectionHead, AddSection, type EditorContext } from "./sections";
 
 export const metadata: Metadata = { title: "Presupuesto · ISF Presupuestos" };
@@ -44,8 +46,8 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
     );
   }
   const editable = q.status === "DRAFT";
-  const [client, clients, taxes, concepts, kits, settings, required, history, warnings, revisions] = await Promise.all([
-    getClient(q.clientId), listClientOptions(), listTaxes(), listConceptOptions(), listKits(), getSettings(), listRequiredConcepts(),
+  const [client, clients, taxes, concepts, kits, notes, required, history, warnings, revisions] = await Promise.all([
+    getClient(q.clientId), listClientOptions(), listTaxes(), listConceptOptions(), listKits(), listNotes(q.id), listRequiredConcepts(),
     listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [], listRevisions(q.id),
   ]);
   const ctx: EditorContext = {
@@ -149,19 +151,7 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
           {q.totals.unpricedLineIds.length > 0 && <p className="warnbox">{q.totals.unpricedLineIds.length} líneas sin precio o sin impuesto no cuentan en el total.</p>}
         </div>
 
-        <div>
-          <h3>Desplazamiento</h3>
-          <p className="mut" style={{ fontSize: 13, margin: "6px 0" }}>
-            Pon los km facturables totales{settings.travelOriginText ? ` desde ${settings.travelOriginText}` : ""} (viajes, vehículos e ida y vuelta) en la línea de desplazamiento.
-          </p>
-          {editable ? (
-            <ActionForm action={updateHeaderAction} key={`travel-${q.updatedAt.getTime()}`} style={{ display: "grid", gap: 8 }}>
-              <input type="hidden" name="id" value={q.id} />
-              <label className="field">Nota sobre el desglose<textarea name="travelNote" defaultValue={q.travelNote} rows={2} placeholder="2 viajes × 2 vehículos × 25 km ida y vuelta" /></label>
-              <button className="btn" style={{ justifySelf: "start" }}>Guardar nota</button>
-            </ActionForm>
-          ) : text(q.travelNote)}
-        </div>
+        <Notes groups={notes} meId={me.id} />
 
         {editable ? <IssuePanel q={q} required={required} /> : <IssuedPanel q={q} />}
 
