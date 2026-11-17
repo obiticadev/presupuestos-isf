@@ -290,6 +290,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .lastnote .txt{white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .lastnote .go{font-size:11px;font-weight:700;color:var(--green)}
 .count{background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:1px 7px;border-radius:10px}
+.notes textarea{font:14px var(--font-archivo),sans-serif;border:1.5px solid var(--ink);padding:6px 8px;resize:vertical;width:100%}
 .notes-add{display:grid;gap:8px}.notes-add .btn{justify-self:start}
 .btn.sm{min-height:32px;padding:5px 10px;font-size:13px}
 .notes-win{position:fixed;right:20px;bottom:16px;width:380px;height:min(520px,calc(100vh - 32px));z-index:40;background:var(--sheet);border:1.5px solid var(--ink);box-shadow:6px 6px 0 rgba(15,31,29,.2);display:flex;flex-direction:column}

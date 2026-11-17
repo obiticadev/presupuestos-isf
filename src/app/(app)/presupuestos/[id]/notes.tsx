@@ -50,7 +50,7 @@ export function Notes({ groups, meId }: { groups: NoteGroup[]; meId: string }) {
 
   const showMenu = (note: NoteView, x: number, y: number) => { setVersions(null); setMenu({ note, x, y }); };
   const cancelPress = () => { if (press.current) clearTimeout(press.current); press.current = null; };
-  const at = (a: At) => ({ "--x": `${Math.min(a.x, window.innerWidth - 240)}px`, "--y": `${Math.min(a.y, window.innerHeight - 200)}px` }) as CSSProperties;
+  const at = (a: At) => ({ "--x": `${Math.min(a.x, window.innerWidth - 290)}px`, "--y": `${Math.min(a.y, window.innerHeight - 200)}px` }) as CSSProperties;
 
   return (
     <div className="notes">
