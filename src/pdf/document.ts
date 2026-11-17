@@ -31,8 +31,9 @@ export type PdfSource = {
 
 export type PdfRow =
   | { kind: "part" | "sub"; number: string; title: string; total: string }
-  | { kind: "line"; text: string; quantity: string }
-  | { kind: "note"; of: "line" | "kit" | "sub" | "part"; text: string };
+  // kit: the row belongs to a kit that has a comment, so the PDF highlights the whole block.
+  | { kind: "line"; text: string; quantity: string; kit?: true }
+  | { kind: "note"; of: "line" | "kit" | "sub" | "part"; text: string; kit?: true };
 
 export type PdfDocument = {
   draft: boolean; reference: string; shortDate: string; longDate: string;
@@ -45,7 +46,9 @@ export type PdfDocument = {
   place: string;
 };
 
-const note = (rows: PdfRow[], of: "line" | "kit" | "sub" | "part", comment: string | undefined) => { if (comment?.trim()) rows.push({ kind: "note", of, text: comment.trim() }); };
+const note = (rows: PdfRow[], of: "line" | "kit" | "sub" | "part", comment: string | undefined, kit = false) => {
+  if (comment?.trim()) rows.push({ kind: "note", of, text: comment.trim(), ...(kit && { kit: true as const }) });
+};
 const money = (x: string) => `${formatDecimalEs(x)} €`;
 const textLines = (s: string) => s.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 const LONG_DATE = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
@@ -65,10 +68,12 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
       const visible = c.lines.filter((x) => x.visible);
       visible.forEach((l, k) => {
         const qty = formatDecimalEs(l.quantity, { min: 0, max: 4 });
-        rows.push({ kind: "line", text: l.description, quantity: l.unitName ? `${qty} ${l.unitName}` : qty });
-        note(rows, "line", l.comment);
+        const kitComment = l.kitInstanceId ? c.kits?.find((x) => x.id === l.kitInstanceId)?.comment : undefined;
+        const kit = !!kitComment?.trim();
+        rows.push({ kind: "line", text: l.description, quantity: l.unitName ? `${qty} ${l.unitName}` : qty, ...(kit && { kit: true as const }) });
+        note(rows, "line", l.comment, kit);
         // A kit's comment follows the last of its visible lines.
-        if (l.kitInstanceId && visible[k + 1]?.kitInstanceId !== l.kitInstanceId) note(rows, "kit", c.kits?.find((x) => x.id === l.kitInstanceId)?.comment);
+        if (l.kitInstanceId && visible[k + 1]?.kitInstanceId !== l.kitInstanceId) note(rows, "kit", kitComment, kit);
       });
       note(rows, "sub", c.comment);
     });

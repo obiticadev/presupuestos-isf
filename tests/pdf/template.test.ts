@@ -27,6 +27,18 @@ test("una nota sale escapada, en su propia fila, en cursiva y conserva sus salto
   expect(body).toMatch(/tr\.note td\{[^}]*white-space:pre-line/);
 });
 
+test("las filas de un conjunto con nota llevan la clase k; su nota cierra el bloque con raya punteada y letra recta", () => {
+  const d = { ...doc(), rows: [
+    { kind: "line" as const, text: "Armario", quantity: "1 ud", kit: true as const },
+    { kind: "note" as const, of: "kit" as const, text: "Pruebas", kit: true as const },
+  ] };
+  const body = TEMPLATES.v1.body(d);
+  expect(body).toContain('<tr class="line k">');
+  expect(body).toContain('<tr class="note kit k">');
+  expect(body).toMatch(/tr\.k td:not\(:first-child\)\{[^}]*background:/);
+  expect(body).toMatch(/tr\.note\.kit td:not\(:first-child\)\{[^}]*font-style:normal[^}]*dashed/);
+});
+
 test("la nota de la partida lleva fondo de banda y la de la subpartida no lleva sangría de línea", () => {
   const body = TEMPLATES.v1.body(doc());
   expect(body).toMatch(/tr\.note\.part td\{[^}]*background:var\(--band\)/);

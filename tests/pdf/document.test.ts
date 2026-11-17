@@ -111,8 +111,27 @@ describe("buildDocument", () => {
     ];
     const notes = buildDocument(s, { draft: false }).rows.filter((r) => r.kind === "note");
     expect(notes).toEqual([
-      { kind: "note", of: "kit", text: "K" }, { kind: "note", of: "line", text: "L" },
+      { kind: "note", of: "kit", text: "K", kit: true }, { kind: "note", of: "line", text: "L" },
       { kind: "note", of: "sub", text: "S" }, { kind: "note", of: "part", text: "P" },
+    ]);
+  });
+
+  it("las filas de un conjunto con nota van marcadas; las de uno sin nota, no", () => {
+    const s = src();
+    const c1 = s.quote.sections[0].children[0];
+    c1.kits = [{ id: "k1", comment: "Pruebas en vacío" }, { id: "k2", comment: " " }];
+    c1.lines = [
+      { description: "Armario", quantity: "1", unitName: "ud", visible: true, kitInstanceId: "k1" },
+      { description: "Cableado", quantity: "1", unitName: "ud", visible: true, kitInstanceId: "k1", comment: "Montado en fábrica" },
+      { description: "Bomba", quantity: "1", unitName: "ud", visible: true, kitInstanceId: "k2", comment: "Sin nota de conjunto" },
+      { description: "Suelta", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null },
+    ];
+    const marked = buildDocument(s, { draft: false }).rows.filter((r) => "kit" in r && r.kit);
+    expect(marked).toEqual([
+      { kind: "line", text: "Armario", quantity: "1 ud", kit: true },
+      { kind: "line", text: "Cableado", quantity: "1 ud", kit: true },
+      { kind: "note", of: "line", text: "Montado en fábrica", kit: true },
+      { kind: "note", of: "kit", text: "Pruebas en vacío", kit: true },
     ]);
   });
 
