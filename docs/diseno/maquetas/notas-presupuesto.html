@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Notas C — tamaños</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--sheet:#fff;--rule:#d5dbd6;--band:#eceeea;--green:#004742;--green-ink:#cfe0db;--amber:#8f5600;--amber-bg:#fff3dc;--red:#a3261e;--mut:#56645f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Archivo,sans-serif;color:var(--ink);background:var(--paper);font-size:14px;line-height:1.4;padding:28px 32px 80px}
+h1{font-size:32px;font-weight:700;font-stretch:88%}
+h2{font-size:13px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin:34px 0 4px}
+.sub{color:var(--mut);margin:6px 0 10px;max-width:980px}
+h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.btn{font:600 14px Archivo,sans-serif;padding:9px 14px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);display:inline-flex;align-items:center;gap:8px;min-height:40px}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}.btn.sm{min-height:32px;padding:5px 10px;font-size:13px}
+.count{background:var(--green);color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;font-weight:700}
+textarea{width:100%;font:14px Archivo,sans-serif;border:1.5px solid var(--ink);padding:8px;background:#fff;resize:none}
+.states{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.st{display:grid;gap:6px}.st>.cap{font-size:12px;font-weight:700;color:var(--mut);letter-spacing:.04em}
+.dev{border:2px solid var(--ink);background:var(--paper);position:relative;overflow:hidden}
+.dev.d{width:640px;height:440px}.dev.t{width:420px;height:560px;border-radius:18px}.dev.m{width:260px;height:520px;border-radius:26px}
+.ghost{height:12px;background:var(--band);margin:8px 0}.ghost.s{width:60%}
+.aside{position:absolute;right:0;top:0;bottom:0;width:230px;background:#fff;border-left:1px solid var(--rule);padding:12px;display:grid;gap:8px;align-content:start}
+.body{padding:14px}
+/* last note as button */
+.lastbtn{display:block;width:100%;text-align:left;border:1.5px solid var(--ink);background:#fff;padding:8px 10px;font:13px Archivo,sans-serif;cursor:pointer;position:relative}
+.lastbtn:hover{background:var(--band)}
+.lastbtn .top{display:flex;justify-content:space-between;align-items:center;font-size:11px;color:var(--mut);margin-bottom:3px;gap:6px}
+.lastbtn .go{font-size:11px;font-weight:700;color:var(--green);margin-top:4px;display:block}
+/* window */
+.win{position:absolute;background:#fff;border:1.5px solid var(--ink);display:flex;flex-direction:column;box-shadow:6px 6px 0 rgba(15,31,29,.2)}
+.d .win{right:14px;bottom:12px;width:330px;height:400px}
+.t .win{right:12px;bottom:12px;left:60px;height:440px}
+.m .win{inset:0;border:0;box-shadow:none;border-radius:24px}
+.wh{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;background:var(--green);color:#fff;font-weight:700}
+.wh .x{font-size:20px;line-height:1}
+.wh .back{font-weight:600;font-size:13px}
+.chat{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--paper);font-size:13px}
+.msg{max-width:84%;padding:6px 9px;border:1px solid var(--rule);background:#fff}
+.msg .who{font-size:11px;font-weight:700;color:var(--green)}
+.msg .meta{font-size:10px;color:var(--mut);margin-top:2px}
+.msg.me{align-self:flex-end;background:#e4efec;border-color:#b8d2cb}
+.msg.locked{background:var(--band);color:#7a8682;border-style:dashed}.msg.locked .who{color:#7a8682}
+.msg.locked .meta::before{content:"🔒 "}
+.msg.hl{outline:2px solid var(--green)}
+.ed{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--amber);font-weight:700;margin-left:4px;text-decoration:underline dotted}
+.sep{text-align:center;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);display:flex;gap:6px;align-items:center}
+.sep::before,.sep::after{content:"";flex:1;border-top:1px solid var(--rule)}
+.comp{border-top:1.5px solid var(--ink);padding:8px;display:grid;gap:6px;background:#fff}
+.row{display:flex;gap:6px;justify-content:flex-end}
+.ctx{position:absolute;background:#fff;border:1.5px solid var(--ink);box-shadow:4px 4px 0 rgba(15,31,29,.15);z-index:5;min-width:170px;font-size:13px}
+.ctx div{padding:7px 11px;border-top:1px solid var(--rule)}.ctx div:first-child{border:0}.ctx .del{color:var(--red)}
+.pop{position:absolute;background:#fff;border:1.5px solid var(--ink);box-shadow:4px 4px 0 rgba(15,31,29,.15);z-index:6;width:240px;padding:9px 11px;font-size:12px}
+.pop .v,.hv .v{border-top:1px solid var(--rule);padding:6px 0}.pop small,.hv small{color:var(--mut);display:block;font-size:11px}
+.pop .v.now,.hv .v.now{font-weight:600}
+.scrim{position:absolute;inset:0;background:rgba(15,31,29,.35);z-index:4}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-top:1.5px solid var(--ink);z-index:6;padding:8px 0 14px;font-size:15px}
+.sheet .grab{width:40px;height:4px;background:var(--rule);border-radius:2px;margin:0 auto 8px}
+.sheet div.o{padding:12px 18px;border-top:1px solid var(--rule)}.sheet .del{color:var(--red)}
+.sheet .prev{padding:4px 18px 10px;font-size:12px;color:var(--mut)}
+.hv{flex:1;padding:12px;background:#fff;font-size:13px;overflow:hidden}
+.hv .lbl{font-size:11px;color:var(--mut);margin-bottom:6px}
+.note{font-size:12px;color:var(--mut);max-width:980px;margin-top:6px}
+.tag{display:inline-block;background:var(--amber-bg);color:var(--amber);font-size:11px;font-weight:700;padding:1px 6px;margin-left:6px}
+</style></head><body>
+<h1>Modelo C · tres tamaños</h1>
+<p class="sub">Sin «Abrir notas» y sin minimizar. <b>La última nota es el botón</b>: lleva el contador y abre la ventana. Debajo está la caja con «Guardar nota». Si aún no hay notas, solo se ve la caja. Lo que cambia según el tamaño: dónde se abre la ventana, cómo se llega al menú (clic derecho con ratón, <b>mantener pulsado</b> en pantalla táctil, porque en iPad y móvil no hay clic derecho) y dónde salen las versiones anteriores.</p>
+
+<template id="aside">
+  <h3>Totales</h3><div class="ghost"></div><div class="ghost s"></div>
+  <h3 style="margin-top:6px">Notas</h3>
+  <button class="lastbtn"><span class="top"><span>Lucía Martín · 17/11 09:42</span><span class="count">5</span></span>2 viajes × 2 vehículos × 25 km ida y vuelta.<span class="go">Ver las 5 notas →</span></button>
+  <textarea rows="2" placeholder="Escribe una nota…"></textarea>
+  <button class="btn pri sm" style="justify-self:start">Guardar nota</button>
+</template>
+<template id="chat">
+  <div class="chat">
+    <div class="sep">R0 · emitida 10/11/2026</div>
+    <div class="msg locked"><div class="who">Javier Ruiz</div>Cliente pide cuadro de mando en la nave 2.<div class="meta">05/11/2026 11:20</div></div>
+    <div class="sep">R1 · borrador</div>
+    <div class="msg"><div class="who">Javier Ruiz</div>Falta confirmar acceso con plataforma.<div class="meta">14/11/2026 10:05</div></div>
+    <div class="msg me"><div class="who">Tú</div>Se quita el cuadro de la nave 2, lo hace el cliente.<div class="meta">16/11/2026 18:31 <span class="ed">editado</span></div></div>
+    <div class="msg"><div class="who">Lucía Martín</div>2 viajes × 2 vehículos × 25 km ida y vuelta.<div class="meta">17/11/2026 09:42</div></div>
+  </div>
+  <div class="comp"><textarea rows="2" placeholder="Escribe una nota…"></textarea><div class="row"><button class="btn pri sm">Guardar nota</button></div></div>
+</template>
+<template id="versions">
+  <div class="v">Revisar si el cuadro de la nave 2 lo hace el cliente.<small>Javier Ruiz · 14/11/2026 09:50</small></div>
+  <div class="v">Se quita el cuadro de la nave 2.<small>Javier Ruiz · 15/11/2026 12:10</small></div>
+  <div class="v now">Se quita el cuadro de la nave 2, lo hace el cliente.<small>Tú · 16/11/2026 18:31 · actual</small></div>
+</template>
+
+<h2>Escritorio</h2>
+<p class="note">Ventana flotante abajo a la derecha, sin oscurecer el editor. Clic derecho → menú junto al mensaje. «Ver versiones anteriores» abre una ficha pequeña al lado del mensaje; se cierra con clic fuera o Esc.</p>
+<div class="states">
+  <div class="st"><div class="cap">1 · Cerrada</div><div class="dev d"><div class="body"><div class="ghost"></div><div class="ghost s"></div><div class="ghost"></div></div><div class="aside" data-t="aside"></div></div></div>
+  <div class="st"><div class="cap">2 · Abierta + clic derecho → «Ver versiones anteriores»</div><div class="dev d"><div class="body"><div class="ghost"></div><div class="ghost s"></div><div class="ghost"></div></div><div class="aside" data-t="aside"></div>
+    <div class="win"><div class="wh"><span>Notas · 5</span><span class="x">×</span></div><div data-t="chat" style="display:contents" data-hl="2"></div></div>
+    <div class="pop" style="left:60px;top:150px"><b>Versiones anteriores</b><div data-t="versions"></div></div>
+  </div></div>
+</div>
+
+<h2>iPad</h2>
+<p class="note">Sin columna lateral: las notas quedan bajo los totales, al final del editor. La ventana flotante es más ancha. <b>Mantener pulsado</b> un mensaje → menú. Las versiones anteriores sustituyen al chat dentro de la misma ventana, con «← Notas» para volver.</p>
+<div class="states">
+  <div class="st"><div class="cap">1 · Cerrada (final del editor)</div><div class="dev t"><div class="body"><div class="ghost"></div><div class="ghost s"></div><div class="ghost"></div><div class="ghost"></div><div class="ghost s"></div><div style="margin-top:14px;display:grid;gap:8px" data-t="aside"></div></div></div></div>
+  <div class="st"><div class="cap">2 · Mantener pulsado → menú</div><div class="dev t"><div class="body"><div class="ghost"></div><div class="ghost s"></div></div>
+    <div class="win"><div class="wh"><span>Notas · 5</span><span class="x">×</span></div><div data-t="chat" style="display:contents" data-hl="2"></div></div>
+    <div class="ctx" style="left:150px;top:300px"><div>Editar</div><div>Ver versiones anteriores</div><div class="del">Eliminar</div></div>
+  </div></div>
+  <div class="st"><div class="cap">3 · Versiones anteriores</div><div class="dev t"><div class="body"><div class="ghost"></div><div class="ghost s"></div></div>
+    <div class="win"><div class="wh"><span class="back">← Notas</span><span>Versiones</span><span class="x">×</span></div><div class="hv"><div class="lbl">Historial de esta nota, de la más antigua (arriba) a la actual (abajo)</div><div data-t="versions"></div></div></div>
+  </div></div>
+</div>
+
+<h2>Móvil</h2>
+<p class="note">Las notas quedan al final del editor, como en iPad. La ventana ocupa toda la pantalla. Mantener pulsado → hoja desde abajo con las opciones. Las versiones anteriores ocupan también toda la pantalla, con «← Notas».</p>
+<div class="states">
+  <div class="st"><div class="cap">1 · Cerrada</div><div class="dev m"><div class="body"><div class="ghost"></div><div class="ghost s"></div><div class="ghost"></div><div style="margin-top:14px;display:grid;gap:8px" data-t="aside"></div></div></div></div>
+  <div class="st"><div class="cap">2 · Abierta</div><div class="dev m"><div class="win"><div class="wh"><span>Notas · 5</span><span class="x">×</span></div><div data-t="chat" style="display:contents"></div></div></div></div>
+  <div class="st"><div class="cap">3 · Mantener pulsado → hoja</div><div class="dev m"><div class="win"><div class="wh"><span>Notas · 5</span><span class="x">×</span></div><div data-t="chat" style="display:contents"></div></div>
+    <div class="scrim"></div><div class="sheet"><div class="grab"></div><div class="prev">«Se quita el cuadro de la nave 2…»</div><div class="o">Editar</div><div class="o">Ver versiones anteriores</div><div class="o del">Eliminar</div></div></div></div>
+  <div class="st"><div class="cap">4 · Versiones anteriores</div><div class="dev m"><div class="win"><div class="wh"><span class="back">← Notas</span><span class="x">×</span></div><div class="hv"><div class="lbl">Historial de esta nota</div><div data-t="versions"></div></div></div></div></div>
+</div>
+
+<h2>Editar (igual en los tres)</h2>
+<p class="note">Al pulsar «Editar», el texto pasa a la caja de abajo. Encima de la caja aparece un aviso <span class="tag">Editando nota de Javier Ruiz · quedará a tu nombre</span> y los botones cambian a «Cancelar» y «Guardar cambios». La nota queda marcada como «editado».</p>
+
+<script>
+document.querySelectorAll('[data-t]').forEach(el=>{
+  el.append(document.getElementById(el.dataset.t).content.cloneNode(true));
+  if(el.dataset.hl){const m=el.querySelectorAll('.msg:not(.locked)')[1];m&&m.classList.add('hl')}
+});
+</script>
+</body></html>
