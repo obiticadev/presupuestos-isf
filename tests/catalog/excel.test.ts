@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import { COLUMNS, writeCatalogSheet } from "@/modules/catalog/excel";
+import { prisma } from "@/lib/db";
 import { importConcepts } from "@/modules/catalog/import";
 import { setUnitActive } from "@/modules/catalog/lists";
 import { getConcept, listConcepts } from "@/modules/catalog/service";
@@ -20,14 +21,38 @@ async function book(rows: unknown[][], header: readonly string[] = COLUMNS): Pro
 }
 const row = (o: Partial<Record<Col, unknown>>) => COLUMNS.map((c) => o[c] ?? DEFAULTS[c] ?? null);
 
-test("exportar e importar sin cambios da 0 altas y 6 cambios sin errores", async () => {
+test("exportar e importar sin cambios da 6 sin cambios y no toca el historial", async () => {
   const admin = await makeUser("admin");
   const { items } = await listConcepts({ status: "all" });
   const bytes = await writeCatalogSheet(await Promise.all(items.map((c) => getConcept(c.id))));
   const r = await importConcepts(admin, bytes, { apply: false });
   expect(r.error).toBeUndefined();
   expect(r.rows.every((x) => x.errors.length === 0)).toBe(true);
-  expect([r.created, r.updated]).toEqual([0, 6]);
+  expect([r.created, r.updated, r.unchanged]).toEqual([0, 0, 6]);
+  const before = await prisma.auditLog.count();
+  expect((await importConcepts(admin, bytes, { apply: true })).applied).toBe(true);
+  expect(await prisma.auditLog.count()).toBe(before + 1); // only «Importación de catálogo»
+});
+
+/** Row for an existing concept as the export writes it, with some columns overridden. */
+async function rowOf(code: string, o: Partial<Record<Col, unknown>>) {
+  const { items } = await listConcepts({ status: "all" });
+  const c = await getConcept(items.find((x) => x.code === code)!.id);
+  const bytes = await writeCatalogSheet([c]);
+  const ws = (await new ExcelJS.Workbook().xlsx.load(bytes as never)).getWorksheet("Catalogo")!;
+  return COLUMNS.map((col, i) => o[col] ?? ws.getRow(2).getCell(i + 1).value);
+}
+
+test("un cambio dice qué campo cambia", async () => {
+  const admin = await makeUser("admin");
+  const r = await importConcepts(admin, await book([await rowOf("SER-PROG", { Precio_venta: "1.234,5" })]), { apply: false });
+  expect(r.rows[0]).toMatchObject({ action: "update", changes: [expect.stringMatching(/^Precio de venta: .* → 1\.234,50$/)] });
+});
+
+test("decimales con otra forma salen sin cambios", async () => {
+  const admin = await makeUser("admin");
+  const r = await importConcepts(admin, await book([await rowOf("SER-DESPL", { Precio_venta: "0,3000" })]), { apply: false });
+  expect(r.rows[0].action).toBe("unchanged");
 });
 
 test("números con artefactos de coma flotante y texto español se guardan exactos", async () => {

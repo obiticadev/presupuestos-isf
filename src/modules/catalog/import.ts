@@ -1,15 +1,16 @@
 import { prisma } from "@/lib/db";
 import { logAction } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
-import type { Concept, Prisma } from "@/generated/prisma/client";
+import { Prisma, type Concept } from "@/generated/prisma/client";
+import type { ImportOptions, ImportResult, ImportRow } from "@/lib/import-result";
 import { readCatalogSheet, type Column } from "./excel";
 import { conceptInput } from "./schema";
-import { changeSummary } from "./service";
-
-export type ImportRow = { row: number; code: string; action: "create" | "update"; errors: string[] };
-export type ImportResult = { error?: string; rows: ImportRow[]; created: number; updated: number; applied: boolean };
+import { conceptSnapshot, describeChanges, diffSnapshots, type ConceptSnapshot } from "./history";
+import type { ConceptDetail } from "./service";
 
 // Column that each validated field comes from, to prefix row errors.
+const EMPTY = { rows: [], created: 0, updated: 0, unchanged: 0, removals: [], decisions: [], incompleteKits: [] };
+
 const FIELD_COLUMN: Record<string, Column> = {
   code: "Codigo", categoryId: "Categoria", description: "Descripcion", unitId: "Unidad", taxId: "Impuesto",
   salePrice: "Precio_venta", cost: "Coste", listPrice: "PVP", discountPct: "Descuento_pct", notes: "Observaciones",
@@ -28,12 +29,12 @@ function yesNo(value: string, empty: boolean): boolean | null {
  * Validates every row of a catalog workbook and, with `apply`, writes all of them in one transaction.
  * Any row error (or a file-level error) means nothing is written: all or nothing.
  */
-export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts: { apply: boolean }): Promise<ImportResult> {
+export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts: ImportOptions): Promise<ImportResult> {
   const sheet = await readCatalogSheet(bytes);
-  if ("error" in sheet) return { error: sheet.error, rows: [], created: 0, updated: 0, applied: false };
+  if ("error" in sheet) return { error: sheet.error, ...EMPTY, applied: false };
 
   const [categories, units, taxes, concepts] = await Promise.all([
-    prisma.category.findMany(), prisma.unit.findMany(), prisma.tax.findMany(), prisma.concept.findMany(),
+    prisma.category.findMany(), prisma.unit.findMany(), prisma.tax.findMany(), prisma.concept.findMany({ include: { category: true, unit: true, tax: true } }),
   ]);
   const byName = <T extends { name: string }>(rows: T[]) => new Map(rows.map((r) => [r.name.trim().toLowerCase(), r]));
   const lookups = { categoryId: byName(categories), unitId: byName(units), taxId: byName(taxes) };
@@ -41,7 +42,7 @@ export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts
   const firstRow = new Map<string, number>();
 
   const results: ImportRow[] = [];
-  const writes: { current?: Concept; data: Prisma.ConceptUncheckedCreateInput }[] = [];
+  const writes: { current?: Concept; data: Prisma.ConceptUncheckedCreateInput; after: ConceptSnapshot; summary: string }[] = [];
 
   for (const { row, values, cellErrors } of sheet.rows) {
     const errors: string[] = [...cellErrors];
@@ -76,32 +77,48 @@ export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts
         errors.push(`${FIELD_COLUMN[field] ?? field}: ${issue.message}`);
       }
     }
-    results.push({ row, code, action: current ? "update" : "create", errors });
+    let action: ImportRow["action"] = current ? "update" : "create";
+    let changes: string[] = [];
     if (parsed.success && errors.length === 0) {
-      writes.push({ current, data: { ...parsed.data, active: active ?? true } });
+      const data = { ...parsed.data, active: active ?? true };
+      // Same normalisation as conceptSnapshot, so «16,75» and 16.7500 compare equal.
+      const dec = (n: unknown) => (n == null ? null : new Prisma.Decimal(n as string | number).toFixed());
+      const after: ConceptSnapshot = {
+        code: data.code, description: data.description, category: lookups.categoryId.get(values.Categoria.trim().toLowerCase())!.name,
+        unit: lookups.unitId.get(values.Unidad.trim().toLowerCase())!.name, tax: lookups.taxId.get(values.Impuesto.trim().toLowerCase())!.name,
+        salePrice: dec(data.salePrice), cost: dec(data.cost), listPrice: dec(data.listPrice), discountPct: dec(data.discountPct),
+        validated: data.validated, active: data.active, notes: data.notes, manufacturer: data.manufacturer,
+        supplier: data.supplier, supplierRef: data.supplierRef,
+      };
+      const diff = current ? diffSnapshots(after, conceptSnapshot(current as ConceptDetail)) : [];
+      if (current && diff.length === 0) action = "unchanged";
+      else {
+        changes = diff.map((c) => `${c.label}: ${c.before} → ${c.after}`);
+        writes.push({ current, data, after, summary: current ? `${code}: ${describeChanges(diff)} (importación)` : `Alta de ${code}: ${data.description} (importación)` });
+      }
     }
+    results.push({ row, code, action, changes, errors });
   }
 
   const created = results.filter((r) => r.action === "create").length;
-  const updated = results.length - created;
+  const updated = results.filter((r) => r.action === "update").length;
+  const unchanged = results.filter((r) => r.action === "unchanged").length;
   const ok = results.every((r) => r.errors.length === 0);
-  if (!opts.apply || !ok) return { rows: results, created, updated, applied: false };
+  if (!opts.apply || !ok) return { ...EMPTY, rows: results, created, updated, unchanged, applied: false };
 
   await prisma.$transaction(async (tx) => {
-    for (const { current, data } of writes) {
-      if (current) {
-        const after = await tx.concept.update({ where: { id: current.id }, data });
-        await logAction(tx, { userId: actor.id, entity: "concept", entityId: after.id, action: "update", summary: `${changeSummary(current, after)} (importación)` });
-      } else {
-        const c = await tx.concept.create({ data });
-        await logAction(tx, { userId: actor.id, entity: "concept", entityId: c.id, action: "create", summary: `Alta de ${c.code}: ${c.description} (importación)` });
-      }
+    for (const { current, data, after, summary } of writes) {
+      const saved = current ? await tx.concept.update({ where: { id: current.id }, data }) : await tx.concept.create({ data });
+      await logAction(tx, {
+        userId: actor.id, entity: "concept", entityId: saved.id, action: current ? "update" : "create", summary,
+        data: { concept: after, source: "import" },
+      });
     }
     await logAction(tx, {
       userId: actor.id, entity: "concept", entityId: "import", action: "import",
-      summary: `Importación de catálogo: ${created} altas, ${updated} cambios`,
+      summary: `Importación de catálogo: ${created} altas, ${updated} cambios, ${unchanged} sin cambios`,
     });
   }, { timeout: 60_000 });
-  return { rows: results, created, updated, applied: true };
+  return { ...EMPTY, rows: results, created, updated, unchanged, applied: true };
 }
 

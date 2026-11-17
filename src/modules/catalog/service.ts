@@ -86,14 +86,6 @@ async function checkRefs(tx: Prisma.TransactionClient, input: Parsed, current?: 
 
 const price = (v: Prisma.Decimal | null) => (v ? formatDecimalEs(v, { max: 4 }) : "sin precio");
 
-export function changeSummary(before: Concept, after: Concept): string {
-  const changes: string[] = [];
-  if (String(before.salePrice) !== String(after.salePrice)) changes.push(`precio ${price(before.salePrice)} → ${price(after.salePrice)}`);
-  if (String(before.cost) !== String(after.cost)) changes.push(`coste ${price(before.cost)} → ${price(after.cost)}`);
-  if (before.validated !== after.validated) changes.push(after.validated ? "validado" : "sin validar");
-  return `${after.code}: ${changes.length ? changes.join(", ") : "datos actualizados"}`;
-}
-
 /** Maps the unique-code violation to a field error; two simultaneous inserts make a prior lookup unreliable. */
 async function uniqueCode<T>(fn: () => Promise<T>): Promise<T> {
   try {
