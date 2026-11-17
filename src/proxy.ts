@@ -1,9 +1,10 @@
 import { getSessionCookie } from "better-auth/cookies";
 import { NextResponse, type NextRequest } from "next/server";
+import { authCookiePrefix } from "@/modules/auth/cookies";
 
 // Optimistic check only: the real session check happens in requireUser() on the server.
 export function proxy(request: NextRequest) {
-  if (!getSessionCookie(request)) return NextResponse.redirect(new URL("/login", request.url));
+  if (!getSessionCookie(request, { cookiePrefix: authCookiePrefix })) return NextResponse.redirect(new URL("/login", request.url));
   return NextResponse.next();
 }
 

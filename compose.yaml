@@ -37,6 +37,7 @@ services:
       <<: *database-url
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Define BETTER_AUTH_SECRET en .env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?Define BETTER_AUTH_URL en .env}
+      BETTER_AUTH_COOKIE_PREFIX: ${BETTER_AUTH_COOKIE_PREFIX:-better-auth}
       DATA_DIR: /data
     volumes:
       - appdata:/data

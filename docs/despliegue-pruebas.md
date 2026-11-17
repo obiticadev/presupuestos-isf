@@ -26,6 +26,9 @@ pendientes en el servidor, sin ejecutar la aplicación en el portátil.
 - PostgreSQL no publica ningún puerto. No se comparte base de datos, volumen,
   carpeta de copias ni secretos con producción.
 - Las contraseñas técnicas se generan aleatoriamente y solo están en Dokploy.
+- `BETTER_AUTH_COOKIE_PREFIX=isf-pruebas` en pruebas. Producción conserva su
+  prefijo existente `better-auth`. El prefijo se pasa al contenedor mediante
+  `compose.yaml` y lo usan tanto Better Auth como el proxy de acceso.
 
 ## Usuarios y datos ficticios
 
@@ -39,10 +42,12 @@ como «PRUEBAS — ISF (datos ficticios)», con numeración `TEST-{AAAA}{NNNNNN}
 Se parte de las semillas de las migraciones y de clientes y borradores ficticios
 nuevos; no se copia ningún dato de producción.
 
-**Cookies:** los navegadores comparten cookies de una misma IP entre puertos.
-Para mantener abiertas producción y pruebas a la vez, usar una ventana de
-incógnito o un perfil distinto para pruebas; de otro modo, iniciar sesión en un
-entorno puede cerrar aparentemente la sesión del otro.
+**Sesiones independientes (2026-11-17):** aunque los navegadores comparten
+cookies de una misma IP entre puertos, cada entorno usa nombres distintos.
+Se pueden abrir producción y pruebas simultáneamente en el mismo navegador,
+sin incógnito ni perfiles separados. Entrar o salir en pruebas no sobrescribe
+las cookies de producción. Tras este cambio hay que volver a entrar una vez
+en pruebas; no se borran las cookies antiguas, pues pertenecen a producción.
 
 **Seguridad:** acceso HTTP exclusivo de la red de oficina; contraseñas de prueba
 conocidas y guardadas en claro por petición del usuario. No introducir datos
