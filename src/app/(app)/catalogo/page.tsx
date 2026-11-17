@@ -6,6 +6,9 @@ import { requireUser } from "@/modules/auth/session";
 import { listCategories, listUnits } from "@/modules/catalog/lists";
 import { CONCEPTS_PAGE_SIZE, getConcept, listConcepts, type ConceptDetail } from "@/modules/catalog/service";
 import { getSettings, listTaxes } from "@/modules/settings/service";
+import { getConceptHistory, type ConceptVersion } from "@/modules/catalog/history";
+import { ConceptHistory } from "./concept-history";
+import { ConceptVersionPanel } from "./concept-version";
 import { ConceptForm, type ConceptValues } from "./forms";
 
 export const metadata: Metadata = { title: "Catálogo · ISF Presupuestos" };
@@ -50,9 +53,10 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
     getSettings(),
   ]);
   let selected: ConceptDetail | null = null;
+  let versions: ConceptVersion[] = [];
   if (conceptId) {
     try {
-      selected = await getConcept(conceptId);
+      [selected, versions] = await Promise.all([getConcept(conceptId), getConceptHistory(conceptId)]);
     } catch (e) {
       // A concept that no longer exists (just deleted, or a stale link) simply leaves the panel closed.
       if (!(e instanceof NotFoundError)) throw e;
@@ -67,6 +71,9 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
   const pages = Math.max(1, Math.ceil(total / CONCEPTS_PAGE_SIZE));
   const opt = (rows: { id: string; name: string; active: boolean }[]) => rows.map(({ id, name, active }) => ({ id, name, active }));
   const panelOpen = selected !== null || creating;
+  const hist = selected !== null && one(sp.historial) === "1" && versions.length > 0;
+  const vIndex = Math.max(0, versions.findIndex((v) => v.id === one(sp.version)));
+  const conceptHref = (extra: Record<string, string>) => href({ concepto: selected!.id, ...extra });
 
   return (
     <>
@@ -79,17 +86,17 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
         </div>
       </div>
       <form className="filters" method="get">
-        <label className="field grow">Buscar<input name="q" defaultValue={q} placeholder="Código o descripción" /></label>
+        <label className="field grow">Buscar<input name="q" defaultValue={q} placeholder="Código o descripción" disabled={hist} /></label>
         <label className="field">
           Categoría
-          <select name="categoria" defaultValue={categoria}>
+          <select name="categoria" defaultValue={categoria} disabled={hist}>
             <option value="">Todas</option>
             {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </label>
         <label className="field">
           Estado
-          <select name="estado" defaultValue={estado}>
+          <select name="estado" defaultValue={estado} disabled={hist}>
             <option value="activos">Activos</option>
             <option value="inactivos">Desactivados</option>
             <option value="todos">Todos</option>
@@ -97,17 +104,17 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
         </label>
         <label className="field">
           Validación
-          <select name="validacion" defaultValue={validacion}>
+          <select name="validacion" defaultValue={validacion} disabled={hist}>
             <option value="todos">Todos</option>
             <option value="si">Validados</option>
             <option value="no">Sin validar</option>
           </select>
         </label>
-        <button className="btn" style={{ alignSelf: "flex-end" }}>Filtrar</button>
+        <button className="btn" style={{ alignSelf: "flex-end" }} disabled={hist}>Filtrar</button>
       </form>
       {conceptId && !selected && <p className="mut" role="status" style={{ marginBottom: 12 }}>El concepto ya no existe: se ha borrado.</p>}
-      <div className={panelOpen ? "split" : undefined}>
-        <div style={{ minWidth: 0, overflowX: "auto" }}>
+      <div className={hist ? "split hist" : panelOpen ? "split" : undefined}>
+        {!hist && <div style={{ minWidth: 0, overflowX: "auto" }}>
           <table>
             <thead>
               <tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Unidad</th><th className="n">Coste</th><th className="n">Venta</th><th>IVA</th><th></th></tr>
@@ -137,12 +144,21 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
               {page < pages && <Link className="btn" href={href({ pagina: String(page + 1) })}>Siguiente</Link>}
             </span>
           </div>
-        </div>
+        </div>}
         {panelOpen && (
-          <aside id="panel" className="sheet panel">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <div className="phonesheet">
+            {hist && <ConceptHistory code={selected!.code} versions={versions} selectedId={versions[vIndex].id} href={conceptHref} />}
+            <aside id="panel" className="sheet panel">
+            {hist ? (
+              <ConceptVersionPanel version={versions[vIndex]} previous={versions[vIndex + 1]} current={selected!} isCurrent={vIndex === 0} />
+            ) : (<>
+            <div className="panelhead">
               <h2 style={{ margin: 0 }}>{selected ? "Concepto" : "Nuevo concepto"}</h2>
-              <Link className="mut" href={href({})}>Cerrar</Link>
+              <span className="links">
+                {versions.length > 1 && <Link className="histbtn" href={conceptHref({ historial: "1" })}>Historial <span>({versions.length})</span></Link>}
+                <Link className="mut nophone" href={href({})}>Cerrar</Link>
+                <Link className="x onlyphone" href={href({})} aria-label="Volver al catálogo">×</Link>
+              </span>
             </div>
             <ConceptForm
               key={selected ? `${selected.id}-${selected.updatedAt.getTime()}` : "nuevo"}
@@ -153,7 +169,9 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
               marginPct={formatDecimalEs(settings.defaultMarginPct, { min: 0 })}
               listHref={href({})}
             />
-          </aside>
+            </>)}
+            </aside>
+          </div>
         )}
       </div>
     </>

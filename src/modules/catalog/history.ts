@@ -32,8 +32,9 @@ const LABELS: Record<keyof ConceptSnapshot, string> = {
   supplier: "Proveedor", supplierRef: "Referencia",
 };
 const DECIMALS = new Set<keyof ConceptSnapshot>(["salePrice", "cost", "listPrice", "discountPct"]);
+export const isAmountField = (f: keyof ConceptSnapshot) => DECIMALS.has(f);
 
-function show(field: keyof ConceptSnapshot, v: string | boolean | null): string {
+export function show(field: keyof ConceptSnapshot, v: string | boolean | null): string {
   if (typeof v === "boolean") return v ? "sí" : "no";
   if (v === null || v === "") return "vacío";
   return DECIMALS.has(field) ? formatDecimalEs(v, { max: 4 }) : v;
