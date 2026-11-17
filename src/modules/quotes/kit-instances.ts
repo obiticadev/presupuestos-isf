@@ -72,7 +72,7 @@ export async function addKitInstance(actor: CurrentUser, subsectionId: string, r
   const template = await prisma.kitTemplate.findUnique({ where: { id: raw.templateId } });
   if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
   const def = kitDefinition.parse(template.definition);
-  return withDraft(sub.quoteId, async (tx) => {
+  return withDraft(actor, sub.quoteId, async (tx) => {
     const max = (await tx.kitInstance.aggregate({ where: { sectionId: sub.id }, _max: { position: true } }))._max.position ?? 0;
     const instance = await tx.kitInstance.create({
       data: {
@@ -91,7 +91,7 @@ export async function updateKitInstance(actor: CurrentUser, instanceId: string, 
   const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
   if (!found) throw new NotFoundError("El conjunto no existe");
   const def = kitDefinition.parse(found.definition);
-  await withDraft(found.section.quoteId, async (tx) => {
+  await withDraft(actor, found.section.quoteId, async (tx) => {
     const instance = await tx.kitInstance.update({ where: { id: instanceId }, data: { quantity: input.quantity, ...clean(def, input) } });
     const missing = await regenerate(tx, actor, found.section.quoteId, instance);
     await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto modificado: ${found.name} × ${input.quantity.replace(".", ",")}${missing.length ? " (incompleto)" : ""}`);
@@ -101,7 +101,7 @@ export async function updateKitInstance(actor: CurrentUser, instanceId: string, 
 export async function removeKitInstance(actor: CurrentUser, instanceId: string): Promise<void> {
   const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
   if (!found) throw new NotFoundError("El conjunto no existe");
-  await withDraft(found.section.quoteId, async (tx) => {
+  await withDraft(actor, found.section.quoteId, async (tx) => {
     await tx.kitInstance.delete({ where: { id: instanceId } });
     await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto eliminado: ${found.name}`);
   });

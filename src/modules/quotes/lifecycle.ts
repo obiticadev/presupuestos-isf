@@ -130,7 +130,7 @@ export async function priceWarnings(tx: Tx | typeof prisma, quoteId: string): Pr
 
 /** Draft only: re-copies price, description, unit and tax from active catalog concepts, leaving adjusted lines alone. */
 export async function refreshPricesFromCatalog(actor: CurrentUser, id: string): Promise<number> {
-  return withDraft(id, async (tx) => {
+  return withDraft(actor, id, async (tx) => {
     let n = 0;
     for (const l of await catalogLines(tx, id)) {
       const c = l.concept!;

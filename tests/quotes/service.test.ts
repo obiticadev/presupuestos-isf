@@ -194,3 +194,12 @@ test("en la instantánea y el editor, las líneas sueltas van antes que las de l
   const lines = (await getQuote(quote.id)).sections[0].children[0].lines;
   expect(lines.map((l) => l.kitSlot ?? l.conceptId)).toEqual(["concept-ser-prog", "main", "c1"]);
 });
+
+test("cualquier cambio en el borrador deja como responsable a quien lo hace", async () => {
+  const { actor, quote, sub } = await makeDraft();
+  const other = await makeUser("presupuestador");
+  await addCustomLine(other, sub.id, { description: "Soporte", unitName: "ud", quantity: "1", unitPrice: "10", taxId: "iva-21" });
+  expect((await getQuote(quote.id)).ownerId).toBe(other.id);
+  await updateSection(actor, sub.id, { title: "Equipos" });
+  expect((await getQuote(quote.id)).ownerId).toBe(actor.id);
+});
