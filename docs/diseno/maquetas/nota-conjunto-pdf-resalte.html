@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Resalte del conjunto</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--rule:#c9d1cb;--band:#eef1ee;--green:#004742;--mut:#56645f}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Archivo,sans-serif;color:var(--ink);background:var(--paper);font-size:14px;line-height:1.4;padding:28px 32px 80px}
+h1{font-size:32px;font-weight:700;font-stretch:88%}
+.sub{color:var(--mut);margin:6px 0 18px;max-width:980px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(560px,1fr));gap:22px}
+.opt{border:1.5px solid var(--ink);background:#fff;cursor:pointer}
+.opt.selected{outline:4px solid var(--green);outline-offset:3px}
+.oh{padding:10px 14px;border-bottom:1.5px solid var(--ink);background:#eceeea}
+.oh b{font-size:17px;font-stretch:90%}.oh p{font-size:12px;color:var(--mut);margin-top:2px}
+.pdf{padding:16px 18px 18px;font-size:12.5px}
+table{width:100%;border-collapse:collapse}
+td{padding:3px 6px;line-height:1.25;border-bottom:.5px solid var(--rule);vertical-align:top}
+.n{text-align:right;white-space:nowrap;width:70px}.p{width:42px;font-weight:700}
+tr.part td{background:var(--band);font-weight:800;text-transform:uppercase;font-size:12px;padding:4px 6px}
+tr.sub td{font-weight:700}
+tr.line td:nth-child(2){padding-left:22px}
+tr.note td{font-style:italic;color:var(--mut);padding-top:0}
+tr.note td:nth-child(2){padding-left:22px}
+tr.has td{border-bottom:none}
+tr.note.kit td{border-top:.75px dashed var(--mut);font-size:11.5px;padding-top:3px;padding-bottom:4px}
+/* Ahora: fondo gris como la partida */
+.X tr.k td:not(:first-child){background:#f3f5f3}
+/* A: raya verde a la izquierda, sin fondo */
+.A tr.k td:nth-child(2){box-shadow:inset 2px 0 0 var(--green)}
+/* B: tinte verde muy suave */
+.B tr.k td:not(:first-child){background:#edf5f2}
+/* C: marco fino verde alrededor del bloque */
+.C tr.k td:nth-child(2){border-left:1px solid var(--green)}
+.C tr.k td:last-child{border-right:1px solid var(--green)}
+.C tr.k.first td:not(:first-child){border-top:1px solid var(--green)}
+.C tr.note.kit td:not(:first-child){border-bottom:1px solid var(--green)}
+/* D: tinte verde + raya verde */
+.D tr.k td:not(:first-child){background:#f2f7f5}
+.D tr.k td:nth-child(2){box-shadow:inset 2px 0 0 var(--green)}
+</style></head><body>
+<h1>Resalte del conjunto con nota · opciones</h1>
+<p class="sub">Arriba de cada ejemplo hay una <b>partida</b> (fondo gris) para comparar. La nota del conjunto va ya <b>en cursiva</b> en todas, cerrada por la raya punteada. Haz clic en la que prefieras.</p>
+
+<template id="rows">
+  <tr class="part"><td class="p">1</td><td>Grupo de bombeo nave 3</td><td></td><td class="n">4.820,00 €</td></tr>
+  <tr class="sub"><td class="p">1.1</td><td>Cuadros eléctricos</td><td></td><td class="n">4.820,00 €</td></tr>
+  <tr class="line"><td></td><td>Bandeja perforada 300 mm</td><td class="n">12 m</td><td></td></tr>
+  <tr class="line k first"><td></td><td>Armario metálico 1000×800</td><td class="n">1 ud</td><td></td></tr>
+  <tr class="line k"><td></td><td>Interruptor general 4P 125 A</td><td class="n">1 ud</td><td></td></tr>
+  <tr class="line k has"><td></td><td>Cableado y montaje del cuadro</td><td class="n">1 ud</td><td></td></tr>
+  <tr class="note line k has"><td></td><td colspan="3">Montado en fábrica</td></tr>
+  <tr class="note kit k"><td></td><td colspan="3">Incluye pruebas en vacío del conjunto</td></tr>
+  <tr class="line"><td></td><td>Toma de tierra</td><td class="n">1 ud</td><td></td></tr>
+</template>
+
+<div class="grid">
+  <div class="opt" data-choice="ahora" onclick="toggleSelect(this)"><div class="oh"><b>Ahora</b><p>Fondo gris claro: se parece al de la partida.</p></div><div class="pdf X"><table data-r></table></div></div>
+  <div class="opt" data-choice="a" onclick="toggleSelect(this)"><div class="oh"><b>A · Raya verde a la izquierda</b><p>Sin fondo. Una raya verde fina recorre las líneas del conjunto y su nota.</p></div><div class="pdf A"><table data-r></table></div></div>
+  <div class="opt" data-choice="b" onclick="toggleSelect(this)"><div class="oh"><b>B · Tinte verde muy suave</b><p>Como ahora, pero el fondo tira a verde y no a gris, así que no se confunde con la partida.</p></div><div class="pdf B"><table data-r></table></div></div>
+  <div class="opt" data-choice="c" onclick="toggleSelect(this)"><div class="oh"><b>C · Marco fino verde</b><p>Sin fondo. Un recuadro fino verde encierra el bloque del conjunto y su nota.</p></div><div class="pdf C"><table data-r></table></div></div>
+  <div class="opt" data-choice="d" onclick="toggleSelect(this)"><div class="oh"><b>D · Tinte verde + raya verde</b><p>Mezcla de A y B: fondo verde muy suave y la raya a la izquierda.</p></div><div class="pdf D"><table data-r></table></div></div>
+</div>
+<script>document.querySelectorAll('[data-r]').forEach(t=>t.innerHTML=document.getElementById('rows').innerHTML);</script>
+</body></html>

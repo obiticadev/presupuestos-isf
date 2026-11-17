@@ -35,9 +35,9 @@ tr.note td{font-style:italic;color:var(--mut);padding-top:0;white-space:pre-line
 tr.note.line td:nth-child(2),tr.note.kit td:nth-child(2){padding-left:6mm}
 tr.note.part td{background:var(--band);padding-top:.7mm}
 tr:has(+ tr.note) td{border-bottom:none}
-/* A kit with a comment: its rows on a light band, closed by a dashed rule and the comment in upright text. */
-tr.k td:not(:first-child){background:#f3f5f3}
-tr.note.kit td:not(:first-child){font-style:normal;font-size:9pt;border-top:.5pt dashed var(--mut);padding-top:.7mm;padding-bottom:1mm}
+/* A kit with a comment: its rows on a light green tint (not the partida's grey), closed by a dashed rule over the comment. */
+tr.k td:not(:first-child){background:#edf5f2}
+tr.note.kit td:not(:first-child){border-top:.5pt dashed var(--mut);padding-top:.7mm;padding-bottom:1mm}
 
 /* Cierre al pie de la última hoja: condiciones y fecha | totales y firma y sello. */
 .close{display:grid;grid-template-columns:1fr 78mm;gap:8mm;margin-top:auto;padding-top:4mm;break-inside:avoid;flex:none}

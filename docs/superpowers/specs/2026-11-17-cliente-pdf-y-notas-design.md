@@ -98,7 +98,7 @@ model QuoteNoteVersion {   // textos anteriores; la versión actual es la propia
 **Por qué:** en el PDF y en el editor, la nota de un conjunto sale justo después de la nota de su última línea y con el mismo aspecto, así que no se distinguen.
 
 **PDF** (maqueta `docs/diseno/maquetas/nota-conjunto-pdf.html`, mezcla de las opciones G y K):
-- **solo si el conjunto tiene nota**, sus filas (sus líneas, las notas de esas líneas y la nota del conjunto) llevan un fondo gris muy claro en las columnas de texto, sin la de numeración. Una raya punteada fina cierra el bloque y debajo va la nota en letra recta, algo más pequeña y en gris;
+- **solo si el conjunto tiene nota**, sus filas (sus líneas, las notas de esas líneas y la nota del conjunto) llevan un tinte verde muy suave (`#edf5f2`, para no confundirse con el gris de la partida) en las columnas de texto, sin la de numeración. Una raya punteada fina, del mismo ancho que el tinte, cierra el bloque y debajo va la nota en cursiva y del mismo tamaño que las notas de línea (ajuste del usuario del 2026-11-17, opción B de `docs/diseno/maquetas/nota-conjunto-pdf-resalte.html`);
 - la nota de una línea sigue igual que ahora: en cursiva, bajo su línea;
 - un conjunto sin nota no se resalta: sale exactamente como ahora;
 - no aparecen ni el nombre del conjunto ni la palabra «Conjunto».
