@@ -64,7 +64,7 @@ export function toCalc(sections: CalcShape[]): CalcSection[] {
   }));
 }
 
-async function recalc(tx: Tx, quoteId: string, ownerId: string): Promise<void> {
+export async function recalc(tx: Tx, quoteId: string, ownerId: string): Promise<void> {
   const sections = await tx.quoteSection.findMany({ where: { quoteId, parentId: null }, include: { children: { include: { lines: true } } } });
   const t = calculateQuote(toCalc(sections));
   await tx.quote.update({ where: { id: quoteId }, data: { base: t.base.toFixed(2), total: t.total.toFixed(2), ownerId } });

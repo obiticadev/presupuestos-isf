@@ -103,11 +103,11 @@ export const removeRequiredConceptAction: Action = action((actor, f) => quotes.r
 export async function createRevisionAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const actor = await requireUser();
   const { createRevision } = await import("./lifecycle");
-  let id = "";
-  const result = await toActionResult(async () => { id = (await createRevision(actor, str(form, "id"))).id; });
+  let rev = { id: "", refreshed: 0 };
+  const result = await toActionResult(async () => { rev = await createRevision(actor, str(form, "id")); });
   if (!result.ok) return result;
   revalidatePath("/", "layout");
-  redirect(`/presupuestos/${id}`);
+  redirect(`/presupuestos/${rev.id}${rev.refreshed ? `?precios=${rev.refreshed}` : ""}`);
 }
 
 export async function duplicateAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {

@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
 import { createRevision, duplicateQuote, isExpired, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
-import { addCatalogLine, deleteDraft, getQuote, updateLine } from "@/modules/quotes/service";
+import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateLine } from "@/modules/quotes/service";
 import { conceptFields, completeDraft } from "../helpers/quotes";
 
 test("revisar crea R01 en borrador; al emitirla, R00 queda sustituida y ya no cambia de estado", async () => {
@@ -106,4 +106,30 @@ test("listRevisions da todas las revisiones del número, de la más reciente a l
   const r1 = await createRevision(actor, quote.id);
   const revs = await listRevisions(r1.id);
   expect(revs.map((r) => [r.id, r.revision, r.status])).toEqual([[r1.id, 1, "DRAFT"], [quote.id, 0, "ISSUED"]]);
+});
+
+test("una revisión sale con los precios del catálogo al día; la emitida conserva los suyos", async () => {
+  const { actor, admin, quote, sub } = await completeDraft();
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-man-4x25", quantity: "1" });
+  await issueQuote(actor, quote.id);
+  const c = await getConcept("concept-man-4x25");
+  await updateConcept(admin, c.id, { ...conceptFields(c), salePrice: "12", validated: true });
+  const rev = await createRevision(actor, quote.id);
+  expect(rev.refreshed).toBe(1);
+  expect((await getQuote(rev.id)).base.toFixed(2)).toBe("1042.00");
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("1040.00");
+  expect((await listQuoteHistory(rev.id)).map((e) => e.summary)).toContain(`Revisión de ${(await getQuote(quote.id)).reference}; 1 línea con precios del catálogo`);
+});
+
+test("la revisión respeta los precios ajustados a mano", async () => {
+  const { actor, admin, quote, sub } = await completeDraft();
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-man-4x25", quantity: "1" });
+  const line = (await getQuote(quote.id)).sections[0].children[0].lines.find((l) => l.conceptId === "concept-man-4x25")!;
+  await adjustPrice(actor, line.id, { newPrice: "11", reason: "Acordado" });
+  await issueQuote(actor, quote.id);
+  const c = await getConcept("concept-man-4x25");
+  await updateConcept(admin, c.id, { ...conceptFields(c), salePrice: "12", validated: true });
+  const rev = await createRevision(actor, quote.id);
+  expect(rev.refreshed).toBe(0);
+  expect((await listQuoteHistory(rev.id)).map((e) => e.summary)).toContain(`Revisión de ${(await getQuote(quote.id)).reference}`);
 });

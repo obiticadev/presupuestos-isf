@@ -6,7 +6,7 @@ import { Prisma, type Quote, type QuoteStatus } from "@/generated/prisma/client"
 import type { AuditEntry } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { STATUS_LABEL } from "./labels";
-import { logQuote, quoteLabel, withDraft, type Tx } from "./service";
+import { logQuote, quoteLabel, recalc, withDraft, type Tx } from "./service";
 
 export const QUOTES_PAGE_SIZE = 50;
 type SettableStatus = Exclude<QuoteStatus, "DRAFT">;
@@ -73,7 +73,7 @@ const HEADER = (q: Quote) => ({
 });
 
 /** New draft revision (R+1) of an issued quote that has not been superseded yet; the previous one stays intact. */
-export async function createRevision(actor: CurrentUser, id: string): Promise<Quote> {
+export async function createRevision(actor: CurrentUser, id: string): Promise<Quote & { refreshed: number }> {
   try {
     return await prisma.$transaction(async (tx) => {
       const q = await tx.quote.findUnique({ where: { id } });
@@ -84,9 +84,11 @@ export async function createRevision(actor: CurrentUser, id: string): Promise<Qu
         data: { ...HEADER(q), seqYear: q.seqYear, seq: q.seq, revision: q.revision + 1, parentId: q.id, ownerId: actor.id, createdById: actor.id, date: todayMadrid() },
       });
       await copyContent(tx, q.id, rev.id);
+      const refreshed = await refreshLines(tx, rev.id); // a revision starts from today's catalog prices
       await logQuote(tx, actor, q.id, "revision", `Borrador de revisión R${String(rev.revision).padStart(2, "0")} de ${q.reference}`);
-      await logQuote(tx, actor, rev.id, "revision", `Revisión de ${q.reference}`);
-      return rev;
+      await logQuote(tx, actor, rev.id, "revision", `Revisión de ${q.reference}${refreshed ? `; ${refreshed} línea${refreshed === 1 ? "" : "s"} con precios del catálogo` : ""}`);
+      if (refreshed) await recalc(tx, rev.id, actor.id);
+      return { ...(await tx.quote.findUniqueOrThrow({ where: { id: rev.id } })), refreshed };
     });
   } catch (e) {
     if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {
@@ -131,18 +133,24 @@ export async function priceWarnings(tx: Tx | typeof prisma, quoteId: string): Pr
 /** Draft only: re-copies price, description, unit and tax from active catalog concepts, leaving adjusted lines alone. */
 export async function refreshPricesFromCatalog(actor: CurrentUser, id: string): Promise<number> {
   return withDraft(actor, id, async (tx) => {
-    let n = 0;
-    for (const l of await catalogLines(tx, id)) {
-      const c = l.concept!;
-      if (!c.active || !c.salePrice || l.adjustments.length || l.section.mode === "GLOBAL") continue;
-      if (c.salePrice.equals(l.unitPrice!) && c.description === l.description && c.unit.name === l.unitName
-        && c.tax.name === l.taxName && c.tax.ratePct.equals(l.taxRatePct ?? -1)) continue;
-      await tx.quoteLine.update({ where: { id: l.id }, data: { unitPrice: c.salePrice, description: c.description, unitName: c.unit.name, taxName: c.tax.name, taxRatePct: c.tax.ratePct } });
-      n++;
-    }
+    const n = await refreshLines(tx, id);
     await logQuote(tx, actor, id, "update", `Precios actualizados desde el catálogo: ${n} línea${n === 1 ? "" : "s"}`);
     return n;
   });
+}
+
+/** Re-copies price, description, unit and tax from active catalog concepts into a quote's lines, leaving adjusted and global-price lines alone. */
+async function refreshLines(tx: Tx, quoteId: string): Promise<number> {
+  let n = 0;
+  for (const l of await catalogLines(tx, quoteId)) {
+    const c = l.concept!;
+    if (!c.active || !c.salePrice || l.adjustments.length || l.section.mode === "GLOBAL") continue;
+    if (c.salePrice.equals(l.unitPrice!) && c.description === l.description && c.unit.name === l.unitName
+      && c.tax.name === l.taxName && c.tax.ratePct.equals(l.taxRatePct ?? -1)) continue;
+    await tx.quoteLine.update({ where: { id: l.id }, data: { unitPrice: c.salePrice, description: c.description, unitName: c.unit.name, taxName: c.tax.name, taxRatePct: c.tax.ratePct } });
+    n++;
+  }
+  return n;
 }
 
 export type QuoteFilter = { q?: string; clientId?: string; ownerId?: string; status?: QuoteStatus | "all"; from?: string; to?: string; page?: number };

@@ -29,9 +29,10 @@ export const metadata: Metadata = { title: "Presupuesto · ISF Presupuestos" };
 const money = (v: { toString(): string }) => `${formatDecimalEs(v)} €`;
 const text = (v: string) => (v ? <span style={{ whiteSpace: "pre-wrap" }}>{v}</span> : <span className="mut">—</span>);
 
-export default async function PresupuestoPage({ params }: PageProps<"/presupuestos/[id]">) {
+export default async function PresupuestoPage({ params, searchParams }: PageProps<"/presupuestos/[id]">) {
   const me = await requireUser();
   const { id } = await params;
+  const precios = Number((await searchParams).precios); // set by «Revisar» when catalog prices were copied in
   let q: QuoteDetail;
   try {
     q = await getQuote(id);
@@ -69,6 +70,9 @@ export default async function PresupuestoPage({ params }: PageProps<"/presupuest
           <span className={`st ${STATUS_CLASS[q.status]}`}><i />{STATUS_LABEL[q.status]}</span>
         </div>
         {q.parent && <p className="mut" style={{ marginTop: 4 }}>Sustituye a <Link href={`/presupuestos/${q.parent.id}`}>R{String(q.parent.revision).padStart(2, "0")}</Link></p>}
+        {editable && Number.isInteger(precios) && precios > 0 && (
+          <p className="warnbox" role="status" style={{ marginTop: 12 }}>Precios actualizados desde el catálogo en {precios} {precios === 1 ? "línea" : "líneas"}.</p>
+        )}
         {editable && <div style={{ marginTop: 12 }}><PriceWarnings id={q.id} warnings={warnings} /></div>}
 
         <section id="cabecera" style={{ marginTop: 16 }}>
