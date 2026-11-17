@@ -153,8 +153,8 @@ export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts
     });
     return { removals, incompleteKits: full ? await incompleteFor(tx, removals) : [] };
   }, { timeout: 60_000 }).catch((error) => {
-    // A failed DELETE aborts the whole transaction, so nothing is saved.
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+    // A failed DELETE (P2003) or a vanished row (P2025) aborts the whole transaction, so nothing is saved.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === "P2003" || error.code === "P2025")) {
       throw new ValidationError({ _: "Algo ha cambiado mientras revisabas: vuelve a revisar el archivo" });
     }
     throw error;
