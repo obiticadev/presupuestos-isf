@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-12 (mejoras tras el uso real: Bloques 1 y 2 cerrados en la rama `mejoras-uso-real`; el siguiente paso es el plan del Bloque 3).
+Última actualización: 2026-11-17 (entorno independiente de pruebas de `mejoras-uso-real` en Dokploy; Bloques 1 y 2 cerrados, siguiente paso: ejecutar el plan del Bloque 3).
 
 ## Cronología
 
@@ -25,7 +25,18 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
    - Tareas 6 y 7: servicios y pruebas hechos; la interfaz se terminó en el nuevo equipo (punto 5).
 5. **2026-11-09, nuevo equipo (Linux).** Entorno local con `mise.local.toml` (Node 24, pnpm 12.18.0; no se sube), plugins superpowers, claude-mem y ponytail a nivel de usuario. Administrador de pruebas `admin@isf.test`, con la contraseña en `.superpowers/test-admin.env` (no se sube). Terminados el panel «Para emitir», el editor de emitidos, los nombres del historial y el listado y la configuración; queda el cierre.
 
-6. **2026-11-11, mejoras tras el primer uso real.** Rama `mejoras-uso-real` (desde `master`). Diseño de 7 bloques aprobado (`specs/2026-11-11-mejoras-uso-real-design.md`); el aspecto del editor se eligió con maquetas en Chrome (`docs/diseno/maquetas/editor-filas*.html`). Bloque 1 (editor y móvil) terminado. Se trabaja bloque a bloque, con push a esta rama y pruebas en local; `master` y el despliegue, al final.
+6. **2026-11-11, mejoras tras el primer uso real.** Rama `mejoras-uso-real` (desde `master`). Diseño de 7 bloques aprobado (`specs/2026-11-11-mejoras-uso-real-design.md`); el aspecto del editor se eligió con maquetas en Chrome (`docs/diseno/maquetas/editor-filas*.html`). Bloque 1 (editor y móvil) terminado. Se trabaja bloque a bloque, con push a esta rama. Desde el 2026-11-17 se revisa en el entorno independiente del servidor; `master` y producción, solo con visto bueno.
+
+7. **2026-11-17, entorno de pruebas en el servidor (autorizado por el usuario).**
+   - URL: **http://192.168.105.83:3101**, rama `mejoras-uso-real`, inicialmente commit `c526d8e`. Producción continúa en `:3100` y `master`, sin redesplegar ni reiniciar.
+   - Dokploy → proyecto «Presupuestos ISF» → entorno `pruebas` (`25HdFz3xoCRINa3gw_-r3`) → «Presupuestos - PRUEBAS» (`composeId e3Bkaq88xSYluN9dqrdZ6`, `appName presupuestos-isf-pruebas-1uwipl`). `composePath ./compose.yaml`, proveedor GitHub existente; despliegue manual, volúmenes estables.
+   - Base de datos y archivos nuevos, sin copiar producción; secretos aleatorios exclusivos en Dokploy, copias en `/srv/presupuestos-pruebas-backups`. PostgreSQL no publica puertos.
+   - Usuarios con nombres `admin` y `user`, roles administrador y presupuestador. Como se entra por correo, sus accesos son `admin@isf.test` y `user@isf.test`. Contraseñas solicitadas anotadas en **`ACCESOS-PRUEBAS.local.md`**, visible en la raíz de este worktree y en la carpeta original, excluido de Git; no se suben secretos.
+   - Configuración marcada «PRUEBAS — ISF (datos ficticios)», numeración `TEST-{AAAA}{NNNNNN}-R{RR}`; 6 conceptos de las semillas, 2 clientes ficticios con contacto e instalación, 2 borradores con líneas de catálogo (670,34 € y 1.005,51 €). Inicialización por servicios de la aplicación, con guardas que rechazan otro entorno o una BD con usuarios/clientes/presupuestos.
+   - Comprobaciones HTTP: acceso con ambos usuarios y roles correctos; clientes, catálogo y editor 200; PDF de borrador correcto (244.449 bytes); administrador accede a usuarios y presupuestador recibe 404 (protección prevista). No sustituye una revisión visual con Chrome.
+   - Reinicio del contenedor de pruebas comprobado: conserva usuarios, clientes y borradores, y el PDF sigue descargando. Copia manual correcta `20261117-0858`, app saludable y bucle diario de `backup` activo. SSH `isf` **ya pertenece al grupo `docker`**: el bloqueo antiguo está resuelto; las comprobaciones de producción pendientes siguen pendientes.
+   - Atención a las cookies entre puertos de la misma IP: abrir pruebas en incógnito u otro perfil para mantener simultáneamente las sesiones de producción y pruebas.
+   - Operación y actualización por bloques: **`docs/despliegue-pruebas.md`**. Siguiente tarea funcional: Bloque 3, sin fusionar `master` ni desplegar producción.
 
 ## Cómo retomar en otro equipo
 

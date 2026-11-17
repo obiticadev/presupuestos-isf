@@ -11,6 +11,7 @@
 /INSTRUCCIONES para pegar en Copilot.txt
 
 # Local
+/ACCESOS-PRUEBAS.local.md
 .claude/settings.local.json
 .env
 .env.*
