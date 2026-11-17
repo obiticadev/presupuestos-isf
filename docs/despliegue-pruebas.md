@@ -19,8 +19,9 @@ pendientes en el servidor, sin ejecutar la aplicación en el portátil.
 - `composeId` de pruebas: `e3Bkaq88xSYluN9dqrdZ6`.
 - Repositorio: `obiticadev/presupuestos-isf`, proveedor GitHub ya existente.
 - Compose: `./compose.yaml`, sin override de desarrollo.
-- Despliegue automático desactivado: actualizar de forma deliberada al terminar
-  cada bloque o cuando el usuario quiera revisarlo.
+- Despliegue automático activado. El servidor consulta `mejoras-uso-real`
+  **cada 5 minutos** mediante cron; si hay cambios, hace una copia de pruebas
+  y solicita su despliegue a Dokploy.
 - `randomize` e `isolatedDeployment` desactivados: los volúmenes conservan
   nombres estables entre despliegues, exclusivos del proyecto de pruebas.
 - PostgreSQL no publica ningún puerto. No se comparte base de datos, volumen,
@@ -57,13 +58,58 @@ reales ni publicar el puerto en Internet.
 
 1. Trabajar y verificar el código en `mejoras-uso-real`.
 2. Hacer commit y push **solo a esa rama**.
-3. Crear una copia de pruebas antes de desplegar migraciones.
-4. En Dokploy, entrar en **pruebas → Presupuestos - PRUEBAS** y desplegar.
+3. Esperar a la siguiente comprobación de cinco minutos y a la compilación.
+   El servidor realiza la copia de pruebas antes de solicitar el despliegue.
+4. Revisar el resultado en Dokploy → **pruebas → Presupuestos - PRUEBAS**.
 5. Comprobar `/api/health`, entrada con ambos roles y el bloque modificado.
 6. Registrar el commit y resultado en `docs/superpowers/progreso.md`.
 
 Esto no fusiona en `master` ni despliega producción. Ambas acciones siguen
 requiriendo el visto bueno explícito del usuario.
+
+## Consulta automática cada cinco minutos
+
+GitHub no puede llamar al webhook `http://192.168.105.83:3000/api/deploy/github`
+porque es una dirección privada de oficina; la entrega del push del 2026-11-17
+falló con «failed to connect to host». No se abre ningún puerto a Internet.
+En su lugar, el servidor consulta GitHub a través de la API local de Dokploy y
+su proveedor GitHub existente. No necesita que el portátil esté encendido.
+
+- Crontab del usuario SSH `isf`: `*/5 * * * *` (minutos 00, 05, 10…).
+- Programa instalado: `/home/isf/.local/lib/presupuestos-pruebas/poll-pruebas.py`.
+  Fuente versionada: `scripts/deploy/poll-pruebas.py`; su instalación se
+  actualiza de forma deliberada por SSH, no ejecutando código del checkout.
+- Token de la API local: `/home/isf/.config/presupuestos-pruebas/dokploy-token`,
+  permisos `600` dentro de una carpeta `700`; nunca en el repositorio ni logs.
+- Estado: `/home/isf/.local/state/presupuestos-pruebas/state.json`.
+- Log rotativo: `/home/isf/.local/state/presupuestos-pruebas/poll.log`
+  (1 MB por archivo, tres rotaciones).
+- Exclusión mutua con `flock`; no encola otro despliegue si ya hay uno pendiente
+  o en marcha. Sin cambios no compila ni crea copias.
+- Verifica servicio, rama, repositorio y persistencia antes de desplegar.
+  Solo permite el Compose de pruebas; no actúa sobre `master` ni producción.
+- Una copia fallida impide desplegar. Un despliegue fallido no se repite
+  indefinidamente con el mismo commit: se espera un nuevo push o revisión manual.
+- Solo confirma el éxito cuando Dokploy termina y `/api/health` responde bien.
+- **Pausar:** desactivar «Auto Deploy» en el servicio de pruebas de Dokploy;
+  el programa respeta ese interruptor. También se puede retirar únicamente
+  su línea del crontab, conservando las demás tareas.
+
+Comprobar y lanzar una consulta inmediata:
+
+```sh
+crontab -l
+tail -n 30 ~/.local/state/presupuestos-pruebas/poll.log
+python3 -B ~/.local/lib/presupuestos-pruebas/poll-pruebas.py
+```
+
+No hay que borrar el estado para actualizar. Si una solicitud queda pendiente
+sin registrarse durante más de 15 minutos, el programa lo anota en el log y
+no duplica despliegues; revisar las colas de Dokploy antes de intervenir.
+Un despliegue manual sigue siendo posible desde Dokploy. Si cambian las
+credenciales de API, sustituir el token privado del servidor.
+
+Pruebas sin base de datos: `python -B -m unittest discover -s tests/deploy -v`.
 
 ## Operación por SSH
 
