@@ -42,6 +42,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - Prisma 7 no regenera el cliente tras `migrate dev`: ejecuta `pnpm exec prisma generate` y **reinicia `pnpm dev`**.
   - La BD de desarrollo está en el puerto 5433.
   - Las pruebas se ejecutan con `PRISMA_USER_CONSENT_FOR_DANGEROUS_AI_ACTION="Autorizo el reset (Recomendado)" pnpm test`; solo reinician `presupuestos_test`.
+  - La versión de la app (`version` de `package.json`, se ve en el menú lateral y en el login) sigue los bloques: 1.0.0 = planes 1-4 en producción, 1.N.0 = Bloque N de `mejoras-uso-real` cerrado. Súbela al cerrar cada bloque.
   - Formularios con `ActionForm` (`src/components/action-form.tsx`), que conserva lo escrito ante un error del servidor.
   - Toda escritura de un borrador pasa por `withDraft()`. Lo emitido no se modifica.
   - Las pruebas de interfaz se hacen con Claude in Chrome. El progreso se registra a mano en claude-mem y en `progreso.md`.

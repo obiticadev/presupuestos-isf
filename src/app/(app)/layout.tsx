@@ -2,6 +2,7 @@ import { signOut } from "@/modules/auth/actions";
 import { requireUser } from "@/modules/auth/session";
 import { MobileMenuButton } from "@/components/mobile-menu";
 import { RailLink } from "@/components/rail-link";
+import { APP_VERSION } from "@/lib/version";
 
 const ROLE_LABEL = { admin: "Administrador", presupuestador: "Presupuestador" } as const;
 
@@ -32,6 +33,7 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
           <form action={signOut}>
             <button type="submit">Cerrar sesión</button>
           </form>
+          <small className="ver">Versión {APP_VERSION}</small>
         </div>
         </div>
       </nav>

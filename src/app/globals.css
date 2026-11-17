@@ -443,3 +443,6 @@ fieldset[disabled] input,fieldset[disabled] textarea{cursor:default}
  .onlyphone{display:grid!important}.nophone{display:none}
  .pair .field input,.pair .field select{min-width:0}
 }
+
+/* Versión de la app: pie del menú lateral y del panel del login */
+.ver{display:block;margin-top:10px;font-size:11px;letter-spacing:.06em;color:#a9c6bf}
