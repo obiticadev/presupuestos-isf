@@ -1,5 +1,4 @@
 import ExcelJS from "exceljs";
-import { ForbiddenError } from "@/lib/errors";
 import { COLUMNS, writeCatalogSheet } from "@/modules/catalog/excel";
 import { importConcepts } from "@/modules/catalog/import";
 import { setUnitActive } from "@/modules/catalog/lists";
@@ -81,9 +80,10 @@ test("SI/NO y vacíos se interpretan; un valor raro en Activo es error", async (
   expect(r.rows[1].errors[0]).toContain("Activo");
 });
 
-test("un presupuestador no puede importar", async () => {
+test("un presupuestador puede importar en modo añadir y actualizar", async () => {
   const p = await makeUser("presupuestador");
-  await expect(importConcepts(p, await book([]), { apply: false })).rejects.toThrow(ForbiddenError);
+  const r = await importConcepts(p, await book([row({ Codigo: "PRE-1" })]), { apply: true });
+  expect(r.applied).toBe(true);
 });
 
 test("«1.500» escrito como texto es un error de fila, no 1,50", async () => {

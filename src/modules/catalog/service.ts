@@ -5,7 +5,6 @@ import { NotFoundError, ValidationError } from "@/lib/errors";
 import { parseOrThrow } from "@/lib/validation";
 import { Prisma, type Concept } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
-import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { conceptInput, type ConceptInput } from "./schema";
 
@@ -107,7 +106,6 @@ async function uniqueCode<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export async function createConcept(actor: CurrentUser, raw: ConceptInput): Promise<Concept> {
-  assertAdmin(actor);
   const input = parseOrThrow(conceptInput, raw);
   return uniqueCode(() =>
     prisma.$transaction(async (tx) => {
@@ -123,7 +121,6 @@ export async function createConcept(actor: CurrentUser, raw: ConceptInput): Prom
 }
 
 export async function updateConcept(actor: CurrentUser, id: string, raw: ConceptInput): Promise<Concept> {
-  assertAdmin(actor);
   const input = parseOrThrow(conceptInput, raw);
   return uniqueCode(() =>
     prisma.$transaction(async (tx) => {
@@ -138,7 +135,6 @@ export async function updateConcept(actor: CurrentUser, id: string, raw: Concept
 }
 
 export async function setConceptActive(actor: CurrentUser, id: string, active: boolean): Promise<void> {
-  assertAdmin(actor);
   await prisma.$transaction(async (tx) => {
     const concept = await tx.concept.findUnique({ where: { id } });
     if (!concept) throw new NotFoundError("El concepto no existe");
@@ -152,7 +148,6 @@ export async function setConceptActive(actor: CurrentUser, id: string, active: b
 
 /** «Eliminar»: deletes an unused concept; one referenced by quotes (plan 3) is deactivated instead. */
 export async function removeConcept(actor: CurrentUser, id: string): Promise<"deleted" | "deactivated"> {
-  assertAdmin(actor);
   const concept = await getConcept(id);
   return deleteOrDeactivate(
     () => prisma.$transaction(async (tx) => {

@@ -9,7 +9,7 @@ const STATUS = { activos: "active", inactivos: "inactive", todos: "all" } as con
 const one = (v: string | string[] | undefined) => (typeof v === "string" ? v : undefined);
 
 export default async function ClientesPage({ searchParams }: PageProps<"/clientes">) {
-  const user = await requireUser();
+  await requireUser();
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const estado = one(sp.estado) ?? "activos";
@@ -23,7 +23,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
       <div className="head">
         <h1>Clientes</h1>
         <div className="actions">
-          {user.role === "admin" && <Link className="btn" href="/clientes/importar">Importar Excel</Link>}
+          <Link className="btn" href="/clientes/importar">Importar Excel</Link>
           <a className="btn" href="/api/clientes/exportar">Exportar</a>
           <Link className="btn pri" href="/clientes/nuevo">Nuevo cliente</Link>
         </div>

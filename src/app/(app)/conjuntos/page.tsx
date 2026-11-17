@@ -6,14 +6,14 @@ import { listKits } from "@/modules/kits/service";
 export const metadata: Metadata = { title: "Conjuntos · ISF Presupuestos" };
 
 export default async function ConjuntosPage() {
-  const user = await requireUser();
+  await requireUser();
   const kits = await listKits({ includeInactive: true });
 
   return (
     <>
       <div className="head">
         <h1>Conjuntos</h1>
-        <div className="actions">{user.role === "admin" && <Link className="btn pri" href="/conjuntos/nuevo">Nuevo conjunto</Link>}</div>
+        <div className="actions"><Link className="btn pri" href="/conjuntos/nuevo">Nuevo conjunto</Link></div>
       </div>
       <p className="mut" style={{ marginTop: 8, maxWidth: 720 }}>
         Un conjunto calcula solo las cantidades de lo que acompaña a un concepto principal: por ejemplo, los metros de manguera de cada bomba según su distancia al cuadro.

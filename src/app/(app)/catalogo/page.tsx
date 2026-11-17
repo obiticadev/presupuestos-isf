@@ -28,8 +28,7 @@ function values(c: ConceptDetail): ConceptValues {
 }
 
 export default async function CatalogoPage({ searchParams }: PageProps<"/catalogo">) {
-  const user = await requireUser();
-  const isAdmin = user.role === "admin";
+  await requireUser();
   const sp = await searchParams;
   const q = one(sp.q) ?? "";
   const categoria = one(sp.categoria) ?? "";
@@ -37,7 +36,7 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
   const validacion = one(sp.validacion) ?? "todos";
   const page = Math.max(1, Number(one(sp.pagina)) || 1);
   const conceptId = one(sp.concepto);
-  const creating = isAdmin && one(sp.nuevo) === "1";
+  const creating = one(sp.nuevo) === "1";
 
   const [{ items, total }, categories, units, taxes, settings] = await Promise.all([
     listConcepts({
@@ -74,9 +73,9 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
       <div className="head">
         <h1>Catálogo</h1>
         <div className="actions">
-          {isAdmin && <Link className="btn" href="/catalogo/importar">Importar Excel</Link>}
+          <Link className="btn" href="/catalogo/importar">Importar Excel</Link>
           <a className="btn" href="/api/catalogo/exportar">Exportar</a>
-          {isAdmin && <Link className="btn pri" href={`${href({ nuevo: "1" })}#panel`}>Nuevo concepto</Link>}
+          <Link className="btn pri" href={`${href({ nuevo: "1" })}#panel`}>Nuevo concepto</Link>
         </div>
       </div>
       <form className="filters" method="get">
@@ -145,33 +144,15 @@ export default async function CatalogoPage({ searchParams }: PageProps<"/catalog
               <h2 style={{ margin: 0 }}>{selected ? "Concepto" : "Nuevo concepto"}</h2>
               <Link className="mut" href={href({})}>Cerrar</Link>
             </div>
-            {isAdmin ? (
-              <ConceptForm
-                key={selected ? `${selected.id}-${selected.updatedAt.getTime()}` : "nuevo"}
-                concept={selected ? values(selected) : null}
-                categories={opt(categories)}
-                units={opt(units)}
-                taxes={opt(taxes)}
-                marginPct={formatDecimalEs(settings.defaultMarginPct, { min: 0 })}
-                listHref={href({})}
-              />
-            ) : (
-              selected && (
-                <dl style={{ marginTop: 14 }}>
-                  <dt>Código</dt><dd className="code">{selected.code}</dd>
-                  <dt>Descripción</dt><dd>{selected.description}</dd>
-                  <dt>Categoría</dt><dd>{selected.category.name}</dd>
-                  <dt>Unidad</dt><dd>{selected.unit.name}</dd>
-                  <dt>Precio de venta</dt><dd>{money(selected.salePrice)}</dd>
-                  <dt>Impuesto</dt><dd>{selected.tax.name}</dd>
-                  <dt>Validado</dt><dd>{selected.validated ? "Sí" : "No: bloquea la emisión"}</dd>
-                  {selected.notes && (<><dt>Observaciones</dt><dd style={{ whiteSpace: "pre-wrap" }}>{selected.notes}</dd></>)}
-                  {(selected.manufacturer || selected.supplier || selected.supplierRef) && (
-                    <><dt>Proveedor</dt><dd>{[selected.manufacturer, selected.supplier, selected.supplierRef].filter(Boolean).join(" · ")}</dd></>
-                  )}
-                </dl>
-              )
-            )}
+            <ConceptForm
+              key={selected ? `${selected.id}-${selected.updatedAt.getTime()}` : "nuevo"}
+              concept={selected ? values(selected) : null}
+              categories={opt(categories)}
+              units={opt(units)}
+              taxes={opt(taxes)}
+              marginPct={formatDecimalEs(settings.defaultMarginPct, { min: 0 })}
+              listHref={href({})}
+            />
           </aside>
         )}
       </div>

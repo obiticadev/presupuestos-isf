@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { Prisma } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
-import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { readClientsBook } from "./excel";
 import { clientInput, contactInput, locationInput } from "./schema";
@@ -40,7 +39,6 @@ type Parsed<T> = { success: true; data: T } | { success: false; error: z.ZodErro
  * «Añadir y actualizar»: what is not in the file is left as it is. Any row error means nothing is written.
  */
 export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts: { apply: boolean }): Promise<ClientImportResult> {
-  assertAdmin(actor);
   const book = await readClientsBook(bytes);
   if ("error" in book) return { error: book.error, rows: [], created: 0, updated: 0, applied: false };
 

@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ImportForm } from "@/components/import-form";
 import { requireUser } from "@/modules/auth/session";
 import { importClientsAction } from "@/modules/clients/actions";
@@ -8,8 +7,7 @@ import { importClientsAction } from "@/modules/clients/actions";
 export const metadata: Metadata = { title: "Importar clientes · ISF Presupuestos" };
 
 export default async function ImportarClientesPage() {
-  const user = await requireUser();
-  if (user.role !== "admin") notFound();
+  await requireUser();
   return (
     <>
       <div className="crumb"><Link href="/clientes">Clientes</Link> / Importar</div>

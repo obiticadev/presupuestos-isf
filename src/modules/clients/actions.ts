@@ -78,7 +78,7 @@ export async function removeLocationAction(_prev: ActionResult | null, form: For
   return run(s(form, "clientId"), () => clients.removeLocation(actor, s(form, "id")));
 }
 
-/** «Revisar» and «Confirmar importación» of the clients workbook (admin only, checked by importClients). */
+/** «Revisar» and «Confirmar importación» of the clients workbook (open to everyone). */
 export async function importClientsAction(_prev: ImportState, form: FormData): Promise<ImportState> {
   const actor = await requireUser();
   return importFile(form, "/clientes", (bytes, apply) => importClients(actor, bytes, { apply }));

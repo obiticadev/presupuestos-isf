@@ -4,7 +4,6 @@ import { NotFoundError, ValidationError } from "@/lib/errors";
 import { parseOrThrow } from "@/lib/validation";
 import { Prisma, type KitTemplate } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
-import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { kitDefinition, refCategoryId, refConceptId, type KitDefinition } from "./definition";
 
@@ -51,7 +50,6 @@ async function checkRefs(tx: Prisma.TransactionClient, def: KitDefinition): Prom
 }
 
 export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
-  assertAdmin(actor);
   const input = parseOrThrow(kitInput, raw);
   try {
     return await prisma.$transaction(async (tx) => {
@@ -73,7 +71,6 @@ export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
 }
 
 export async function setKitActive(actor: CurrentUser, id: string, active: boolean): Promise<void> {
-  assertAdmin(actor);
   await prisma.$transaction(async (tx) => {
     const row = await tx.kitTemplate.findUnique({ where: { id } });
     if (!row) throw new NotFoundError("Conjunto no encontrado");

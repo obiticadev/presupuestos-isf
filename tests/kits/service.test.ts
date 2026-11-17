@@ -1,4 +1,4 @@
-import { ForbiddenError, ValidationError } from "@/lib/errors";
+import { ValidationError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { setConceptActive } from "@/modules/catalog/service";
 import type { KitDefinition } from "@/modules/kits/definition";
@@ -52,7 +52,9 @@ test("nombre repetido se rechaza", async () => {
   await expect(saveKit(admin, { name: "Instalación de bomba", description: "", definition: def() })).rejects.toThrow("Ya existe un conjunto con ese nombre");
 });
 
-test("un presupuestador no puede guardar conjuntos", async () => {
+test("un presupuestador guarda y desactiva un conjunto", async () => {
   const p = await makeUser("presupuestador");
-  await expect(saveKit(p, { name: "X", description: "", definition: def() })).rejects.toThrow(ForbiddenError);
+  const k = await saveKit(p, { name: "X", description: "", definition: def() });
+  await setKitActive(p, k.id, false);
+  expect((await getKit(k.id)).active).toBe(false);
 });

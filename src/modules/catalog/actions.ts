@@ -77,7 +77,7 @@ export async function removeConceptAction(_prev: RemoveResult | null, form: Form
   return result.ok ? { ok: true, outcome } : result;
 }
 
-/** «Revisar» and «Confirmar importación» of the catalog (admin only, checked by importConcepts). */
+/** «Revisar» and «Confirmar importación» of the catalog (open to everyone). */
 export async function importCatalogAction(_prev: ImportState, form: FormData): Promise<ImportState> {
   const actor = await requireUser();
   return importFile(form, "/catalogo", (bytes, apply) => importConcepts(actor, bytes, { apply }));

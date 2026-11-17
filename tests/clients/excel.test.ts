@@ -1,6 +1,5 @@
 import ExcelJS from "exceljs";
 import { prisma } from "@/lib/db";
-import { ForbiddenError } from "@/lib/errors";
 import { CLIENT_COLUMNS, CONTACT_COLUMNS, LOCATION_COLUMNS, readClientsBook, writeClientsBook } from "@/modules/clients/excel";
 import { importClients } from "@/modules/clients/import";
 import { createClient, exportClients, getClient, saveContact, saveLocation, setClientActive } from "@/modules/clients/service";
@@ -151,9 +150,9 @@ test("falta una hoja o una columna", async () => {
   expect((await importClients(admin, new Uint8Array([1, 2, 3]), { apply: false })).error).toBe("El archivo no es un Excel (.xlsx) válido");
 });
 
-test("solo un administrador puede importar", async () => {
+test("un presupuestador puede importar", async () => {
   const p = await makeUser("presupuestador");
-  await expect(importClients(p, await book({ Clientes: [cliente()] }), { apply: true })).rejects.toThrow(ForbiddenError);
+  expect((await importClients(p, await book({ Clientes: [cliente()] }), { apply: true })).applied).toBe(true);
 });
 
 test("la importación queda en el historial", async () => {

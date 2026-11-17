@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/db";
 import { logAction } from "@/modules/audit/service";
-import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import type { Concept, Prisma } from "@/generated/prisma/client";
 import { readCatalogSheet, type Column } from "./excel";
@@ -30,7 +29,6 @@ function yesNo(value: string, empty: boolean): boolean | null {
  * Any row error (or a file-level error) means nothing is written: all or nothing.
  */
 export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts: { apply: boolean }): Promise<ImportResult> {
-  assertAdmin(actor);
   const sheet = await readCatalogSheet(bytes);
   if ("error" in sheet) return { error: sheet.error, rows: [], created: 0, updated: 0, applied: false };
 
