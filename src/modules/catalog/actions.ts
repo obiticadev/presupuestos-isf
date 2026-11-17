@@ -63,18 +63,21 @@ export async function saveConceptAction(_prev: SaveConceptResult | null, form: F
   return result.ok ? { ok: true, id: savedId } : result;
 }
 
-export async function setConceptActiveAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+export async function setConceptActiveAction(_prev: ToggleResult | null, form: FormData): Promise<ToggleResult> {
   const actor = await requireUser();
-  return run(CATALOG, () => catalog.setConceptActive(actor, String(form.get("id")), form.get("active") === "1"));
+  let incompleteKits: string[] = [];
+  const result = await run(CATALOG, async () => { incompleteKits = (await catalog.setConceptActive(actor, String(form.get("id")), form.get("active") === "1")).incompleteKits; });
+  return result.ok ? { ok: true, incompleteKits } : result;
 }
 
-export type RemoveResult = ActionResult & { outcome?: "deleted" | "deactivated" };
+export type ToggleResult = ActionResult & { incompleteKits?: string[] };
+export type RemoveResult = ToggleResult & { outcome?: "deleted" | "deactivated" };
 
 export async function removeConceptAction(_prev: RemoveResult | null, form: FormData): Promise<RemoveResult> {
   const actor = await requireUser();
-  let outcome: "deleted" | "deactivated" = "deleted";
-  const result = await run(CATALOG, async () => { outcome = await catalog.removeConcept(actor, String(form.get("id"))); });
-  return result.ok ? { ok: true, outcome } : result;
+  let removal: Awaited<ReturnType<typeof catalog.removeConcept>> = { outcome: "deleted", incompleteKits: [] };
+  const result = await run(CATALOG, async () => { removal = await catalog.removeConcept(actor, String(form.get("id"))); });
+  return result.ok ? { ok: true, ...removal } : result;
 }
 
 /** «Revisar» and «Confirmar importación» of the catalog (open to everyone). */

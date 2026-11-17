@@ -113,7 +113,7 @@ test("editar y quitar líneas; ocultar no cambia el total", async () => {
 test("eliminar un concepto usado en un presupuesto lo desactiva", async () => {
   const { actor, admin, sub } = await makeDraft();
   await addCatalogLine(actor, sub.id, { conceptId: "concept-man-12x075", quantity: "1" });
-  expect(await removeConcept(admin, "concept-man-12x075")).toBe("deactivated");
+  expect((await removeConcept(admin, "concept-man-12x075")).outcome).toBe("deactivated");
 });
 
 test("eliminar un cliente con presupuestos lo desactiva, igual que su ubicación usada", async () => {

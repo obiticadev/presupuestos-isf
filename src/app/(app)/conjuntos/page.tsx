@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { prisma } from "@/lib/db";
 import { requireUser } from "@/modules/auth/session";
-import { listKits } from "@/modules/kits/service";
+import { kitIssues, listKits } from "@/modules/kits/service";
 
 export const metadata: Metadata = { title: "Conjuntos · ISF Presupuestos" };
 
 export default async function ConjuntosPage() {
   await requireUser();
   const kits = await listKits({ includeInactive: true });
+  const incomplete = await Promise.all(kits.map(async (k) => k.active && (await kitIssues(prisma, k)).length > 0));
 
   return (
     <>
@@ -21,12 +23,12 @@ export default async function ConjuntosPage() {
       <table style={{ marginTop: 18 }}>
         <thead><tr><th>Nombre</th><th>Descripción</th><th className="n">Componentes</th><th>Estado</th></tr></thead>
         <tbody>
-          {kits.map((k) => (
+          {kits.map((k, i) => (
             <tr key={k.id} style={k.active ? undefined : { opacity: 0.6 }}>
               <td><Link className="code" href={`/conjuntos/${k.id}`}>{k.name}</Link></td>
               <td>{k.description || <span className="mut">—</span>}</td>
               <td className="n">{k.definition.components.length}</td>
-              <td>{k.active ? "Activo" : <span className="badge off">Desactivado</span>}</td>
+              <td>{k.active ? "Activo" : <span className="badge off">Desactivado</span>}{incomplete[i] && <> <span className="badge amber">Incompleto</span></>}</td>
             </tr>
           ))}
           {kits.length === 0 && <tr><td colSpan={4} className="mut">Todavía no hay conjuntos.</td></tr>}

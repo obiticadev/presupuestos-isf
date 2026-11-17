@@ -2,10 +2,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { NotFoundError } from "@/lib/errors";
+import { prisma } from "@/lib/db";
 import { requireUser } from "@/modules/auth/session";
 import { listCategories } from "@/modules/catalog/lists";
 import { listConceptOptions } from "@/modules/catalog/service";
-import { getKit, type Kit } from "@/modules/kits/service";
+import { getKit, kitIssues, type Kit } from "@/modules/kits/service";
 import { KitActiveToggle, KitForm } from "../forms";
 
 export const metadata: Metadata = { title: "Conjunto · ISF Presupuestos" };
@@ -24,6 +25,7 @@ export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id
       throw e;
     }
   }
+  const issues = kit ? await kitIssues(prisma, kit) : [];
   const [concepts, categories] = await Promise.all([listConceptOptions(), listCategories({ includeInactive: true })]);
   const conceptOptions = concepts.map((c) => ({ id: c.id, name: `${c.code} · ${c.description}`, active: c.active }));
   const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name, active: c.active }));
@@ -36,6 +38,7 @@ export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id
         {kit && !kit.active && <span className="badge off">Desactivado</span>}
       </div>
 
+      {issues.map((m) => <p key={m} className="warnbox" style={{ marginBottom: 8 }}>{m}</p>)}
       <KitForm kit={kit} concepts={conceptOptions} categories={categoryOptions} />
       {kit && <KitActiveToggle id={kit.id} active={kit.active} />}
     </>
