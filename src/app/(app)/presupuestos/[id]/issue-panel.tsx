@@ -41,7 +41,7 @@ export function IssuePanel({ q, required }: { q: QuoteDetail; required: (Require
                       <ActionForm action={setWaiverAction} close style={{ display: "grid", gap: 6, marginTop: 6 }}>
                         <input type="hidden" name="quoteId" value={q.id} />
                         <input type="hidden" name="conceptId" value={r.conceptId} />
-                        <input name="reason" required maxLength={300} aria-label={`Motivo para no incluir ${r.concept.description}`} placeholder="Motivo" />
+                        <label className="field">Motivo<input name="reason" required maxLength={300} aria-label={`Motivo para no incluir ${r.concept.description}`} /></label>
                         <button className="btn" style={{ justifySelf: "start" }}>Marcar 0</button>
                       </ActionForm>
                     </details>
