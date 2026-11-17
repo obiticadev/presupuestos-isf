@@ -33,7 +33,7 @@ function body(d: PdfDocument): string {
 ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
 <section class="letter">
   <div class="from"><b>${c.legalName}</b>${[c.address, joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
-  <div class="to"><b>${d.recipient.name}</b>${[d.recipient.place, ...d.recipient.address, d.recipient.attention ?? ""].filter(Boolean).map((l) => html`<br>${l}`)}</div>
+  <div class="to"><b>${d.recipient.name}</b>${[...d.recipient.address, d.recipient.attention ?? ""].filter(Boolean).map((l) => html`<br>${l}`)}</div>
   <div class="place">${d.letter.place} a ${d.longDate}</div>
   <div class="subject">Asunto: ${d.reference}</div>
   <p>${d.letter.greeting}</p>

@@ -37,7 +37,7 @@ export type PdfRow =
 export type PdfDocument = {
   draft: boolean; reference: string; shortDate: string; longDate: string;
   company: PdfSource["company"];
-  recipient: { name: string; place: string; address: string[]; attention: string | null };
+  recipient: { name: string; address: string[]; attention: string | null };
   letter: { place: string; greeting: string; intro: string; closing: string[] };
   clientName: string; title: string; rows: PdfRow[];
   totals: { base: string; taxes: { label: string; amount: string }[]; total: string };
@@ -54,13 +54,8 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
   const [y, m, day] = q.date.slice(0, 10).split("-").map(Number);
   const longDate = LONG_DATE.format(new Date(q.date)); // a date without time stored at UTC midnight
   const loc = q.location;
-  // Snapshots from before 2026-11-12 (city/province) keep their layout: location name, address with «city (province)», no «en …».
-  const legacy = !!loc && loc.installation === undefined;
-  const installation = (loc?.installation ?? loc?.city ?? "").trim();
-  const country = (loc?.country ?? loc?.province ?? "").trim();
-  const where = legacy ? "" : [installation, country].filter(Boolean).join(", ");
-  const cityLine = legacy ? [installation, country && `(${country})`].filter(Boolean).join(" ") : "";
-  const address = loc?.address.trim() ? [loc.address.trim(), cityLine].filter(Boolean) : textLines(q.client.fiscalAddress);
+  // Snapshots from before 2026-11-12 have city/province instead: their letter keeps no «en …».
+  const where = [loc?.installation, loc?.country].map((x) => (x ?? "").trim()).filter(Boolean).join(", ");
 
   const rows: PdfRow[] = [];
   q.sections.forEach((s, i) => {
@@ -87,7 +82,7 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
     longDate,
     company,
     recipient: {
-      name: q.client.legalName, place: legacy ? loc.name : where, address,
+      name: q.client.legalName, address: textLines(q.client.fiscalAddress),
       attention: q.contact ? `A la atención de ${q.contact.name}` : null,
     },
     letter: {

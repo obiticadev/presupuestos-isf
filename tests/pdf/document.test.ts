@@ -49,7 +49,7 @@ describe("buildDocument", () => {
     expect(d.conditions.validity).toBe("30 días");
     expect(d.reference).toBe("PR-2026000001-R00");
     expect(d.recipient.attention).toBe("A la atención de Ana López");
-    expect(d.recipient.address).toEqual(["Ctra. de Toledo, km 4", "28300 Aranjuez (Madrid)"]);
+    expect(d.recipient.address).toEqual(["Calle Mayor 1", "28001 Madrid"]);
   });
 
   it("formats quantities with and without unit", () => {
@@ -131,18 +131,24 @@ describe("buildDocument", () => {
     expect(buildDocument(src(), { draft: false }).rows.some((r) => r.kind === "note")).toBe(false);
   });
 
+  it("el destinatario es razón social, dirección fiscal línea a línea y contacto", () => {
+    const s = src();
+    s.quote.client.fiscalAddress = "Calle de Ejemplo, 1.\r\n\n  Dirección ficticia.  \n";
+    const d = buildDocument(s, { draft: false });
+    expect(d.recipient).toEqual({ name: "Acme S.L.", address: ["Calle de Ejemplo, 1.", "Dirección ficticia."], attention: "A la atención de Ana López" });
+  });
+
   it("toPdfSource round-trips through JSON", () => {
     expect(toPdfSource({ d: new Date("2026-01-01T00:00:00Z") }, { q: 2 })).toEqual({ company: { d: "2026-01-01T00:00:00.000Z" }, quote: { q: 2 } });
   });
 });
 
 describe("buildDocument: instalación", () => {
-  it("el destinatario lleva «instalación, país» en lugar del nombre, y debajo solo la dirección", () => {
+  it("el destinatario es el cliente y su dirección fiscal, no la instalación", () => {
     const s = src();
     s.quote.location = { name: "Planta", address: "Ctra. de Toledo, km 4", installation: "28300 Aranjuez", country: "España" };
     const d = buildDocument(s, { draft: false });
-    expect(d.recipient.place).toBe("28300 Aranjuez, España");
-    expect(d.recipient.address).toEqual(["Ctra. de Toledo, km 4"]);
+    expect(d.recipient).toEqual({ name: "Acme S.L.", address: ["Calle Mayor 1", "28001 Madrid"], attention: "A la atención de Ana López" });
   });
 
   it("la carta sigue el asunto con «en instalación, país»", () => {
@@ -156,21 +162,20 @@ describe("buildDocument: instalación", () => {
     const s = src();
     s.quote.location = { name: "Planta", address: "", installation: "EDAR Sur", country: "" };
     expect(buildDocument(s, { draft: false }).letter.intro).toMatch(/bombeo en EDAR Sur\.$/);
-    expect(buildDocument(s, { draft: false }).recipient.place).toBe("EDAR Sur");
     s.quote.location = { name: "Planta", address: "", installation: "", country: "" };
     expect(buildDocument(s, { draft: false }).letter.intro).toMatch(/bombeo\.$/);
-    expect(buildDocument(s, { draft: false }).recipient.place).toBe("");
   });
 
-  it("un snapshot antiguo conserva el nombre de la ubicación y la carta sin «en»", () => {
+  it("un snapshot antiguo deja la carta sin «en»", () => {
     const d = buildDocument(src(), { draft: false });
-    expect(d.recipient.place).toBe("Planta");
     expect(d.letter.intro).toBe("Agradeciendo la confianza, presentamos oferta en referencia a ampliación del grupo de bombeo.");
   });
 
-  it("un snapshot antiguo con city y province se regenera igual", () => {
+  it("un snapshot antiguo con city y province se regenera con la dirección fiscal y sin «en»", () => {
     const s = src();
     s.quote.location = { name: "Planta", address: "Ctra. de Toledo, km 4", city: "28300 Aranjuez", province: "Madrid" };
-    expect(buildDocument(s, { draft: false }).recipient.address).toEqual(["Ctra. de Toledo, km 4", "28300 Aranjuez (Madrid)"]);
+    const d = buildDocument(s, { draft: false });
+    expect(d.recipient.address).toEqual(["Calle Mayor 1", "28001 Madrid"]);
+    expect(d.letter.intro).toMatch(/bombeo\.$/);
   });
 });
