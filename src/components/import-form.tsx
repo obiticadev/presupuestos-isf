@@ -3,12 +3,11 @@
 import Link from "next/link";
 import { startTransition, useActionState, useState } from "react";
 
-import type { ImportRow as CatalogRow } from "@/lib/import-result";
+import type { ImportResult } from "@/lib/import-result";
 
-type ImportRow = Omit<CatalogRow, "changes"> & { changes?: string[] }; // client rows carry no field diff
 export type ImportState =
   | { ok: false; errors: Record<string, string> }
-  | { ok: true; error?: string; rows: ImportRow[]; created: number; updated: number; unchanged?: number; applied: boolean }
+  | ({ ok: true } & ImportResult)
   | null;
 
 /**
@@ -61,7 +60,7 @@ export function ImportForm({ step, keyLabel, doneHref, doneLabel }: {
         <>
           <h2>Revisión</h2>
           <p className={bad ? "err" : "mut"} style={{ marginBottom: 10 }}>
-            {result.created} altas, {result.updated} cambios, {result.unchanged ?? 0} sin cambios, {bad} filas con errores.
+            {result.created} altas, {result.updated} cambios, {result.unchanged} sin cambios, {bad} filas con errores.
             {bad > 0 && " Corrige el archivo y vuelve a revisarlo: no se importará nada mientras haya errores."}
           </p>
           <div style={{ overflowX: "auto" }}>
@@ -74,7 +73,7 @@ export function ImportForm({ step, keyLabel, doneHref, doneLabel }: {
                     <td className="n">{r.row}</td>
                     <td className="code">{r.code || "—"}</td>
                     <td>{r.action === "create" ? "Alta" : r.action === "unchanged" ? "Sin cambios" : "Cambio"}</td>
-                    <td>{r.errors.length ? <ul style={{ margin: 0, paddingLeft: 18 }}>{r.errors.map((e) => <li key={e}>{e}</li>)}</ul> : <span className="mut">{r.changes?.join("; ") || "Correcta"}</span>}</td>
+                    <td>{r.errors.length ? <ul style={{ margin: 0, paddingLeft: 18 }}>{r.errors.map((e) => <li key={e}>{e}</li>)}</ul> : <span className="mut">{r.changes.join("; ") || "Correcta"}</span>}</td>
                   </tr>
                 ))}
                 {rows.length === 0 && <tr><td colSpan={sheets ? 5 : 4} className="mut">El archivo no tiene filas.</td></tr>}

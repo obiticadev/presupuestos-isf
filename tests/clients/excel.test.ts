@@ -33,7 +33,7 @@ const snapshot = async () => (await exportClients()).map((c) => ({
   locations: c.locations.map((x) => omit(x, ["id", "clientId"])),
 }));
 
-test("exportar e importar sin cambios da 0 altas y todo cambios, sin errores", async () => {
+test("exportar e importar sin cambios da todo sin cambios, sin errores", async () => {
   const admin = await makeUser("admin");
   const a = await createClient(admin, { legalName: "Aguas del Sur, S.A.", taxId: "B12345678", offerValidityDays: "30", paymentTerms: "30 días\nTransferencia" });
   const b = await createClient(admin, { legalName: "Conservas Ribera", taxId: "A28000000" });
@@ -46,7 +46,7 @@ test("exportar e importar sin cambios da 0 altas y todo cambios, sin errores", a
   const r = await importClients(admin, await writeClientsBook(await exportClients()), { apply: true });
   expect(r.error).toBeUndefined();
   expect(r.rows.flatMap((x) => x.errors)).toEqual([]);
-  expect([r.created, r.updated, r.applied]).toEqual([0, 6, true]);
+  expect([r.created, r.updated, r.unchanged, r.applied]).toEqual([0, 0, 6, true]);
   expect(await snapshot()).toEqual(before);
 });
 
@@ -159,7 +159,7 @@ test("la importación queda en el historial", async () => {
   const admin = await makeUser("admin");
   await importClients(admin, await book({ Clientes: [cliente()] }), { apply: true });
   const logs = await prisma.auditLog.findMany({ where: { entity: "client" }, select: { summary: true } });
-  expect(logs.map((l) => l.summary)).toEqual(expect.arrayContaining(["Alta de Aguas del Sur, S.A. (B12345678) (importación)", "Importación de clientes: 1 altas, 0 cambios"]));
+  expect(logs.map((l) => l.summary)).toEqual(expect.arrayContaining(["Alta de Aguas del Sur, S.A. (B12345678) (importación)", "Importación de clientes: 1 altas, 0 cambios, 0 sin cambios"]));
 });
 
 test("exportar e importar con dos contactos del mismo nombre (uno desactivado) no da errores", async () => {
@@ -173,4 +173,24 @@ test("exportar e importar con dos contactos del mismo nombre (uno desactivado) n
   expect(r.created).toBe(0);
   expect(await snapshot()).toEqual(before);
   expect((await prisma.clientContact.findUniqueOrThrow({ where: { id: contact.id } })).role).toBe("Antigua");
+});
+
+test("exportar e importar clientes sin cambios da todo sin cambios y no escribe", async () => {
+  const admin = await makeUser("admin");
+  const c = await createClient(admin, { legalName: "Aguas del Sur, S.A.", taxId: "B12345678", offerValidityDays: "30" });
+  await saveContact(admin, c.id, { name: "Ana López", role: "Jefa", email: "ana@ejemplo.es" });
+  await saveLocation(admin, c.id, { name: "Planta", installation: "EDAR Sur", country: "España" });
+  const logs = await prisma.auditLog.count();
+  const r = await importClients(admin, await writeClientsBook(await exportClients()), { apply: true });
+  expect([r.created, r.updated, r.unchanged]).toEqual([0, 0, 3]);
+  expect(await prisma.auditLog.count()).toBe(logs + 1);
+  expect((await prisma.auditLog.findFirstOrThrow({ where: { action: "import" } })).summary).toBe("Importación de clientes: 0 altas, 0 cambios, 3 sin cambios");
+});
+
+test("un cambio en la instalación dice qué cambia", async () => {
+  const admin = await makeUser("admin");
+  const c = await createClient(admin, { legalName: "Aguas del Sur, S.A.", taxId: "B12345678" });
+  await saveLocation(admin, c.id, { name: "Planta", country: "España" });
+  const r = await importClients(admin, await book({ Instalaciones: [{ CIF: "B12345678", Nombre: "Planta", Pais: "Portugal" }] }), { apply: false });
+  expect(r.rows[0]).toMatchObject({ sheet: "Instalaciones", action: "update", changes: ["País: España → Portugal"] });
 });

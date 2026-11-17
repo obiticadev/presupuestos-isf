@@ -4,11 +4,11 @@ import { ValidationError } from "@/lib/errors";
 import { Prisma } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
+import type { ImportResult, ImportRow } from "@/lib/import-result";
 import { readClientsBook } from "./excel";
 import { clientInput, contactInput, locationInput } from "./schema";
 
-export type ClientImportRow = { sheet: "Clientes" | "Contactos" | "Instalaciones"; row: number; code: string; action: "create" | "update"; errors: string[] };
-export type ClientImportResult = { error?: string; rows: ClientImportRow[]; created: number; updated: number; applied: boolean };
+const EMPTY = { rows: [], created: 0, updated: 0, unchanged: 0, removals: [], decisions: [], incompleteKits: [] };
 
 // Column that each validated field comes from, to prefix row errors.
 const CLIENT_FIELD: Record<string, string> = {
@@ -18,6 +18,18 @@ const CLIENT_FIELD: Record<string, string> = {
 const CHILD_FIELD: Record<string, string> = {
   name: "Nombre", role: "Cargo", email: "Email", phone: "Telefono", address: "Direccion", installation: "Instalacion", country: "Pais",
 };
+
+const CLIENT_LABEL: Record<string, string> = {
+  legalName: "Razón social", tradeName: "Nombre comercial", fiscalAddress: "Dirección fiscal", paymentTerms: "Forma de pago",
+  exclusions: "Exclusiones", offerValidityDays: "Validez (días)", notes: "Observaciones", active: "Activo",
+};
+const CONTACT_LABEL: Record<string, string> = { role: "Cargo", email: "Email", phone: "Teléfono", active: "Activo" };
+const LOCATION_LABEL: Record<string, string> = { address: "Dirección", installation: "Instalación", country: "País", active: "Activo" };
+
+const show = (v: unknown) => (typeof v === "boolean" ? (v ? "sí" : "no") : v == null || v === "" ? "vacío" : String(v));
+/** «Campo: antes → después» for each labelled field that differs. */
+const changedFields = (before: Record<string, unknown>, after: Record<string, unknown>, labels: Record<string, string>): string[] =>
+  Object.keys(labels).filter((k) => show(before[k]) !== show(after[k])).map((k) => `${labels[k]}: ${show(before[k])} → ${show(after[k])}`);
 
 const normCif = (s: string) => s.replace(/[\s.-]/g, "").toUpperCase();
 const sameName = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -38,15 +50,15 @@ type Parsed<T> = { success: true; data: T } | { success: false; error: z.ZodErro
  * Validates the three sheets of a clients workbook and, with `apply`, writes them in one transaction (spec 2.2).
  * «Añadir y actualizar»: what is not in the file is left as it is. Any row error means nothing is written.
  */
-export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts: { apply: boolean }): Promise<ClientImportResult> {
+export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts: { apply: boolean }): Promise<ImportResult> {
   const book = await readClientsBook(bytes);
-  if ("error" in book) return { error: book.error, rows: [], created: 0, updated: 0, applied: false };
+  if ("error" in book) return { error: book.error, ...EMPTY, applied: false };
 
   // Same order as the export (exportClients), so repeated names pair up row by row.
   const order = [{ active: "desc" }, { name: "asc" }, { id: "asc" }] satisfies Prisma.ClientContactOrderByWithRelationInput[];
   const existing = new Map((await prisma.client.findMany({ include: { contacts: { orderBy: order }, locations: { orderBy: order } } })).map((c) => [c.taxId, c]));
-  const results: ClientImportRow[] = [];
-  const clientWrites: { id?: string; data: z.output<typeof clientInput> & { active: boolean } }[] = [];
+  const results: ImportRow[] = [];
+  const clientWrites: { id?: string; data: z.output<typeof clientInput> & { active: boolean }; changes: string[] }[] = [];
   const inSheet = new Map<string, number>();
 
   for (const { row, values, cellErrors } of book.clients) {
@@ -61,18 +73,26 @@ export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts:
     });
     if (!parsed.success) errors.push(...issues(parsed.error, CLIENT_FIELD));
     const current = existing.get(cif);
-    results.push({ sheet: "Clientes", row, code: cif, action: current ? "update" : "create", errors });
-    if (parsed.success && errors.length === 0) clientWrites.push({ id: current?.id, data: { ...parsed.data, active } });
+    let action: ImportRow["action"] = current ? "update" : "create";
+    let changes: string[] = [];
+    if (parsed.success && errors.length === 0) {
+      const data = { ...parsed.data, active };
+      changes = current ? changedFields(current, data, CLIENT_LABEL) : [];
+      if (current && changes.length === 0) action = "unchanged";
+      else clientWrites.push({ id: current?.id, data, changes });
+    }
+    results.push({ sheet: "Clientes", row, code: cif, action, changes, errors });
   }
 
   const children = <C extends string, T extends { name: string }>(
     sheet: "Contactos" | "Instalaciones",
     rows: { row: number; values: Record<C | "CIF" | "Nombre" | "Activo", string>; cellErrors: string[] }[],
     parse: (values: Record<C | "CIF" | "Nombre" | "Activo", string>, name: string) => Parsed<T>,
-    list: (client: NonNullable<ReturnType<typeof existing.get>>) => { id: string; name: string }[],
+    list: (client: NonNullable<ReturnType<typeof existing.get>>) => ({ id: string; name: string } & Record<string, unknown>)[],
+    labels: Record<string, string>,
   ) => {
     const what = sheet === "Contactos" ? "contactos" : "instalaciones";
-    const writes: { cif: string; id?: string; data: T & { active: boolean } }[] = [];
+    const writes: { cif: string; id?: string; data: T & { active: boolean }; changes: string[] }[] = [];
     const keyOf = (v: { CIF: string; Nombre: string }) => `${normCif(v.CIF)} · ${v.Nombre.trim().toLowerCase()}`;
     const inFile = new Map<string, number>();
     rows.forEach(({ values }) => inFile.set(keyOf(values), (inFile.get(keyOf(values)) ?? 0) + 1));
@@ -95,45 +115,53 @@ export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts:
       if (matches.length > 1 && inFile.get(key) !== matches.length) errors.push(`Hay varios ${what} con ese nombre en el cliente: renómbralos antes`);
       else if (matches.length <= 1 && before.length > 0) errors.push(`Repetido en la fila ${before[0]}`);
       const match = matches.length > 1 ? matches[before.length] : before.length === 0 ? matches[0] : undefined;
-      results.push({ sheet, row, code: name ? `${cif} · ${name}` : cif, action: match ? "update" : "create", errors });
-      if (parsed.success && errors.length === 0) writes.push({ cif, id: match?.id, data: { ...parsed.data, active } });
+      let action: ImportRow["action"] = match ? "update" : "create";
+      let changes: string[] = [];
+      if (parsed.success && errors.length === 0) {
+        const data = { ...parsed.data, active };
+        changes = match ? changedFields(match, data, labels) : [];
+        if (match && changes.length === 0) action = "unchanged";
+        else writes.push({ cif, id: match?.id, data, changes });
+      }
+      results.push({ sheet, row, code: name ? `${cif} · ${name}` : cif, action, changes, errors });
     }
     return writes;
   };
   const contactWrites = children("Contactos", book.contacts,
-    (v, name) => contactInput.safeParse({ name, role: v.Cargo, email: v.Email, phone: v.Telefono }), (c) => c.contacts);
+    (v, name) => contactInput.safeParse({ name, role: v.Cargo, email: v.Email, phone: v.Telefono }), (c) => c.contacts, CONTACT_LABEL);
   const locationWrites = children("Instalaciones", book.locations,
-    (v, name) => locationInput.safeParse({ name, address: v.Direccion, installation: v.Instalacion, country: v.Pais }), (c) => c.locations);
+    (v, name) => locationInput.safeParse({ name, address: v.Direccion, installation: v.Instalacion, country: v.Pais }), (c) => c.locations, LOCATION_LABEL);
 
   const created = results.filter((r) => r.action === "create").length;
-  const updated = results.length - created;
+  const updated = results.filter((r) => r.action === "update").length;
+  const unchanged = results.filter((r) => r.action === "unchanged").length;
   const ok = results.every((r) => r.errors.length === 0);
-  if (!opts.apply || !ok) return { rows: results, created, updated, applied: false };
+  if (!opts.apply || !ok) return { ...EMPTY, rows: results, created, updated, unchanged, applied: false };
 
   const log = (tx: Prisma.TransactionClient, entityId: string, action: string, summary: string) =>
     logAction(tx, { userId: actor.id, entity: "client", entityId, action, summary: `${summary} (importación)` });
   try {
     await prisma.$transaction(async (tx) => {
       const clients = new Map([...existing.values()].map((c) => [c.taxId, { id: c.id, legalName: c.legalName }]));
-      for (const { id, data } of clientWrites) {
+      for (const { id, data, changes } of clientWrites) {
         const c = id ? await tx.client.update({ where: { id }, data }) : await tx.client.create({ data });
         clients.set(c.taxId, { id: c.id, legalName: c.legalName });
-        await log(tx, c.id, id ? "update" : "create", id ? `${c.legalName}: datos actualizados` : `Alta de ${c.legalName} (${c.taxId})`);
+        await log(tx, c.id, id ? "update" : "create", id ? `${c.legalName}: ${changes.join("; ")}` : `Alta de ${c.legalName} (${c.taxId})`);
       }
-      for (const { cif, id, data } of contactWrites) {
+      for (const { cif, id, data, changes } of contactWrites) {
         const c = clients.get(cif)!;
         if (id) await tx.clientContact.update({ where: { id }, data: { ...data, name: undefined } }); // matched ignoring case: keep the stored name
         else await tx.clientContact.create({ data: { ...data, clientId: c.id } });
-        await log(tx, c.id, id ? "update" : "create", `${c.legalName}: contacto ${data.name} ${id ? "modificado" : "añadido"}`);
+        await log(tx, c.id, id ? "update" : "create", `${c.legalName}: contacto ${data.name} ${id ? `modificado (${changes.join("; ")})` : "añadido"}`);
       }
-      for (const { cif, id, data } of locationWrites) {
+      for (const { cif, id, data, changes } of locationWrites) {
         const c = clients.get(cif)!;
         if (id) await tx.clientLocation.update({ where: { id }, data: { ...data, name: undefined } });
         else await tx.clientLocation.create({ data: { ...data, clientId: c.id } });
-        await log(tx, c.id, id ? "update" : "create", `${c.legalName}: instalación ${data.name} ${id ? "modificada" : "añadida"}`);
+        await log(tx, c.id, id ? "update" : "create", `${c.legalName}: instalación ${data.name} ${id ? `modificada (${changes.join("; ")})` : "añadida"}`);
       }
       await logAction(tx, {
-        userId: actor.id, entity: "client", entityId: "import", action: "import", summary: `Importación de clientes: ${created} altas, ${updated} cambios`,
+        userId: actor.id, entity: "client", entityId: "import", action: "import", summary: `Importación de clientes: ${created} altas, ${updated} cambios, ${unchanged} sin cambios`,
       });
     }, { timeout: 60_000 });
   } catch (error) {
@@ -143,5 +171,5 @@ export async function importClients(actor: CurrentUser, bytes: Uint8Array, opts:
     }
     throw error;
   }
-  return { rows: results, created, updated, applied: true };
+  return { ...EMPTY, rows: results, created, updated, unchanged, applied: true };
 }
