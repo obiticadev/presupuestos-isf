@@ -34,6 +34,7 @@ export function Comment({ kind, id, text, editable, variant }: { kind: Kind; id:
     <>
       {text && (
         <div className={`comment ${variant}`}>
+          {variant === "ck" && <span className="lab">Comentario del conjunto</span>}
           <p>{text}</p>
           {editable && (
             <span className="acts">
