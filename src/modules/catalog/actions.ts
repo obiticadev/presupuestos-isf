@@ -83,5 +83,5 @@ export async function removeConceptAction(_prev: RemoveResult | null, form: Form
 /** «Revisar» and «Confirmar importación» of the catalog (open to everyone). */
 export async function importCatalogAction(_prev: ImportState, form: FormData): Promise<ImportState> {
   const actor = await requireUser();
-  return importFile(form, "/catalogo", (bytes, apply) => importConcepts(actor, bytes, { apply }));
+  return importFile(form, "/catalogo", (bytes, opts) => importConcepts(actor, bytes, opts));
 }

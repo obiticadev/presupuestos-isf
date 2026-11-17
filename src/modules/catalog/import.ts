@@ -2,10 +2,13 @@ import { prisma } from "@/lib/db";
 import { logAction } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { Prisma, type Concept } from "@/generated/prisma/client";
-import type { ImportOptions, ImportResult, ImportRow } from "@/lib/import-result";
+import type { ImportOptions, ImportResult, ImportRow, Removal } from "@/lib/import-result";
+import { ValidationError } from "@/lib/errors";
+import { assertAdmin } from "@/modules/auth/permissions";
 import { readCatalogSheet, type Column } from "./excel";
 import { conceptInput } from "./schema";
-import { conceptSnapshot, describeChanges, diffSnapshots, type ConceptSnapshot } from "./history";
+import { conceptSnapshot, describeChanges, diffSnapshots, historyData, type ConceptSnapshot } from "./history";
+import { kitsUsingConcepts, usedConceptIds } from "./usage";
 import type { ConceptDetail } from "./service";
 
 // Column that each validated field comes from, to prefix row errors.
@@ -30,11 +33,14 @@ function yesNo(value: string, empty: boolean): boolean | null {
  * Any row error (or a file-level error) means nothing is written: all or nothing.
  */
 export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts: ImportOptions): Promise<ImportResult> {
+  const full = opts.mode === "full";
+  if (full) assertAdmin(actor);
   const sheet = await readCatalogSheet(bytes);
   if ("error" in sheet) return { error: sheet.error, ...EMPTY, applied: false };
+  if (full && sheet.rows.length === 0) return { error: "El archivo no tiene filas: la importación completa lo borraría todo", ...EMPTY, applied: false };
 
   const [categories, units, taxes, concepts] = await Promise.all([
-    prisma.category.findMany(), prisma.unit.findMany(), prisma.tax.findMany(), prisma.concept.findMany({ include: { category: true, unit: true, tax: true } }),
+    prisma.category.findMany(), prisma.unit.findMany(), prisma.tax.findMany(), prisma.concept.findMany({ include: { category: true, unit: true, tax: true }, orderBy: { code: "asc" } }),
   ]);
   const byName = <T extends { name: string }>(rows: T[]) => new Map(rows.map((r) => [r.name.trim().toLowerCase(), r]));
   const lookups = { categoryId: byName(categories), unitId: byName(units), taxId: byName(taxes) };
@@ -104,9 +110,21 @@ export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts
   const updated = results.filter((r) => r.action === "update").length;
   const unchanged = results.filter((r) => r.action === "unchanged").length;
   const ok = results.every((r) => r.errors.length === 0);
-  if (!opts.apply || !ok) return { ...EMPTY, rows: results, created, updated, unchanged, applied: false };
 
-  await prisma.$transaction(async (tx) => {
+  // Full mode: concepts not in the file are deleted, or deactivated if used (already inactive and used: left alone).
+  const inFile = new Set(results.map((r) => r.code));
+  const absent = full ? concepts.filter((c) => !inFile.has(c.code)) : [];
+  const removalsFor = (used: Set<string>): Removal[] => absent.filter((c) => c.active || !used.has(c.id)).map((c) => used.has(c.id)
+    ? { kind: "concept", id: c.id, label: c.code, outcome: "deactivate", reason: "Está en uso" }
+    : { kind: "concept", id: c.id, label: c.code, outcome: "delete", reason: "No se usa" });
+  const incompleteFor = (tx: Prisma.TransactionClient | typeof prisma, removals: Removal[]) =>
+    kitsUsingConcepts(tx, removals.filter((x) => x.outcome === "deactivate").map((x) => x.id));
+  if (!opts.apply || !ok) {
+    const removals = full ? removalsFor(await usedConceptIds(prisma)) : [];
+    return { ...EMPTY, rows: results, created, updated, unchanged, removals, incompleteKits: full ? await incompleteFor(prisma, removals) : [], applied: false };
+  }
+
+  const done = await prisma.$transaction(async (tx) => {
     for (const { current, data, after, summary } of writes) {
       const saved = current ? await tx.concept.update({ where: { id: current.id }, data }) : await tx.concept.create({ data });
       await logAction(tx, {
@@ -114,11 +132,33 @@ export async function importConcepts(actor: CurrentUser, bytes: Uint8Array, opts
         data: { concept: after, source: "import" },
       });
     }
+    // Recomputed here: something used since the review is deactivated, not deleted.
+    const removals = full ? removalsFor(await usedConceptIds(tx)) : [];
+    const byId = new Map(absent.map((c) => [c.id, c]));
+    for (const { id, label, outcome } of removals) {
+      const c = byId.get(id)!;
+      if (outcome === "delete") await tx.concept.delete({ where: { id } });
+      else await tx.concept.update({ where: { id }, data: { active: false } });
+      await logAction(tx, {
+        userId: actor.id, entity: "concept", entityId: id, action: outcome,
+        summary: outcome === "delete" ? `Baja de ${label} (importación completa)` : `${label} desactivado (importación completa)`,
+        data: historyData({ ...c, active: outcome === "delete" ? c.active : false }, "import-full"),
+      });
+    }
+    const deleted = removals.filter((x) => x.outcome === "delete").length;
     await logAction(tx, {
       userId: actor.id, entity: "concept", entityId: "import", action: "import",
-      summary: `Importación de catálogo: ${created} altas, ${updated} cambios, ${unchanged} sin cambios`,
+      summary: `Importación de catálogo: ${created} altas, ${updated} cambios, ${unchanged} sin cambios`
+        + (full ? `, ${deleted} bajas, ${removals.length - deleted} desactivados` : ""),
     });
-  }, { timeout: 60_000 });
-  return { ...EMPTY, rows: results, created, updated, unchanged, applied: true };
+    return { removals, incompleteKits: full ? await incompleteFor(tx, removals) : [] };
+  }, { timeout: 60_000 }).catch((error) => {
+    // A failed DELETE aborts the whole transaction, so nothing is saved.
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
+      throw new ValidationError({ _: "Algo ha cambiado mientras revisabas: vuelve a revisar el archivo" });
+    }
+    throw error;
+  });
+  return { ...EMPTY, rows: results, created, updated, unchanged, ...done, applied: true };
 }
 
