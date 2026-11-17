@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
 import { addKitInstance, removeKitInstance, updateKitInstance } from "./kit-instances";
+import { addNote, deleteNote, editNote } from "./notes";
 import * as quotes from "./service";
 
 // Thin wrappers: read the form, call the service (which checks the draft and logs), refresh the pages that show quotes.
@@ -46,7 +47,7 @@ export async function deleteDraftAction(_prev: ActionResult | null, form: FormDa
 
 // Whoever edits the draft becomes its responsible; issuing records the issuer.
 export const updateHeaderAction: Action = action((actor, f) =>
-  quotes.updateHeader(actor, str(f, "id"), { ...present(f, ["clientId", "locationId", "contactId", "date", "subject", "paymentTerms", "exclusions", "validityDays", "travelNote"]), ownerId: actor.id }));
+  quotes.updateHeader(actor, str(f, "id"), { ...present(f, ["clientId", "locationId", "contactId", "date", "subject", "paymentTerms", "exclusions", "validityDays"]), ownerId: actor.id }));
 
 export const addSectionAction: Action = action((actor, f) =>
   quotes.addSection(actor, str(f, "quoteId"), { parentId: str(f, "parentId") || undefined, title: str(f, "title") }));
@@ -118,3 +119,8 @@ export async function duplicateAction(_prev: ActionResult | null, form: FormData
   revalidatePath("/", "layout");
   redirect(`/presupuestos/${id}`);
 }
+
+// Internal notes: they do not change the quote's responsible.
+export const addNoteAction: Action = action((actor, f) => addNote(actor, str(f, "quoteId"), { text: str(f, "text") }));
+export const editNoteAction: Action = action((actor, f) => editNote(actor, str(f, "id"), { text: str(f, "text") }));
+export const deleteNoteAction: Action = action((actor, f) => deleteNote(actor, str(f, "id")));

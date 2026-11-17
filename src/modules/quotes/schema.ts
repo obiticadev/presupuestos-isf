@@ -22,9 +22,10 @@ export const headerInput = z.object({
   paymentTerms: text(4000),
   exclusions: text(8000),
   validityDays: z.coerce.number({ message: "Escribe un número de días" }).int("Días enteros").min(1, "Entre 1 y 365 días").max(365, "Entre 1 y 365 días"),
-  travelNote: text(1000),
 }).partial();
 export type HeaderInput = z.input<typeof headerInput>;
+
+export const noteInput = z.object({ text: text(1000).min(1, "Escribe la nota") });
 
 export const sectionInput = z.object({
   title: text(300).transform(oneLine).optional(),

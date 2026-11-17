@@ -68,7 +68,7 @@ async function copyContent(tx: Tx, fromId: string, toId: string): Promise<void> 
 
 const HEADER = (q: Quote) => ({
   clientId: q.clientId, locationId: q.locationId, contactId: q.contactId, subject: q.subject, paymentTerms: q.paymentTerms,
-  exclusions: q.exclusions, validityDays: q.validityDays, travelNote: q.travelNote, waivers: q.waivers as Prisma.InputJsonValue,
+  exclusions: q.exclusions, validityDays: q.validityDays, waivers: q.waivers as Prisma.InputJsonValue,
   base: q.base, total: q.total,
 });
 
