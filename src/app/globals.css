@@ -341,3 +341,24 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
   .note-menu .prev{display:block;padding:12px 18px 6px;font-size:12px;color:var(--mut)}
   .note-menu button,.note-menu .del{padding:14px 18px;font-size:15px}
 }
+
+/* Importación: modo, contadores y decisiones (maqueta importacion-completa-app.html, E y F) */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;border:0;padding:0;margin:0}
+.modes label{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--rule);background:var(--sheet);padding:12px;cursor:pointer}
+.modes label:has(input:checked){border-color:var(--ink);box-shadow:inset 4px 0 var(--green)}
+.modes label.danger:has(input:checked){border-color:var(--red);box-shadow:inset 4px 0 var(--red)}
+.modes input{width:18px;height:18px;accent-color:var(--green);margin-top:2px;flex:none}
+.modes small{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.counts{display:grid;grid-template-columns:repeat(3,1fr);border:1.5px solid var(--ink);background:var(--sheet);margin:6px 0 18px}
+.counts.full{grid-template-columns:repeat(5,1fr)}
+.counts div{padding:10px 12px;border-right:1px solid var(--rule)}.counts div:last-child{border-right:0}
+.counts b{display:block;font-size:24px;font-stretch:88%}
+.counts span{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.counts .del b{color:var(--red)}.counts .off b{color:var(--amber)}
+.redbox{border:1.5px solid var(--red);background:#fbe8e6;color:var(--red);padding:12px 14px;font-weight:600;margin:18px 0 10px}
+.choice{display:flex;gap:6px;flex-wrap:wrap}
+.choice label{display:flex;gap:6px;align-items:center;border:1.5px solid var(--rule);padding:6px 10px;font-weight:600;font-size:13px;cursor:pointer;background:var(--sheet);white-space:nowrap}
+.choice label:has(input:checked){border-color:var(--ink);background:var(--band)}
+.choice input{accent-color:var(--green)}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+@media (max-width:900px){.modes{grid-template-columns:1fr}.counts.full{grid-template-columns:repeat(3,1fr)}.counts div{border-bottom:1px solid var(--rule)}}
