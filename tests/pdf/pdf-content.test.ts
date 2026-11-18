@@ -156,3 +156,21 @@ test("cierre más alto que una hoja: las exclusiones de 8.000 caracteres siguen 
   const s = await sheets(src);
   expect(s.at(-1)!.closeGap).not.toBeNull();
 });
+
+test("cierre que no cabe con una sola partida, subpartida y línea: no deja la subpartida ni la nota sueltas", async () => {
+  for (const comment of [undefined, "Comentario de la única línea."]) {
+    const src = withParts([["Partida única", [["Subpartida única", [["Línea única", "1", "ud"]]]]]]);
+    src.quote.sections[0].children[0].lines[0].comment = comment;
+    src.quote.exclusions = "Exclusión: obra civil y ayudas de albañilería en la zona de bombeo. ".repeat(120);
+    const body = TEMPLATES.v1.body(buildDocument(src, { draft: false }));
+    const edges = await withPage(async (page) => {
+      await page.setContent(body);
+      await page.evaluate(paginate, SHEET_PX);
+      return page.evaluate(() => [...document.querySelectorAll(".sheet tbody")].map((t, i) => ({
+        firstIsNote: i > 0 && !!t.firstElementChild?.classList.contains("note"),
+        lastIsHead: ["part", "sub"].some((k) => t.lastElementChild?.classList.contains(k)),
+      })));
+    });
+    expect(edges.filter((e) => e.lastIsHead || e.firstIsNote), String(comment)).toEqual([]);
+  }
+});

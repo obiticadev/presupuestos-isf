@@ -39,7 +39,8 @@ cat >"$bin/bash" <<'EOF'
 EOF
 cat >"$bin/tar" <<'EOF'
 #!/bin/sh
-[ "${FAIL_TAR:-0}" = 0 ] || exit 2
+# Un fallo de verdad tras escribir parte del archivo: la copia no debe publicarse.
+[ "${FAIL_TAR:-0}" = 0 ] || { /bin/tar "$@"; exit 2; }
 # Código 1 de GNU tar: un archivo cambió mientras se leía, pero el archivo queda completo.
 [ "${CHANGED_TAR:-0}" = 0 ] || { /bin/tar "$@"; exit 1; }
 exec /bin/tar "$@"

@@ -27,7 +27,8 @@ backup_now() {
   # Completar los dos temporales antes de publicar ninguno.
   pg_dump -Fc -f "$db.tmp"
   # GNU tar sale con 1 si un archivo cambió mientras se leía: el archivo queda completo y válido. Otro código, fallo.
-  tar -czf "$files.tmp" -C /data . || { [ $? -eq 1 ] && log "AVISO: un archivo de /data cambió mientras se copiaba; la copia se guarda igualmente"; }
+  # exit explícito: set -e no corta dentro de un `||`.
+  tar -czf "$files.tmp" -C /data . || { [ $? -eq 1 ] || exit 1; log "AVISO: un archivo de /data cambió mientras se copiaba; la copia se guarda igualmente"; }
   mv "$files.tmp" "$files"
   mv "$db.tmp" "$db"
   prune /backups/db .dump

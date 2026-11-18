@@ -64,6 +64,8 @@ export function paginate(sheetHeightPx: number): void {
     // The last sub fills this whole sheet (or started on an earlier one): carry its last lines, keeping heads with a line.
     from = 1;
     while (from < rs.length - 1 && leads(rs[from - 1], rs[from])) from++;
+    // The whole sheet is one heading chain: nothing can leave without its head, so the close stays and the sheet flows.
+    if (leads(rs[from - 1], rs[from])) return flow(sheet);
   }
   sheet = newSheet(sheet);
   const target = sheet.querySelector("tbody")!;

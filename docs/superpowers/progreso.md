@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-19 (Bloque 8 terminado en 1.8.4, pendiente de la revisión del usuario; con él se cierra `mejoras-uso-real`).
+Última actualización: 2026-11-19 (Bloque 8 terminado en 1.8.5, pendiente de la revisión del usuario; con él se cierra `mejoras-uso-real`).
 
 ## Cronología
 
@@ -135,12 +135,13 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - Borradores: «Borrador-{instalación}» sin número, «Borrador-{referencia que tendrá}» con número.
   - Menores de la revisión final, arreglados en 1.7.4: una fila nueva de las tablas ya muestra «Guardado»; «Nueva revisión» y «Nueva ampliación» bloquean todo el número, así que a la vez solo sale adelante una (prueba en `lifecycle.test.ts`). Revisión final hecha por el propio agente (sin revisor independiente).
   - En local: `admin@isf.test` y `user@isf.test` con la contraseña de `ACCESOS-PRUEBAS.local.md` y una firma de prueba.
-- **Bloque 8 terminado el 2026-11-19 (1.8.1 a 1.8.4), pendiente de la revisión del usuario** (diseño `specs/2026-11-18-bloque-8-design.md`, plan `plans/2026-11-18-bloque-8.md`; ejecutado por el propio agente en esta sesión):
+- **Bloque 8 terminado el 2026-11-19 (1.8.1 a 1.8.5), pendiente de la revisión del usuario** (diseño `specs/2026-11-18-bloque-8-design.md`, plan `plans/2026-11-18-bloque-8.md`; ejecutado por el propio agente en esta sesión):
   - `backup.sh`: el código 1 de GNU tar (un archivo cambió al leerlo) guarda la copia con un «AVISO» en el log; otro código sigue fallando (prueba de Docker con `CHANGED_TAR`; `FAIL_TAR` simula ahora el código 2).
   - `tests/docker/versions.test.ts` falla si la versión de `playwright-core` del `Dockerfile` no es la de `package.json` (el `Dockerfile` no se toca).
   - El emitido muestra «El PDF se generará al descargarlo» mientras `IssuedDocument.pdfPath` esté vacío (`QuoteDetail.issued`); comprobado en Chrome.
   - `paginate`: al llevar el cierre a otra hoja, las filas van por bloques (encabezados y nota con su fila), así que no quedan partidas, subpartidas ni notas sueltas (solo pasaba con hojas de ~340 px); un cierre más alto que una hoja hace crecer la última hoja y Chromium lo continúa en las páginas siguientes con cabecera y pie (exclusiones de 8.000 caracteres: 8 páginas, comprobado en Chrome).
   - Prueba intermitente de `kit-instances`: no reproducible en 30 pasadas del archivo y 5 de la suite completa (370/370) el 2026-11-19; cerrada sin cambios.
+  - Revisión final con un revisor independiente; arreglado en 1.8.5: un `tar` con código distinto de 1 no paraba la copia (`set -e` no corta dentro de `||`), así que publicaba un archivo roto y borraba una copia buena al limpiar; y una última hoja que es solo partida, subpartida y línea (con o sin nota) dejaba la subpartida o la nota sueltas: ahora el cierre se queda y la hoja fluye. Pruebas: `FAIL_TAR` escribe el archivo antes de fallar, y «cierre que no cabe con una sola partida…».
   - Quedan para el usuario: comprobaciones en el servidor, cambio de credenciales y manual (puntos 4 a 6 de «Pendiente tras el despliegue»).
 - **Al retomar:** `git pull` en `mejoras-uso-real`, `mise x -- pnpm install`, `mise x -- pnpm exec prisma migrate deploy` (migraciones nuevas: `20261111205350_comments` y `20261112120000_installation`), la suite, y arrancar con `mise x -- pnpm dev`. Al hacer commit desde el equipo Linux, los archivos que tienen CRLF se añaden con `git -c core.autocrlf=false add` (la configuración global de git usa `autocrlf=input`).
 - **Usuarios de prueba (local y `:3101`):** `admin@isf.test` (admin) y `user@isf.test` (presupuestador), con la contraseña de `ACCESOS-PRUEBAS.local.md`; si en local no entran, se restauran con `ADMIN_PASSWORD=… pnpm admin reset-password --email <usuario>` (y `user@isf.test` se crea con `auth.api.createUser`, rol presupuestador).
