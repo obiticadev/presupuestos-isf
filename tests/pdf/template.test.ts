@@ -71,10 +71,17 @@ test("los datos de empresa vacíos no dejan rótulos ni separadores sueltos", ()
   expect(from).toBe(`<b>${d.company.legalName}</b>`);
   d.company.email = "a@b.c";
   expect(TEMPLATES.v1.body(d)).toContain(`<div class="from"><b>${d.company.legalName}</b><br>a@b.c</div>`);
-  const registry = TEMPLATES.v1.footer({ ...d, company: { ...d.company, email: "" } }).match(/<span style="flex:1">(.*?)<\/span>/)![1];
+  const registry = TEMPLATES.v1.footer({ ...d, company: { ...d.company, email: "" } }).match(/<span style="flex:1;text-align:center">(.*?)<\/span>/)![1];
   expect(registry).toBe("");
   for (const s of [from, registry]) { expect(s).not.toContain("CIF"); expect(s).not.toMatch(/·\s*·|^\s*·|·\s*$/); }
-  expect(TEMPLATES.v1.footer({ ...d, company: { ...d.company, taxId: "B1" } })).toContain('<span style="flex:1">CIF B1</span>');
+  expect(TEMPLATES.v1.footer({ ...d, company: { ...d.company, taxId: "B1" } })).toContain('<span style="flex:1;text-align:center">CIF B1</span>');
+});
+
+test("la dirección del emisor sale línea a línea y el pie del registro va centrado", () => {
+  const d = doc();
+  d.company = { ...d.company, address: "C/ Mayor 1\r\n  Madrid " };
+  expect(TEMPLATES.v1.body(d)).toContain(`<b>${d.company.legalName}</b><br>C/ Mayor 1<br>Madrid<br>`);
+  expect(TEMPLATES.v1.footer(d)).toContain('<span style="flex:1;text-align:center">');
 });
 
 test("plantilla desconocida", async () => {

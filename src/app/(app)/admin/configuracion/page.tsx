@@ -31,10 +31,10 @@ export default async function ConfiguracionPage() {
           fields={[
             { name: "legalName", label: "Razón social", value: s.legalName },
             { name: "taxId", label: "CIF", value: s.taxId },
-            { name: "address", label: "Dirección", value: s.address },
+            { name: "address", label: "Dirección", value: s.address, kind: "textarea" },
             { name: "phone", label: "Teléfono", value: s.phone },
             { name: "email", label: "Email", value: s.email, kind: "email" },
-            { name: "registryText", label: "Datos registrales (pie de página)", value: s.registryText, kind: "textarea" },
+            { name: "registryText", label: "Datos registrales (pie de página)", value: s.registryText },
           ]}
         />
         <div>
@@ -91,10 +91,12 @@ export default async function ConfiguracionPage() {
             ))}
             {addable.length > 0 && (
               <ActionForm action={addRequiredConceptAction} reset style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-                <select name="conceptId" required defaultValue="" aria-label="Concepto obligatorio que añadir" style={{ flex: 1, minWidth: 0 }}>
-                  <option value="" disabled>Elige un concepto activo…</option>
-                  {addable.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.description}</option>)}
-                </select>
+                <label className="field" style={{ flex: 1, minWidth: 0 }}>
+                  <select name="conceptId" required defaultValue="" aria-label="Concepto obligatorio que añadir">
+                    <option value="" disabled>Elige un concepto activo…</option>
+                    {addable.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.description}</option>)}
+                  </select>
+                </label>
                 <button className="btn pri">Añadir</button>
               </ActionForm>
             )}

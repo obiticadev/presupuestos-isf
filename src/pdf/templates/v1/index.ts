@@ -58,7 +58,7 @@ function body(d: PdfDocument): string {
   return html`<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${safe(archivoFontFace() + STYLES)}</style></head><body>
 ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
 <section class="letter">
-  <div class="from"><b>${c.legalName}</b>${[c.address, joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
+  <div class="from"><b>${c.legalName}</b>${[...c.address.split(/\r?\n/).map((l) => l.trim()), joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
   <div class="to"><b>${d.recipient.name}</b>${[...d.recipient.address, d.recipient.attention ?? ""].filter(Boolean).map((l) => html`<br>${l}`)}</div>
   <div class="place">${d.letter.place} a ${d.longDate}</div>
   <div class="subject">Asunto: ${d.reference}</div>
@@ -91,7 +91,7 @@ function footer(d: PdfDocument): string {
   return html`<style>${safe(archivoFontFace())}</style>
 <div style="${FRAME};height:7mm;display:flex;align-items:center;justify-content:space-between;gap:8mm;border-top:.75pt solid #c9d1cb;font-size:7pt;color:#56645f">
   <span>${d.shortDate}</span>
-  <span style="flex:1">${registry}</span>
+  <span style="flex:1;text-align:center">${registry}</span>
   <span style="white-space:nowrap">Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>
 </div>`.__html;
 }

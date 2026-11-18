@@ -55,7 +55,7 @@ export function Notes({ groups, meId }: { groups: NoteGroup[]; meId: string }) {
 
   return (
     <div className="notes">
-      <h3>Notas</h3>
+      <h3>Notas internas</h3>
       {last && (
         <button type="button" className="lastnote" onClick={() => setOpen(true)}>
           <span className="top"><span>{last.authorName} · {when(last.updatedAt)}</span><span className="count">{all.length}</span></span>

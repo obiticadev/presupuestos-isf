@@ -25,7 +25,7 @@ export const settingsInput = z
     address: text(300),
     phone: text(50),
     email: z.union([z.literal(""), z.email("Email no válido")]),
-    registryText: text(2000),
+    registryText: text(2000).transform((v) => v.replace(/\s*\r?\n\s*/g, " ")),
     letterGreeting: text(200),
     letterIntro: text(2000),
     letterClosing: text(4000),
