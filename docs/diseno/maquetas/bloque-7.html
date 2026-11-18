@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bloque 7: tipos, ampliaciones y borradores</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1200px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:44px 0 10px;border-top:1.5px solid var(--ink);padding-top:10px}
+.variant{font-size:20px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 12px;max-width:820px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:28px;align-items:start}
+.side{max-width:400px}
+.side .sheet{padding:16px}
+.grp{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin:12px 0 2px;display:flex;justify-content:space-between}
+.grp code{font:600 11px var(--font-archivo);letter-spacing:0;text-transform:none}
+.locked{font-size:12px;color:var(--mut);padding:4px 6px 0}
+/* Tablas que se guardan solas al salir del campo */
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:28px;align-items:start}
+.auto{width:100%}
+.auto td{vertical-align:middle}
+.auto input{width:100%;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px}
+.auto input:focus{outline:2px solid var(--green);outline-offset:1px}
+.auto .cod{width:6.5rem}.auto .cod input{text-align:center}
+.saved{transition:opacity .3s}.saved.gone{opacity:0}
+.tipo{width:6.5rem;min-width:0!important;flex:none}.tipo select{min-width:0!important}selectedcontent em{display:none}::picker(select){min-width:22rem}.tipo select{width:100%}.tipo select{overflow:hidden;text-overflow:ellipsis}
+.tipo button{all:unset;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1}
+.tipo em{color:var(--mut);font-style:italic;font-weight:400;margin-left:6px}
+.auto .act{width:7.5rem;text-align:right}
+.x{font:600 16px var(--font-archivo),sans-serif;width:36px;height:36px;border:1.5px solid var(--ink);background:var(--sheet);cursor:pointer;display:inline-grid;place-items:center}
+.x:hover{border-color:var(--red);color:var(--red)}
+.saved{font-size:12px;color:var(--ok);font-weight:600}
+.off td:not(.act){opacity:.55}
+.addrow{margin-top:10px}
+</style>
+</head>
+<body>
+<h1>Bloque 7: maquetas</h1>
+<p class="why">Ejemplo: PR-2026001007 (tipo 001 · Proyectos). Principal R00 y R01; ampliación A01 con R00 y R01; ampliación A02 en borrador.</p>
+
+<!-- ============ 1. ÁRBOL ============ -->
+<div class="lbl">1 · Recuadro «Revisiones y ampliaciones» (variante A, de lo más nuevo arriba a lo más viejo abajo)</div>
+<div class="side">
+  <nav class="sheet revs">
+    <h3 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Revisiones y ampliaciones</h3>
+    <div class="grp">Ampliación A02 <code>-A02</code></div>
+    <a href="#"><b>R00</b><span class="st borrador"><i></i>Borrador</span><small class="mut">admin</small></a>
+    <div class="grp">Ampliación A01 <code>-A01</code></div>
+    <a href="#" aria-current="page"><b>R01</b><span class="st enviado"><i></i>Enviado</span><small class="mut">17/11/26 · admin</small></a>
+    <a href="#"><b>R00</b><span class="st emitido"><i></i>Emitido</span><small class="mut">14/11/26 · admin</small></a>
+    <div class="grp">Principal <code>PR-2026001007</code></div>
+    <a href="#"><b>R01</b><span class="st aceptado"><i></i>Aceptado</span><small class="mut">18/11/26 · Laura</small></a>
+    <a href="#"><b>R00</b><span class="st emitido"><i></i>Emitido</span><small class="mut">10/11/26 · Laura</small></a>
+  </nav>
+</div>
+
+<!-- ============ 2. PANEL ============ -->
+<div class="lbl">2 · Panel</div>
+<div class="cols">
+  <div class="side">
+    <div class="variant" style="font-size:16px">Última emitida de la principal, sin ampliaciones</div>
+    <div class="sheet" style="display:grid;gap:10px">
+      <h3 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Estado</h3>
+      <button class="btn"><span class="st aceptado"><i></i>Aceptado</span></button>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <button class="btn pri" style="justify-content:center">Nueva revisión</button>
+        <button class="btn" style="justify-content:center">Nueva ampliación</button>
+      </div>
+      <button class="btn">Descargar PDF</button>
+      <button class="btn" style="justify-self:start">Duplicar</button>
+    </div>
+  </div>
+  <div class="side">
+    <div class="variant" style="font-size:16px">La misma, cuando ya tiene ampliaciones</div>
+    <div class="sheet" style="display:grid;gap:10px">
+      <h3 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut)">Estado</h3>
+      <button class="btn"><span class="st aceptado"><i></i>Aceptado</span></button>
+      <button class="btn pri" style="justify-content:center">Nueva ampliación</button>
+      <p class="locked" style="margin:0">Ya tiene ampliaciones: la principal no admite nuevas revisiones.</p>
+      <button class="btn">Descargar PDF</button>
+      <button class="btn" style="justify-self:start">Duplicar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ 3. TABLAS ============ -->
+<div class="lbl">3 · Administración · Tipos, Categorías y Unidades: se guarda al salir del campo</div>
+<p class="why">Sin botones «Guardar»: al cambiar un campo y salir de él se guarda y aparece «Guardado» durante 2 s (pruébalo: cambia un campo y sal de él). «+ Añadir fila» crea una fila vacía, que se guarda al rellenarla. Lo que no se ha usado se borra con la ×; lo usado solo se desactiva (y se puede reactivar).</p>
+<div class="grid2">
+  <section>
+    <h2>Tipos de presupuesto</h2>
+    <table class="auto">
+      <thead><tr><th>Nombre</th><th class="cod">Código</th><th class="act"></th></tr></thead>
+      <tbody>
+        <tr><td><input value="Proyectos"></td><td class="cod"><input value="001"></td><td class="act"><button class="btn sm warn">Desactivar</button></td></tr>
+        <tr><td><input value="Asistencia técnica"></td><td class="cod"><input value="002"></td><td class="act"><button class="x" aria-label="Borrar Asistencia técnica">×</button></td></tr>
+        <tr class="off"><td><input value="Ventas directas"></td><td class="cod"><input value="010"></td><td class="act"><button class="btn sm">Reactivar</button></td></tr>
+        <tr><td><input placeholder="Nombre" autofocus></td><td class="cod"><input placeholder="003"></td><td class="act"><button class="x" aria-label="Quitar fila">×</button></td></tr>
+      </tbody>
+    </table>
+    <button class="btn addrow">+ Añadir fila</button>
+  </section>
+  <section>
+    <h2>Categorías del catálogo</h2>
+    <table class="auto">
+      <thead><tr><th>Nombre</th><th class="act"></th></tr></thead>
+      <tbody>
+        <tr><td><input value="Bombas"></td><td class="act"><button class="btn sm warn">Desactivar</button></td></tr>
+        <tr><td><input value="Mangueras"></td><td class="act"><button class="btn sm warn">Desactivar</button></td></tr>
+        <tr><td><input value="Pruebas"></td><td class="act"><button class="x" aria-label="Borrar Pruebas">×</button></td></tr>
+      </tbody>
+    </table>
+    <button class="btn addrow">+ Añadir fila</button>
+  </section>
+</div>
+<p class="why" style="margin-top:14px">Unidades de cobro, igual que Categorías.</p>
+
+<!-- ============ 4. CABECERA Y LISTADO ============ -->
+<div class="lbl">4 · Borrador nuevo: título, tipo y listado</div>
+<div class="crumb"><a href="#">Presupuestos</a> / Borrador</div>
+<div class="head"><h1>Borrador-Instalación de demostración</h1> <span class="st borrador"><i></i>Borrador</span></div>
+<div class="filters">
+  <label class="field tipo">Tipo<select><button><selectedcontent></selectedcontent></button><option value="" disabled>—</option><option>001<em>Proyectos</em></option><option selected>002<em>Asistencia técnica y mantenimiento preventivo de instalaciones</em></option><option>010<em>Ventas directas</em></option></select></label>
+  <span class="mut" style="align-self:flex-end;font-size:13px;padding-bottom:10px">… y a continuación Cliente y Nombre, como hoy.</span>
+</div>
+<p class="why">«Tipo» cerrado muestra solo el código; al abrirlo, cada código lleva su nombre en gris y en cursiva. En una revisión, «Tipo» es una caja de solo lectura. En una ampliación no se cambian tipo, cliente ni instalación; sí fecha, validez, contacto, asunto, forma de pago y exclusiones (el responsable, automático). Sin instalación elegida, el título es «Borrador». Para emitir, el tipo es obligatorio («Falta el tipo»).</p>
+<table style="max-width:720px">
+  <thead><tr><th>Referencia</th><th>Cliente</th></tr></thead>
+  <tbody>
+    <tr><td><a href="#">PR-2026001007-A01-R01</a></td><td>Conservas Ribera</td></tr>
+    <tr><td><a href="#">PR-2026001007-R01</a></td><td>Conservas Ribera</td></tr>
+    <tr><td><a href="#">Borrador-Instalación de demostración</a></td><td>Conservas Ribera</td></tr>
+  </tbody>
+</table>
+<script>
+document.querySelectorAll('.auto input').forEach(i=>i.addEventListener('change',()=>{
+  const td=i.closest('tr').querySelector('.act');let m=td.querySelector('.saved');
+  if(!m){m=document.createElement('span');m.className='saved';m.textContent='Guardado ';td.prepend(m)}
+  m.classList.remove('gone');clearTimeout(m.t);m.t=setTimeout(()=>m.classList.add('gone'),2000);
+}));
+</script>
+</body>
+</html>

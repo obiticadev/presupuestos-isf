@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-18 (Bloques 4 y 5 cerrados y aprobados en `mejoras-uso-real`, versión 1.5.0; el Bloque 6 no se empieza hasta que el usuario lo diga).
+Última actualización: 2026-11-18 (Bloques 4 y 5 cerrados en 1.5.0; diseños de los Bloques 6 y 7 aprobados; siguiente: escribir el plan del Bloque 6 en un chat nuevo).
 
 ## Cronología
 
@@ -125,9 +125,11 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - Emitir exige firma de quien emite (panel: «Falta tu firma: configúrala en Mi cuenta»); la instantánea guarda `signer` (nombre y firma), así que una revisión emitida por otro lleva la suya y cambiar la firma no toca lo emitido. PDF: sello de 62 mm (`src/pdf/assets/sello-isf.svg`) con la firma encima y «Fdo.: Nombre»; las instantáneas antiguas mantienen el recuadro vacío. La vista previa de un borrador usa la firma de quien la mira.
   - Logo SVG en el inicio de sesión (`public/logo-isf.svg`; se quita el JPG).
   - Los usuarios de las pruebas se crean con una firma de ejemplo (`TEST_SIGNATURE`); los reales tienen que firmar en Mi cuenta antes de emitir.
-- **Siguiente:** en pausa. **No empezar el Bloque 6 hasta nuevo aviso del usuario.** Pendiente, en este orden:
-  - Bloque 6, usuarios, historial y zona de peligro: eliminar usuarios conservando su nombre en el historial, historial filtrable, series de numeración y la zona de peligro.
-  - Bloque 7, pendientes del despliegue en código: prueba intermitente de `kit-instances`, aviso si falla el PDF al emitir, encabezado huérfano y cierre más alto que una hoja en `paginate`, `tar` en `backup.sh`, versión de Playwright duplicada. Añadir aquí el caso improbable de una nota de la última partida sola en la hoja del cierre.
+- **Diseños de los Bloques 6 y 7 aprobados por el usuario el 2026-11-18** (con maquetas elegidas): `specs/2026-11-18-bloque-6-design.md` (maqueta `docs/diseno/maquetas/bloque-6.html`) y `specs/2026-11-18-bloque-7-design.md` (maqueta `docs/diseno/maquetas/bloque-7.html`). Se quitaron las series de numeración y el reinicio manual (el reinicio anual ya existe). **Versión por tarea:** cada tarea del plan sube un parche, 1.6.1, 1.6.2… (Bloque 6) y 1.7.1… (Bloque 7).
+- **Siguiente:** en un chat nuevo, escribir el plan del Bloque 6 con `superpowers:writing-plans` y ejecutarlo; después, plan y ejecución del Bloque 7. Pendiente, en este orden:
+  - Bloque 6: eliminar usuarios (autores conservados en historial, ajustes de precio y notas), historial filtrable, zona de peligro (solo «Borrar todos los presupuestos») y menores (desplegable de conceptos obligatorios, pie del PDF centrado, datos registrales en una línea, dirección en varias líneas).
+  - Bloque 7: tipos de presupuesto con contador por tipo, ampliaciones (`-A01-R00`), tablas de administración que se guardan solas y «Borrador-{instalación}».
+  - Bloque 8, pendientes del despliegue en código: prueba intermitente de `kit-instances`, aviso si falla el PDF al emitir, encabezado huérfano y cierre más alto que una hoja en `paginate`, `tar` en `backup.sh`, versión de Playwright duplicada. Añadir aquí el caso improbable de una nota de la última partida sola en la hoja del cierre.
 - **Al retomar:** `git pull` en `mejoras-uso-real`, `mise x -- pnpm install`, `mise x -- pnpm exec prisma migrate deploy` (migraciones nuevas: `20261111205350_comments` y `20261112120000_installation`), la suite, y arrancar con `mise x -- pnpm dev`. Al hacer commit desde el equipo Linux, los archivos que tienen CRLF se añaden con `git -c core.autocrlf=false add` (la configuración global de git usa `autocrlf=input`).
 - **Usuarios de prueba (local y `:3101`):** `admin@isf.test` (admin) y `user@isf.test` (presupuestador), con la contraseña de `ACCESOS-PRUEBAS.local.md`; si en local no entran, se restauran con `ADMIN_PASSWORD=… pnpm admin reset-password --email <usuario>` (y `user@isf.test` se crea con `auth.api.createUser`, rol presupuestador).
 - **Datos de la BD de desarrollo:** el borrador «Ampliación del grupo de bombeo» (`cmw9urhye0012djm6hdo8szw4`) tiene nombres largos, comentarios y elementos «… de prueba UI» para revisar el editor.

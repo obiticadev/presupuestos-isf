@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bloque 6: usuarios, historial y zona de peligro</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<!-- Los estilos reales de la app -->
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1200px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:44px 0 10px;border-top:1.5px solid var(--ink);padding-top:10px}
+.variant{font-size:20px;font-weight:800;margin:28px 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 12px;max-width:820px}
+.del-name{color:var(--mut)}
+td.c1{width:7.5rem}td.c2{width:7rem}
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.danger-zone{border:1.5px solid var(--red);background:#fdf3f2;padding:16px;margin-top:10px;max-width:900px}
+.danger-zone h2{color:var(--red);margin:0 0 6px}
+.danger-zone p{margin:0 0 12px;font-size:14px}
+.danger-zone .confirm{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.danger-zone input{border-color:var(--red)}
+.more{border:1.5px solid var(--ink);background:var(--sheet);margin:18px 0 14px}
+.more summary{cursor:pointer;padding:10px 12px;font-weight:600;font-size:14px}
+.more .filters{margin:0;padding:0 12px 12px}
+.searchrow{display:flex;gap:10px;margin:18px 0 0;flex-wrap:wrap}
+.searchrow .field{flex:1;min-width:240px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 14px;font-size:13px}
+.chip{border:1.5px solid var(--green);color:var(--green);padding:3px 8px;font-weight:600}
+dialog.demo{position:static;display:block;border:1.5px solid var(--ink);padding:0;max-width:560px;margin:12px 0;background:var(--sheet)}
+dialog.demo .bar{padding:12px 14px;border-bottom:1.5px solid var(--ink);font-weight:800;color:var(--red)}
+dialog.demo .body{padding:14px;display:grid;gap:12px;font-size:14px}
+dialog.demo .foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 14px;border-top:1.5px solid var(--rule)}
+</style>
+</head>
+<body>
+<h1>Bloque 6: maquetas para elegir</h1>
+<p class="why">Tres pantallas. En Usuarios hay una sola propuesta, porque el diseño ya está decidido. En Historial y en la Zona de peligro hay dos variantes: dime A o B para cada una.</p>
+
+<!-- ================= USUARIOS ================= -->
+<div class="lbl">1 · Usuarios (propuesta única)</div>
+<p class="why">«Eliminar» solo aparece en quien no tiene nada emitido. Quien sí tiene emitidos solo se puede desactivar. Tu fila y la del último administrador activo no tienen ni «Eliminar» ni «Desactivar».</p>
+<table>
+  <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th><th></th><th></th></tr></thead>
+  <tbody>
+    <tr><td style="font-weight:600">Oliver Bitica <span class="mut">(tú)</span></td><td>admin@isf.test</td><td>Administrador</td><td>Activo</td><td></td><td></td></tr>
+    <tr><td style="font-weight:600">Laura Gómez</td><td>laura@isf.es</td><td>Presupuestador</td><td>Activo</td><td class="c1"><button class="btn sm">Desactivar</button></td><td class="c2"><span class="mut" style="font-size:12px">12 emitidos</span></td></tr>
+    <tr><td style="font-weight:600">Prueba Becario</td><td>becario@isf.es</td><td>Presupuestador</td><td>Activo</td><td class="c1"><button class="btn sm">Desactivar</button></td><td class="c2"><button class="btn sm danger">Eliminar</button></td></tr>
+    <tr style="opacity:.6"><td style="font-weight:600">Antonio Ruiz</td><td>antonio@isf.es</td><td>Presupuestador</td><td><span class="badge off">Desactivado</span></td><td class="c1"><button class="btn sm">Reactivar</button></td><td class="c2"><span class="mut" style="font-size:12px">3 emitidos</span></td></tr>
+  </tbody>
+</table>
+<p class="why" style="margin-top:10px">Al pulsar «Eliminar» se pide confirmación con el mismo botón de doble clic que ya usa la app: «¿Eliminar a Prueba Becario? Sus 2 borradores pasarán a ti».</p>
+
+<!-- ================= HISTORIAL ================= -->
+<div class="lbl">2 · Historial con filtros</div>
+
+<div class="variant">A · Todos los filtros en una fila</div>
+<p class="why">Igual que el catálogo y el listado. Todo está a la vista; en pantallas estrechas los filtros bajan de línea.</p>
+<form class="filters" onsubmit="return false">
+  <label class="field">Buscar<input type="search" placeholder="Texto del resumen…" style="min-width:220px"></label>
+  <label class="field">Entidad<select><option>Todas</option><option>Presupuestos</option></select></label>
+  <label class="field">Usuario<select><option>Todos</option><option>Laura Gómez</option><option>Antonio Ruiz (eliminado)</option><option>Sistema</option></select></label>
+  <label class="field">Acción<select><option>Todas</option><option>Emisión</option></select></label>
+  <label class="field">Desde<input type="date"></label>
+  <label class="field">Hasta<input type="date"></label>
+  <button class="btn" style="align-self:flex-end">Filtrar</button>
+</form>
+<table>
+  <thead><tr><th>Fecha</th><th>Usuario</th><th>Entidad</th><th>Acción</th><th>Resumen</th></tr></thead>
+  <tbody>
+    <tr><td class="mut">18/11/26 10:12</td><td>Laura Gómez</td><td>Presupuestos</td><td>Emisión</td><td>PR-2026000031-R00 emitido</td></tr>
+    <tr><td class="mut">17/11/26 16:40</td><td><span class="del-name">Antonio Ruiz (eliminado)</span></td><td>Catálogo</td><td>Cambio</td><td>MAN-4X25 modificado</td></tr>
+    <tr><td class="mut">17/11/26 03:00</td><td><span class="mut">Sistema</span></td><td>Presupuestos</td><td>Cambio de estado</td><td>PR-2026000004-R00 caducado</td></tr>
+  </tbody>
+</table>
+
+<div class="variant">B · Buscador grande y «Más filtros» plegado</div>
+<p class="why">Primero el texto. El resto se despliega cuando hace falta, y los filtros activos se ven como etiquetas aunque el panel esté cerrado.</p>
+<div class="searchrow">
+  <label class="field">Buscar en el historial<input type="search" placeholder="Referencia, concepto, cliente…"></label>
+  <button class="btn pri" style="align-self:flex-end">Buscar</button>
+</div>
+<details class="more">
+  <summary>Más filtros (2 activos)</summary>
+  <div class="filters">
+    <label class="field">Entidad<select><option>Presupuestos</option></select></label>
+    <label class="field">Usuario<select><option>Todos</option></select></label>
+    <label class="field">Acción<select><option>Emisión</option></select></label>
+    <label class="field">Desde<input type="date"></label>
+    <label class="field">Hasta<input type="date"></label>
+  </div>
+</details>
+<div class="chips"><span class="chip">Entidad: Presupuestos ×</span><span class="chip">Acción: Emisión ×</span><a href="#" class="mut">Quitar filtros</a></div>
+<table>
+  <thead><tr><th>Fecha</th><th>Usuario</th><th>Entidad</th><th>Acción</th><th>Resumen</th></tr></thead>
+  <tbody>
+    <tr><td class="mut">18/11/26 10:12</td><td>Laura Gómez</td><td>Presupuestos</td><td>Emisión</td><td>PR-2026000031-R00 emitido</td></tr>
+  </tbody>
+</table>
+
+<!-- ================= ZONA DE PELIGRO ================= -->
+<div class="lbl">3 · Configuración · Zona de peligro (solo administradores, al final de la página)</div>
+
+<div class="variant">A · Confirmación en el propio recuadro</div>
+<p class="why">Se escribe BORRAR y el botón se activa. Todo está a la vista y no hay ventanas.</p>
+<section class="danger-zone">
+  <h2>Zona de peligro</h2>
+  <p><b>Borrar todos los presupuestos y reiniciar la numeración.</b> Se borran los 47 presupuestos, sus PDF, sus notas y sus entradas del historial. La numeración vuelve a empezar, así que los números nuevos <b>pueden coincidir con los de presupuestos borrados</b>. No se puede deshacer: haz antes una copia manual (docs/despliegue.md).</p>
+  <div class="confirm">
+    <label class="field">Escribe BORRAR para confirmar<input autocomplete="off" placeholder="BORRAR"></label>
+    <button class="btn danger" disabled>Borrar todos los presupuestos</button>
+  </div>
+</section>
+
+<div class="variant">B · Botón que abre una ventana de confirmación</div>
+<p class="why">El recuadro solo explica y tiene un botón. Al pulsarlo se abre una ventana donde se escribe BORRAR; así es más difícil llegar a hacerlo sin querer.</p>
+<section class="danger-zone">
+  <h2>Zona de peligro</h2>
+  <p><b>Borrar todos los presupuestos y reiniciar la numeración.</b> Borra los 47 presupuestos, sus PDF, notas e historial, y la numeración vuelve a empezar.</p>
+  <button class="btn danger">Borrar todos los presupuestos…</button>
+</section>
+<dialog class="demo" open>
+  <div class="bar">¿Borrar los 47 presupuestos?</div>
+  <div class="body">
+    <p style="margin:0">Se borran sus PDF, sus notas y sus entradas del historial. Los números nuevos <b>pueden coincidir con los de presupuestos borrados</b>. No se puede deshacer: haz antes una copia manual.</p>
+    <label class="field">Escribe BORRAR para confirmar<input autocomplete="off" placeholder="BORRAR"></label>
+  </div>
+  <div class="foot"><button class="btn">Cancelar</button><button class="btn danger" disabled>Borrar</button></div>
+</dialog>
+</body>
+</html>
