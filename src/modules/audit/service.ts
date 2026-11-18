@@ -1,9 +1,12 @@
+import { parseIsoDate, startOfMadridDay } from "@/lib/dates";
 import { prisma } from "@/lib/db";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 
 export const AUDIT_PAGE_SIZE = 50;
+/** Author filter value for entries without a user (automatic actions). */
+export const SYSTEM = "Sistema";
 
 export type AuditEntry = {
   id: string;
@@ -31,10 +34,21 @@ export async function logAction(
 
 export async function listAudit(
   user: CurrentUser,
-  filter: { entity?: string; entityId?: string; page?: number },
+  filter: { q?: string; entity?: string; entityId?: string; userName?: string; action?: string; from?: string; to?: string; page?: number },
 ): Promise<{ items: AuditEntry[]; total: number }> {
   assertAdmin(user);
-  const where = { entity: filter.entity || undefined, entityId: filter.entityId || undefined };
+  const from = filter.from ? startOfMadridDay(filter.from) : null;
+  const to = filter.to ? parseIsoDate(filter.to) : null;
+  const toNext = to && startOfMadridDay(new Date(to.getTime() + 86_400_000).toISOString().slice(0, 10));
+  const byUser: Prisma.AuditLogWhereInput | undefined = !filter.userName ? undefined
+    : filter.userName === SYSTEM ? { userId: null, userName: null }
+    : { OR: [{ user: { name: filter.userName } }, { userId: null, userName: filter.userName }] };
+  const where: Prisma.AuditLogWhereInput = {
+    entity: filter.entity || undefined, entityId: filter.entityId || undefined, action: filter.action || undefined,
+    summary: filter.q?.trim() ? { contains: filter.q.trim(), mode: "insensitive" } : undefined,
+    createdAt: from || toNext ? { gte: from ?? undefined, lt: toNext ?? undefined } : undefined,
+    ...byUser,
+  };
   const page = Math.max(1, Math.floor(filter.page ?? 1));
   const [rows, total] = await prisma.$transaction([
     prisma.auditLog.findMany({
@@ -58,4 +72,13 @@ export async function listAudit(
       summary: r.summary,
     })),
   };
+}
+
+/** Names for the author filter: current users plus the deleted ones that appear in the log. */
+export async function listAuditUserNames(): Promise<string[]> {
+  const [users, deleted] = await Promise.all([
+    prisma.user.findMany({ select: { name: true } }),
+    prisma.auditLog.findMany({ where: { userId: null, userName: { not: null } }, select: { userName: true }, distinct: ["userName"] }),
+  ]);
+  return [...new Set([...users.map((u) => u.name), ...deleted.map((d) => d.userName!)])].sort((a, b) => a.localeCompare(b, "es"));
 }

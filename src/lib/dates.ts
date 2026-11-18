@@ -12,3 +12,14 @@ export function parseIsoDate(s: string): Date | null {
 
 /** Date column → "20/10/2026". */
 export const formatDateEs = (d: Date) => d.toISOString().slice(0, 10).split("-").reverse().join("/");
+
+/** "2026-03-11" → the instant 00:00 in Madrid of that day, or null if it is not a real date. */
+export function startOfMadridDay(iso: string): Date | null {
+  const utc = parseIsoDate(iso);
+  if (!utc) return null;
+  // Madrid is UTC+1 or +2 and never changes the clock at midnight, so the offset at UTC midnight is the one at local midnight.
+  const offset = new Intl.DateTimeFormat("en", { timeZone: "Europe/Madrid", timeZoneName: "longOffset" })
+    .formatToParts(utc).find((p) => p.type === "timeZoneName")!.value; // "GMT+01:00"
+  const [, sign, h, m] = /GMT([+-])(\d\d):(\d\d)/.exec(offset)!;
+  return new Date(utc.getTime() - (sign === "+" ? 1 : -1) * (Number(h) * 60 + Number(m)) * 60_000);
+}
