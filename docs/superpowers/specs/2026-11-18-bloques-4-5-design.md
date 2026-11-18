@@ -2,7 +2,7 @@
 
 Fecha: 2026-11-18. Rama: `mejoras-uso-real`. Parte de `2026-11-11-mejoras-uso-real-design.md` (apartados 4.1 y 5.1–5.6), con lo que el usuario decidió el 2026-11-18. Las notas internas (4.2) ya se hicieron el 2026-11-17, así que los dos bloques van juntos en un solo plan.
 
-Maqueta aprobada: `docs/diseno/maquetas/cuenta-firma.html` (se ve servida desde la raíz del repositorio, p. ej. `python -m http.server`, porque enlaza `src/app/globals.css` y `docs/sello/sello-isf.svg`).
+Maqueta aprobada: `docs/diseno/maquetas/cuenta-firma.html` (se ve servida desde la raíz del repositorio, p. ej. `python -m http.server`, porque enlaza `src/app/globals.css` y `src/pdf/assets/sello-isf.svg`).
 
 ## Por qué
 

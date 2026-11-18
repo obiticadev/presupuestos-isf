@@ -13,6 +13,8 @@ import { ensureIssuedPdf, pdfFileName, pdfResponse, readIssuedPdf } from "@/modu
 import { getQuote, setComment } from "@/modules/quotes/service";
 import { updateSettings } from "@/modules/settings/service";
 import { completeDraft, conceptFields, makeDraft } from "../helpers/quotes";
+import { makeUser, TEST_SIGNATURE } from "../helpers/users";
+import { deleteSignature } from "@/modules/account/service";
 
 // Counts renders so a test can tell a regeneration from a file served as it was.
 vi.mock("@/pdf/templates", async (orig) => {
@@ -166,4 +168,37 @@ test("pdfResponse devuelve 500 si falla la generación", async () => {
 test("pdfFileName", async () => {
   expect(pdfFileName({ reference: "PR-2026000002-R00", client: { legalName: "x" } })).toBe("PR-2026000002-R00.pdf");
   expect(pdfFileName({ reference: null, client: { legalName: "Conservas Ribera, S.A." } })).toBe("BORRADOR-Conservas-Ribera-S-A.pdf");
+});
+
+const lastDoc = () => vi.mocked(renderDocument).mock.calls.at(-1)![1];
+
+test("cambiar la firma después de emitir no cambia el PDF: se regenera con la de la instantánea", async () => {
+  const { actor, quote } = await issued();
+  const first = await ensureIssuedPdf(actor, quote.id);
+  const original = Buffer.from(TEST_SIGNATURE).toString("base64");
+  expect(lastDoc().signer).toEqual({ name: actor.name, signature: original });
+  await deleteSignature(actor);
+  await rm(abs(first.path));
+  const r = await ensureIssuedPdf(actor, quote.id);
+  expect(lastDoc().signer).toEqual({ name: actor.name, signature: original });
+  expect(await text(await readFile(abs(r.path)))).toContain(norm(`Fdo.: ${actor.name}`));
+});
+
+test("una instantánea anterior, sin firmante, se genera con el recuadro vacío", async () => {
+  const { actor, quote } = await issued();
+  const doc = await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: quote.id } });
+  const { signer: _signer, ...old } = doc.snapshot as Record<string, unknown>;
+  await prisma.issuedDocument.update({ where: { id: doc.id }, data: { snapshot: old as never } });
+  const r = await ensureIssuedPdf(actor, quote.id);
+  expect(lastDoc().signer).toBeNull();
+  expect(await text(await readFile(abs(r.path)))).toContain(norm("Firma y sello"));
+});
+
+test("la vista previa del borrador lleva la firma de quien la mira, o el recuadro si no tiene", async () => {
+  const { actor, quote } = await completeDraft();
+  await pdfResponse(actor, quote.id);
+  expect(lastDoc().signer).toEqual({ name: actor.name, signature: Buffer.from(TEST_SIGNATURE).toString("base64") });
+  const unsigned = await makeUser("presupuestador", { signature: false });
+  await pdfResponse(unsigned, quote.id);
+  expect(lastDoc().signer).toBeNull();
 });

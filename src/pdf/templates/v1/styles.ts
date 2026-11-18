@@ -50,6 +50,11 @@ tr.note.kit td:not(:first-child){border-top:.5pt dashed var(--mut);padding-top:.
 .totals .big{font-size:12pt;font-weight:800;border-bottom:none;border-top:1.5pt solid var(--ink);margin-top:1mm;padding-top:2mm}
 .stamp{height:22mm;border:.75pt solid var(--rule);padding:1.2mm 2mm}
 .stamp small{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700}
+/* Sello de 62 mm (860×344) con la firma encima: la firma lo rebasa, pero cabe en los 78 mm de la columna y no pisa los totales. */
+.signed{position:relative;width:62mm;height:24.8mm;margin:6mm auto 0}
+.signed .sello{display:block;width:100%;height:100%}
+.signed .firma{position:absolute;left:50%;top:50%;width:125%;height:130%;object-fit:contain;transform:translate(-50%,-55%) rotate(-3deg)}
+.fdo{font-size:7.5pt;color:var(--mut);text-align:center}
 
 /* Borrador: Chromium repite los elementos fijos en cada hoja impresa. 80 pt: los 96 de la maqueta (hoja de 210 mm) no caben en los 174 mm útiles. */
 .wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}

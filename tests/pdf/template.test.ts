@@ -1,6 +1,7 @@
 import { buildDocument } from "@/pdf/document";
 import { TEMPLATES, renderDocument } from "@/pdf/templates";
 import { html, safe } from "@/pdf/templates/v1/html";
+import { stampHtml } from "@/pdf/templates/v1";
 import { pdfSource } from "./fixture";
 
 const doc = (draft = false) => buildDocument(pdfSource(), { draft });
@@ -79,4 +80,18 @@ test("los datos de empresa vacíos no dejan rótulos ni separadores sueltos", ()
 test("plantilla desconocida", async () => {
   await expect(renderDocument("v9", doc(), null)).rejects.toThrow("Plantilla desconocida: v9");
   await expect(renderDocument("toString", doc(), null)).rejects.toThrow("Plantilla desconocida: toString");
+});
+
+test("stampHtml: sin firmante, el recuadro vacío; con firmante, sello, firma y «Fdo.: nombre» escapado", () => {
+  expect(stampHtml(null)).toContain("Firma y sello");
+  const s = stampHtml({ name: "Lucía <b>Pardo</b>", signature: "AAAA" });
+  expect(s).toContain("data:image/svg+xml;base64,");
+  expect(s).toContain("data:image/png;base64,AAAA");
+  expect(s).toContain("Fdo.: Lucía &lt;b&gt;Pardo&lt;/b&gt;");
+  expect(s).not.toContain("Firma y sello");
+});
+
+test("el cuerpo del PDF lleva el bloque de firma del documento", () => {
+  expect(TEMPLATES.v1.body({ ...doc(), signer: { name: "Ana", signature: "AAAA" } })).toContain("Fdo.: Ana");
+  expect(TEMPLATES.v1.body({ ...doc(), signer: null })).toContain("Firma y sello");
 });

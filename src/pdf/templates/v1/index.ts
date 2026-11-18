@@ -1,5 +1,6 @@
 import type { PdfDocument, PdfRow } from "@/pdf/document";
 import { archivoFontFace } from "@/pdf/fonts";
+import { selloDataUri } from "@/pdf/stamp";
 import type { Template } from "../index";
 import { html, safe } from "./html";
 import { paginate } from "./paginate";
@@ -21,6 +22,13 @@ const row = (r: PdfRow) =>
   : r.kind === "line"
     ? html`<tr class="line${r.kit ? " k" : ""}"><td></td><td>${r.text}</td><td class="n">${r.quantity}</td><td></td></tr>`
     : html`<tr class="${r.kind}"><td class="p">${r.number}</td><td>${r.title}</td><td></td><td class="n">${r.total}</td></tr>`;
+
+/** «Firma y sello» of the close: the stamp with the issuer's signature over it, or the empty box when there is none. */
+export function stampHtml(signer: PdfDocument["signer"]): string {
+  if (!signer) return html`<div class="stamp"><small>Firma y sello</small></div>`.__html;
+  return html`<div class="signed"><img class="sello" src="${selloDataUri()}" alt=""><img class="firma" src="data:image/png;base64,${signer.signature}" alt=""></div>
+<div class="fdo">Fdo.: ${signer.name}</div>`.__html;
+}
 
 function body(d: PdfDocument): string {
   const c = d.company;
@@ -57,7 +65,7 @@ ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
         ${d.totals.taxes.map((t) => html`<div><span>${t.label}</span><span>${t.amount}</span></div>`)}
         <div class="big"><span>Total presupuesto</span><span>${d.totals.total}</span></div>
       </div>
-      <div class="stamp"><small>Firma y sello</small></div>
+      ${safe(stampHtml(d.signer))}
     </div>
   </div>
 </section>

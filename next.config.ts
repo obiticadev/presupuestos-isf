@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/*": [
       "./node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2",
+      "./src/pdf/assets/sello-isf.svg",
       "./node_modules/playwright-core/**/*",
     ],
   },
