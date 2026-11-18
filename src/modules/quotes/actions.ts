@@ -112,6 +112,16 @@ export async function createRevisionAction(_prev: ActionResult | null, form: For
   redirect(`/presupuestos/${rev.id}${rev.refreshed ? `?precios=${rev.refreshed}` : ""}`);
 }
 
+export async function createExtensionAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const { createExtension } = await import("./lifecycle");
+  let id = "";
+  const result = await toActionResult(async () => { id = (await createExtension(actor, str(form, "id"))).id; });
+  if (!result.ok) return result;
+  revalidatePath("/", "layout");
+  redirect(`/presupuestos/${id}`);
+}
+
 export async function duplicateAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const actor = await requireUser();
   const { duplicateQuote } = await import("./lifecycle");

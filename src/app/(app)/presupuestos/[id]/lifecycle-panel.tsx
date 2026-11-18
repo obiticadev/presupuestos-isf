@@ -1,19 +1,37 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { ActionForm } from "@/components/action-form";
 import { Menu } from "@/components/disclosure";
 import type { AuditEntry } from "@/modules/audit/service";
-import { createRevisionAction, duplicateAction, refreshPricesAction, setStatusAction } from "@/modules/quotes/actions";
+import { createExtensionAction, createRevisionAction, duplicateAction, refreshPricesAction, setStatusAction } from "@/modules/quotes/actions";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
 import { validityRunOut } from "@/modules/quotes/lifecycle";
 import type { QuoteDetail } from "@/modules/quotes/service";
 
 const rev = (n: number) => `R${String(n).padStart(2, "0")}`;
+const ext = (n: number) => `A${String(n).padStart(2, "0")}`;
+/** R01 in the main line; A02 for a new extension, A01-R01 for its revisions. */
+const lineLabel = (r: { extension: number; revision: number }) => (r.extension ? (r.revision ? `${ext(r.extension)}-${rev(r.revision)}` : ext(r.extension)) : rev(r.revision));
+type NumberRow = { id: string; extension: number; revision: number; status: keyof typeof STATUS_LABEL; issuedAt: Date | null; owner: { name: string } };
+
+function NewButton({ action, id, label, pri }: { action: typeof createRevisionAction; id: string; label: string; pri?: boolean }) {
+  return (
+    <ActionForm action={action}>
+      <input type="hidden" name="id" value={id} />
+      <button className={pri ? "btn pri" : "btn"} style={{ width: "100%", justifyContent: "center" }}>{label}</button>
+    </ActionForm>
+  );
+}
 const fmt = new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" });
 
-/** Issued quote: status selector (or «Sustituido por»), new revision and duplicate. */
-export function IssuedPanel({ q }: { q: QuoteDetail }) {
+/**
+ * Issued quote: status selector (or «Sustituido por»), new revision or extension, and duplicate.
+ * Only the newest line moves: once the number has a later extension, this line takes no more revisions.
+ */
+export function IssuedPanel({ q, number }: { q: QuoteDetail; number: NumberRow[] }) {
   const next = q.revisions.find((r) => r.id === q.supersededById);
-  const draftRevision = q.revisions.find((r) => r.status === "DRAFT");
+  const draft = number.find((r) => r.status === "DRAFT");
+  const later = number.some((r) => r.extension > q.extension);
   const runOut = validityRunOut(q); // Emitido or Enviado would turn back into Caducado within the hour
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -33,14 +51,23 @@ export function IssuedPanel({ q }: { q: QuoteDetail }) {
           </Menu>
         </ActionForm>
       )}
-      {!next && (draftRevision ? (
-        <Link className="btn" href={`/presupuestos/${draftRevision.id}`}>Abrir el borrador {rev(draftRevision.revision)}</Link>
-      ) : (
-        <ActionForm action={createRevisionAction}>
-          <input type="hidden" name="id" value={q.id} />
-          <button className="btn pri">Nueva revisión</button>
-        </ActionForm>
+      {!next && (draft && (!later || draft.extension > q.extension) ? (
+        <Link className="btn" href={`/presupuestos/${draft.id}`}>Abrir el borrador {lineLabel(draft)}</Link>
+      ) : q.extension === 0 ? (
+        later ? (
+          <NewButton action={createExtensionAction} id={q.id} label="Nueva ampliación" pri />
+        ) : (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <NewButton action={createRevisionAction} id={q.id} label="Nueva revisión" pri />
+            <NewButton action={createExtensionAction} id={q.id} label="Nueva ampliación" />
+          </div>
+        )
+      ) : later ? null : (
+        <NewButton action={createRevisionAction} id={q.id} label="Nueva revisión" pri />
       ))}
+      {!next && later && (
+        <p className="locked">{q.extension ? "Hay una ampliación posterior: esta ya no admite nuevas revisiones." : "Ya tiene ampliaciones: la principal no admite nuevas revisiones."}</p>
+      )}
       <a className="btn" href={`/api/presupuestos/${q.id}/pdf`} target="_blank" rel="noopener">Descargar PDF</a>
       <DuplicateButton id={q.id} />
     </div>
@@ -71,18 +98,27 @@ export function PriceWarnings({ id, warnings }: { id: string; warnings: string[]
   );
 }
 
-/** Every revision of this number; each opens its own page (data, PDF, duplicate). Superseded ones are not in the quotes list. */
-export function Revisions({ current, revisions }: { current: string; revisions: { id: string; revision: number; status: keyof typeof STATUS_LABEL; issuedAt: Date | null; owner: { name: string } }[] }) {
+/**
+ * Every revision of this number, newest extension on top and the main line at the bottom, latest revision first in each;
+ * each opens its own page (data, PDF, duplicate). Superseded ones are not in the quotes list.
+ */
+export function Revisions({ current, base, revisions }: { current: string; base: string; revisions: NumberRow[] }) {
   if (revisions.length < 2) return null;
+  const grouped = revisions.some((r) => r.extension > 0);
   return (
-    <nav className="sheet revs" aria-label="Revisiones">
-      <h3>Revisiones</h3>
-      {revisions.map((r) => (
-        <Link key={r.id} href={`/presupuestos/${r.id}`} aria-current={r.id === current ? "page" : undefined}>
+    <nav className="sheet revs" aria-label="Revisiones y ampliaciones">
+      <h3>{grouped ? "Revisiones y ampliaciones" : "Revisiones"}</h3>
+      {revisions.map((r, i) => (
+        <Fragment key={r.id}>
+          {grouped && r.extension !== revisions[i - 1]?.extension && (
+            <div className="grp">{r.extension ? <>Ampliación {ext(r.extension)} <code>-{ext(r.extension)}</code></> : <>Principal <code>{base}</code></>}</div>
+          )}
+        <Link href={`/presupuestos/${r.id}`} aria-current={r.id === current ? "page" : undefined}>
           <b>{rev(r.revision)}</b>
           <span className={`st ${STATUS_CLASS[r.status]}`}><i />{STATUS_LABEL[r.status]}</span>
           <small className="mut">{r.issuedAt ? `${fmt.format(r.issuedAt)} · ${r.owner.name}` : r.owner.name}</small>
         </Link>
+        </Fragment>
       ))}
     </nav>
   );

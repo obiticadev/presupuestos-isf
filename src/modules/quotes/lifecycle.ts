@@ -6,7 +6,7 @@ import { Prisma, type Quote, type QuoteStatus } from "@/generated/prisma/client"
 import { authorLabel, logAction, type AuditEntry } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { STATUS_LABEL } from "./labels";
-import { logQuote, quoteLabel, recalc, withDraft, type Tx } from "./service";
+import { insertSection, logQuote, quoteLabel, recalc, withDraft, type Tx } from "./service";
 
 export const QUOTES_PAGE_SIZE = 50;
 type SettableStatus = Exclude<QuoteStatus, "DRAFT">;
@@ -102,6 +102,8 @@ export async function createRevision(actor: CurrentUser, id: string): Promise<Qu
       if (!q) throw new NotFoundError("El presupuesto no existe");
       if (q.status === "DRAFT") throw new ValidationError({ _: "Solo se revisa un presupuesto emitido" });
       if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: revisa la última" });
+      if (await tx.quote.count({ where: { ...numberOf(q), extension: { gt: q.extension } } }))
+        throw new ValidationError({ _: "Ya tiene una ampliación posterior: solo avanza la más reciente" });
       const rev = await tx.quote.create({
         data: { ...HEADER(q), seqYear: q.seqYear, typeCode: q.typeCode, numberPattern: q.numberPattern, seq: q.seq, extension: q.extension, revision: q.revision + 1, parentId: q.id, ownerId: actor.id, createdById: actor.id, date: todayMadrid() },
       });
@@ -117,6 +119,43 @@ export async function createRevision(actor: CurrentUser, id: string): Promise<Qu
       const q = await prisma.quote.findUniqueOrThrow({ where: { id } });
       throw new ValidationError({ _: `Ya hay un borrador de revisión R${String(q.revision + 1).padStart(2, "0")} de este presupuesto` });
     }
+    throw e;
+  }
+}
+
+/** Every quote sharing this number: the main line and its extensions, with their revisions. */
+const numberOf = (q: Pick<Quote, "seqYear" | "typeCode" | "seq">) => ({ seqYear: q.seqYear, typeCode: q.typeCode, seq: q.seq });
+
+/**
+ * New extension (A01, A02…) of the latest issued main quote: same number, header copied, no sections or notes.
+ * Only the newest line moves, so while the number has any draft no extension is created.
+ */
+export async function createExtension(actor: CurrentUser, id: string): Promise<Quote> {
+  try {
+    return await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Quote" WHERE id = ${id} FOR UPDATE`;
+      const q = await tx.quote.findUnique({ where: { id } });
+      if (!q) throw new NotFoundError("El presupuesto no existe");
+      if (q.status === "DRAFT") throw new ValidationError({ _: "Solo se amplía un presupuesto emitido" });
+      if (q.extension > 0) throw new ValidationError({ _: "Solo se amplía la principal" });
+      if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: amplía la última" });
+      const all = await tx.quote.findMany({ where: numberOf(q), select: { status: true, extension: true } });
+      if (all.some((x) => x.status === "DRAFT")) throw new ValidationError({ _: "Hay un borrador pendiente en este presupuesto: emítelo o bórralo antes" });
+      const extension = Math.max(...all.map((x) => x.extension)) + 1;
+      const ext = await tx.quote.create({
+        data: {
+          ...HEADER(q), base: 0, total: 0, waivers: {}, seqYear: q.seqYear, typeCode: q.typeCode, numberPattern: q.numberPattern, seq: q.seq,
+          extension, revision: 0, ownerId: actor.id, createdById: actor.id, date: todayMadrid(),
+        },
+      });
+      await insertSection(tx, ext.id, null, "");
+      const label = `A${String(extension).padStart(2, "0")}`;
+      await logQuote(tx, actor, q.id, "extension", `Borrador de ampliación ${label} de ${q.reference}`);
+      await logQuote(tx, actor, ext.id, "extension", `Ampliación ${label} de ${q.reference}`);
+      return ext;
+    });
+  } catch (e) {
+    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") throw new ValidationError({ _: "Ya hay un borrador de ampliación de este presupuesto" });
     throw e;
   }
 }
@@ -214,8 +253,8 @@ export async function listRevisions(id: string) {
   const q = await prisma.quote.findUnique({ where: { id }, select: { seqYear: true, typeCode: true, seq: true } });
   if (!q || q.seq === null) return [];
   return prisma.quote.findMany({
-    where: { seqYear: q.seqYear, typeCode: q.typeCode, seq: q.seq }, orderBy: { revision: "desc" },
-    select: { id: true, revision: true, status: true, reference: true, issuedAt: true, owner: { select: { name: true } } },
+    where: numberOf(q), orderBy: [{ extension: "desc" }, { revision: "desc" }],
+    select: { id: true, extension: true, revision: true, status: true, reference: true, issuedAt: true, owner: { select: { name: true } } },
   });
 }
 
@@ -223,7 +262,7 @@ export async function listRevisions(id: string) {
 export async function listQuoteHistory(id: string): Promise<AuditEntry[]> {
   const q = await prisma.quote.findUnique({ where: { id } });
   if (!q) throw new NotFoundError("El presupuesto no existe");
-  const ids = q.seq !== null ? (await prisma.quote.findMany({ where: { seqYear: q.seqYear, typeCode: q.typeCode, seq: q.seq }, select: { id: true } })).map((x) => x.id) : [id];
+  const ids = q.seq !== null ? (await prisma.quote.findMany({ where: numberOf(q), select: { id: true } })).map((x) => x.id) : [id];
   const rows = await prisma.auditLog.findMany({
     where: { entity: "quote", entityId: { in: ids } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 200,
     include: { user: { select: { name: true } } },

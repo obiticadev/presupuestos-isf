@@ -20,6 +20,7 @@ import { listTaxes } from "@/modules/settings/service";
 import { OpenKitFromHash } from "@/components/disclosure";
 import { InstallationFields } from "./installation-fields";
 import { formatTypeCode, listQuoteTypes } from "@/modules/quotes/types";
+import { baseReference } from "@/modules/quotes/numbering";
 import { IssuePanel } from "./issue-panel";
 import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory, Revisions } from "./lifecycle-panel";
 import { Comment } from "./comment";
@@ -94,17 +95,29 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
                 ) : (
                   <div className="field tipo">Tipo<output className="box" tabIndex={0}>{q.typeCode ? formatTypeCode(q.typeCode) : "—"}</output></div>
                 )}
-                <label className="field">Cliente
-                  <select name="clientId" defaultValue={q.clientId}>
-                    {!clients.some((c) => c.id === q.clientId) && <option value={q.clientId}>{q.client.legalName} (desactivado)</option>}
-                    {clients.map((c) => <option key={c.id} value={c.id}>{c.legalName}</option>)}
-                  </select>
-                </label>
+                {q.extension > 0 ? (
+                  <div className="field">Cliente<output className="box" tabIndex={0}>{q.client.legalName}</output></div>
+                ) : (
+                  <label className="field">Cliente
+                    <select name="clientId" defaultValue={q.clientId}>
+                      {!clients.some((c) => c.id === q.clientId) && <option value={q.clientId}>{q.client.legalName} (desactivado)</option>}
+                      {clients.map((c) => <option key={c.id} value={c.id}>{c.legalName}</option>)}
+                    </select>
+                  </label>
+                )}
               </div>
-              <InstallationFields
-                options={activeOrCurrent(client.locations, q.locationId).map((l) => ({ id: l.id, name: l.name, label: installationLabel(l) }))}
-                current={q.locationId}
-              />
+              {/* An extension keeps the type, client and installation of its quote. */}
+              {q.extension > 0 ? (
+                <>
+                  <div className="field">Nombre<output className="box" tabIndex={0}>{q.location?.name ?? "—"}</output></div>
+                  <div className="field">Instalación<output className="box" tabIndex={0}>{installationLabel(q.location)}</output></div>
+                </>
+              ) : (
+                <InstallationFields
+                  options={activeOrCurrent(client.locations, q.locationId).map((l) => ({ id: l.id, name: l.name, label: installationLabel(l) }))}
+                  current={q.locationId}
+                />
+              )}
               <label className="field">Contacto
                 <select name="contactId" defaultValue={q.contactId ?? ""}>
                   <option value="">— Sin elegir —</option>
@@ -174,7 +187,7 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
 
         <Notes groups={notes} meId={me.id} />
 
-        {editable ? <IssuePanel q={q} required={required} hasSignature={(await getSignature(me.id)) !== null} /> : <IssuedPanel q={q} />}
+        {editable ? <IssuePanel q={q} required={required} hasSignature={(await getSignature(me.id)) !== null} /> : <IssuedPanel q={q} number={revisions} />}
 
         {editable && (
           <ActionForm action={deleteDraftAction}>
@@ -184,7 +197,8 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
         )}
         {editable && <DuplicateButton id={q.id} />}
       </aside>
-      <Revisions current={q.id} revisions={revisions} />
+      <Revisions current={q.id} revisions={revisions}
+        base={q.seq !== null && q.numberPattern ? baseReference(q.numberPattern, { year: q.seqYear!, typeCode: q.typeCode, seq: q.seq }) : ""} />
       </div>
     </div>
   );

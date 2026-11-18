@@ -131,7 +131,7 @@ async function nextPosition(tx: Tx, where: { quoteId: string; parentId: string |
 }
 
 /** A partida always comes with its first subpartida, so there is somewhere to add lines. */
-async function insertSection(tx: Tx, quoteId: string, parentId: string | null, title: string): Promise<QuoteSection> {
+export async function insertSection(tx: Tx, quoteId: string, parentId: string | null, title: string): Promise<QuoteSection> {
   const section = await tx.quoteSection.create({ data: { quoteId, parentId, title, position: await nextPosition(tx, { quoteId, parentId }) } });
   if (!parentId) await tx.quoteSection.create({ data: { quoteId, parentId: section.id, title: "", position: 1 } });
   return section;
@@ -227,6 +227,9 @@ export async function updateHeader(actor: CurrentUser, id: string, raw: HeaderIn
       const c = await tx.clientContact.findUnique({ where: { id: contactId } });
       if (!c || c.clientId !== clientId || !c.active) throw new ValidationError({ contactId: "Elige un contacto de este cliente" });
     }
+    const changes = (k: "clientId" | "locationId" | "typeId") => input[k] !== undefined && input[k] !== quote[k];
+    if (quote.extension > 0 && (changes("clientId") || changes("locationId") || changes("typeId")))
+      throw new ValidationError({ _: "En una ampliación no se cambian tipo, cliente ni instalación" });
     if (input.typeId !== undefined && input.typeId !== quote.typeId) {
       if (quote.seq !== null) throw new ValidationError({ typeId: "El tipo solo se elige en el primer borrador" });
       const t = input.typeId ? await tx.quoteType.findUnique({ where: { id: input.typeId } }) : null;

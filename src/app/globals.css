@@ -525,3 +525,7 @@ dialog.danger .foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 
 .tipo select::picker(select) { min-width: 22rem; }
 .tipo option[data-d]::after { color: var(--mut); font-style: italic; }
 .head .tiponame { margin-left: auto; color: var(--mut); font-weight: 600; }
+/* Revisiones y ampliaciones (Bloque 7) */
+.revs .grp { font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--mut); margin: 12px 0 2px; display: flex; justify-content: space-between; }
+.revs .grp code { font: 600 11px var(--font-archivo), sans-serif; letter-spacing: 0; text-transform: none; }
+.locked { font-size: 12px; color: var(--mut); padding: 4px 6px 0; margin: 0; }

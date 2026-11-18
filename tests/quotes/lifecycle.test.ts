@@ -1,9 +1,10 @@
 import { prisma } from "@/lib/db";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
-import { createRevision, duplicateQuote, expireQuotes, validityRunOut, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
-import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateLine } from "@/modules/quotes/service";
-import { conceptFields, completeDraft, quoteType } from "../helpers/quotes";
+import { createExtension, createRevision, duplicateQuote, expireQuotes, validityRunOut, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
+import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateHeader, updateLine } from "@/modules/quotes/service";
+import { ValidationError } from "@/lib/errors";
+import { conceptFields, completeDraft, makeClient, quoteType } from "../helpers/quotes";
 
 test("revisar crea R01 en borrador; al emitirla, R00 queda sustituida y ya no cambia de estado", async () => {
   const { actor, quote } = await completeDraft();
@@ -205,4 +206,85 @@ test("duplicar copia el tipo", async () => {
   const { actor, quote } = await completeDraft();
   const { quote: dup } = await duplicateQuote(actor, quote.id);
   expect(dup.typeId).toBe((await getQuote(quote.id)).typeId);
+});
+
+const year = new Date().getUTCFullYear();
+
+test("ampliar la principal emitida crea A01-R00 sin partidas ni notas y con la cabecera copiada", async () => {
+  const { actor, quote } = await completeDraft();
+  const r0 = await issueQuote(actor, quote.id);
+  const a1 = await createExtension(actor, r0.id);
+  expect([a1.status, a1.extension, a1.revision, a1.seq, a1.typeCode]).toEqual(["DRAFT", 1, 0, r0.seq, 1]);
+  expect([a1.subject, a1.paymentTerms]).toEqual([r0.subject, r0.paymentTerms]);
+  const d = await getQuote(a1.id);
+  expect(d.sections.flatMap((s) => s.children.flatMap((c) => c.lines))).toEqual([]);
+  expect(d.total.toFixed(2)).toBe("0.00");
+  expect(await prisma.quoteNote.count({ where: { quoteId: a1.id } })).toBe(0);
+  await addCatalogLine(actor, d.sections[0].children[0].id, { conceptId: "concept-ser-despl", quantity: "100" });
+  await addCatalogLine(actor, d.sections[0].children[0].id, { conceptId: "concept-ser-prog", quantity: "1" });
+  expect((await issueQuote(actor, a1.id)).reference).toBe(r0.reference!.replace("-R00", "-A01-R00"));
+  expect((await getQuote(r0.id)).supersededById).toBeNull();
+  expect((await createExtension(actor, r0.id)).extension).toBe(2);
+});
+
+/** Main R00 issued and A01-R00 issued; returns both. */
+async function withExtension() {
+  const d = await completeDraft();
+  const r0 = await issueQuote(d.actor, d.quote.id);
+  const a1 = await createExtension(d.actor, r0.id);
+  const sub = (await getQuote(a1.id)).sections[0].children[0];
+  await addCatalogLine(d.actor, sub.id, { conceptId: "concept-ser-despl", quantity: "100" });
+  await addCatalogLine(d.actor, sub.id, { conceptId: "concept-ser-prog", quantity: "1" });
+  return { ...d, r0, a1: await issueQuote(d.actor, a1.id) };
+}
+
+test("la revisión de la A01 es A01-R01 y sustituye a la A01-R00, no a la principal", async () => {
+  const { actor, r0, a1 } = await withExtension();
+  const r = await createRevision(actor, a1.id);
+  expect((await issueQuote(actor, r.id)).reference).toBe(r0.reference!.replace("-R00", "-A01-R01"));
+  expect((await getQuote(a1.id)).supersededById).toBe(r.id);
+  expect((await getQuote(r0.id)).supersededById).toBeNull();
+});
+
+test("reglas de las ampliaciones", async () => {
+  const { actor, quote, r0, a1 } = await withExtension();
+  const draft = await completeDraft();
+  await expect(createExtension(actor, draft.quote.id)).rejects.toThrow(ValidationError);
+  await expect(createExtension(actor, a1.id)).rejects.toThrow("Solo se amplía la principal");
+  await expect(createRevision(actor, r0.id)).rejects.toThrow("Ya tiene una ampliación posterior: solo avanza la más reciente");
+  const pending = await createRevision(actor, a1.id);
+  await expect(createExtension(actor, quote.id)).rejects.toThrow("Hay un borrador pendiente en este presupuesto: emítelo o bórralo antes");
+  await deleteDraft(actor, pending.id);
+  await createExtension(actor, quote.id);
+  await expect(createRevision(actor, a1.id)).rejects.toThrow("Ya tiene una ampliación posterior: solo avanza la más reciente");
+});
+
+test("una revisión sustituida no se amplía", async () => {
+  const { actor, quote } = await completeDraft();
+  await issueQuote(actor, quote.id);
+  const r1 = await createRevision(actor, quote.id);
+  await issueQuote(actor, r1.id);
+  await expect(createExtension(actor, quote.id)).rejects.toThrow("Sustituido");
+});
+
+test("en una ampliación no se cambian tipo, cliente ni instalación; el resto, sí", async () => {
+  const { actor, admin, r0 } = await (async () => { const d = await completeDraft(); return { ...d, r0: await issueQuote(d.actor, d.quote.id) }; })();
+  const a1 = await createExtension(actor, r0.id);
+  const other = await makeClient(admin);
+  const msg = { issues: { _: "En una ampliación no se cambian tipo, cliente ni instalación" } };
+  await expect(updateHeader(actor, a1.id, { clientId: other.client.id })).rejects.toMatchObject(msg);
+  await expect(updateHeader(actor, a1.id, { locationId: "" })).rejects.toMatchObject(msg);
+  await expect(updateHeader(actor, a1.id, { typeId: (await quoteType(2)).id })).rejects.toMatchObject(msg);
+  await updateHeader(actor, a1.id, { clientId: r0.clientId, locationId: r0.locationId!, subject: "otra cosa", validityDays: "15", paymentTerms: "Contado", exclusions: "Nada", date: `${year}-01-02` });
+  expect((await getQuote(a1.id)).subject).toBe("otra cosa");
+});
+
+test("el listado trae una fila por línea viva y el historial de la A01 incluye el de la principal", async () => {
+  const { actor, quote, r0, a1 } = await withExtension();
+  const r1 = await createRevision(actor, r0.id).catch(() => null); // blocked: the main line no longer moves
+  expect(r1).toBeNull();
+  const ids = (await listQuotes({})).items.map((i) => i.id);
+  expect(ids).toEqual(expect.arrayContaining([r0.id, a1.id]));
+  expect((await listQuoteHistory(a1.id)).some((h) => h.entityId === quote.id)).toBe(true);
+  expect((await listRevisions(a1.id)).map((r) => [r.extension, r.revision])).toEqual([[1, 0], [0, 0]]);
 });
