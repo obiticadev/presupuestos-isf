@@ -33,11 +33,12 @@ export async function setStatus(actor: CurrentUser, id: string, status: Settable
  */
 export async function expireQuotes(now = new Date()): Promise<number> {
   return prisma.$transaction(async (tx) => {
+    // issuedAt is a timestamp without time zone holding UTC: first mark it as UTC, then read it in Madrid.
     const rows = await tx.$queryRaw<{ id: string; reference: string; status: QuoteStatus }[]>`
       WITH due AS (
         SELECT id, reference, status FROM "Quote"
         WHERE status IN ('ISSUED', 'SENT') AND "supersededById" IS NULL
-          AND ("issuedAt" AT TIME ZONE 'Europe/Madrid')::date + "validityDays" < (${now}::timestamptz AT TIME ZONE 'Europe/Madrid')::date
+          AND (("issuedAt" AT TIME ZONE 'UTC') AT TIME ZONE 'Europe/Madrid')::date + "validityDays" < (${now}::timestamptz AT TIME ZONE 'Europe/Madrid')::date
         FOR UPDATE)
       UPDATE "Quote" q SET status = 'EXPIRED', "updatedAt" = now() FROM due WHERE q.id = due.id
       RETURNING due.id, due.reference, due.status`;

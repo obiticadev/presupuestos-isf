@@ -91,6 +91,17 @@ test("expireQuotes caduca al día siguiente del vencimiento, contando días de M
   expect(await prisma.auditLog.count({ where: { entityId: quote.id, action: "status" } })).toBe(1);
 });
 
+test("expireQuotes cuenta el día de emisión de Madrid aunque en UTC sea el día anterior", async () => {
+  const { actor, quote } = await completeDraft();
+  await issueQuote(actor, quote.id);
+  // 2026-03-02 00:30 en Madrid = 2026-03-01 23:30 UTC: emitido el día 2; con 30 días vence el 1 de abril.
+  await prisma.quote.update({ where: { id: quote.id }, data: { issuedAt: new Date("2026-03-01T23:30:00Z"), validityDays: 30 } });
+  await expireQuotes(new Date("2026-03-31T22:30:00Z")); // 01-04 00:30 en Madrid: aún vigente
+  expect((await getQuote(quote.id)).status).toBe("ISSUED");
+  await expireQuotes(new Date("2026-04-01T22:30:00Z")); // 02-04 00:30 en Madrid
+  expect((await getQuote(quote.id)).status).toBe("EXPIRED");
+});
+
 test("expireQuotes no toca aceptados, rechazados, borradores ni revisiones sustituidas; sí los enviados", async () => {
   const old = { issuedAt: new Date("2020-01-01T10:00:00Z"), validityDays: 1 };
   const issued = async (status?: "ACCEPTED" | "REJECTED" | "SENT") => {

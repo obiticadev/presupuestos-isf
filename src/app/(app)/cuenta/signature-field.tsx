@@ -31,9 +31,10 @@ export function SignatureField({ signature, sello }: { signature: string | null;
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  // Sizes the canvas to its box at ≥ 2× resolution (sharp strokes) and clears it.
+  // Sizes the canvas to its box at ≥ 2× resolution (sharp strokes), within the 4000×2000 the server accepts, and clears it.
   const fit = () => {
-    const c = canvas.current!, r = c.getBoundingClientRect(), k = Math.max(devicePixelRatio || 1, 2);
+    const c = canvas.current!, r = c.getBoundingClientRect();
+    const k = Math.min(Math.max(devicePixelRatio || 1, 2), 4000 / r.width, 2000 / r.height);
     c.width = r.width * k;
     c.height = r.height * k;
     c.getContext("2d")!.setTransform(k, 0, 0, k, 0, 0);
