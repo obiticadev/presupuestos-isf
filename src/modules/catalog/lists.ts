@@ -2,12 +2,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { parseOrThrow } from "@/lib/validation";
-import type { Category, Unit } from "@/generated/prisma/client";
+import { Prisma, type Category, type Unit } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
 import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 
-// Categories and units behave the same: a name, renamed or deactivated, never deleted.
+// Categories and units behave the same: a name, renamed, deactivated, or deleted while no concept uses it.
 const listInput = z.object({ id: z.string().optional(), name: z.string().trim().min(1, "Escribe el nombre").max(50, "Máximo 50 caracteres") });
 export type ListInput = z.input<typeof listInput>;
 
@@ -20,7 +20,7 @@ type Delegate = typeof prisma.category;
 const table = (tx: Pick<typeof prisma, "category" | "unit">, kind: Kind) => tx[kind.model] as unknown as Delegate;
 
 async function list(kind: Kind, opts: { includeInactive?: boolean }) {
-  return table(prisma, kind).findMany({ where: opts.includeInactive ? undefined : { active: true }, orderBy: { name: "asc" } });
+  return table(prisma, kind).findMany({ where: opts.includeInactive ? undefined : { active: true }, orderBy: { name: "asc" }, include: { _count: { select: { concepts: true } } } });
 }
 
 async function save(kind: Kind, actor: CurrentUser, raw: ListInput) {
@@ -55,9 +55,24 @@ async function setActive(kind: Kind, actor: CurrentUser, id: string, active: boo
   });
 }
 
-export const listCategories = (opts: { includeInactive?: boolean } = {}): Promise<Category[]> => list(CATEGORY, opts);
+async function remove(kind: Kind, actor: CurrentUser, id: string) {
+  assertAdmin(actor);
+  try {
+    await prisma.$transaction(async (tx) => {
+      const row = await table(tx, kind).delete({ where: { id } });
+      await logAction(tx, { userId: actor.id, entity: kind.model, entityId: id, action: "delete", summary: `${kind.label} ${row.name} borrada` });
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") throw new ValidationError({ _: "Está en uso: desactívala" });
+    throw error;
+  }
+}
+
+export const listCategories = (opts: { includeInactive?: boolean } = {}) => list(CATEGORY, opts);
 export const saveCategory = (actor: CurrentUser, input: ListInput): Promise<Category> => save(CATEGORY, actor, input);
 export const setCategoryActive = (actor: CurrentUser, id: string, active: boolean) => setActive(CATEGORY, actor, id, active);
-export const listUnits = (opts: { includeInactive?: boolean } = {}): Promise<Unit[]> => list(UNIT, opts);
+export const listUnits = (opts: { includeInactive?: boolean } = {}) => list(UNIT, opts);
 export const saveUnit = (actor: CurrentUser, input: ListInput): Promise<Unit> => save(UNIT, actor, input);
 export const setUnitActive = (actor: CurrentUser, id: string, active: boolean) => setActive(UNIT, actor, id, active);
+export const deleteCategory = (actor: CurrentUser, id: string) => remove(CATEGORY, actor, id);
+export const deleteUnit = (actor: CurrentUser, id: string) => remove(UNIT, actor, id);

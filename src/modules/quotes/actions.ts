@@ -8,6 +8,7 @@ import { addKitInstance, removeKitInstance, updateKitInstance } from "./kit-inst
 import { addNote, deleteNote, editNote } from "./notes";
 import { deleteAllQuotes } from "./reset";
 import * as quotes from "./service";
+import { deleteQuoteType, saveQuoteType, setQuoteTypeActive } from "./types";
 
 // Thin wrappers: read the form, call the service (which checks the draft and logs), refresh the pages that show quotes.
 
@@ -128,3 +129,7 @@ export const deleteNoteAction: Action = action((actor, f) => deleteNote(actor, s
 
 // Danger zone (Configuración): deletes every quote; the service checks the role and the typed word.
 export const deleteAllQuotesAction: Action = action((actor, f) => deleteAllQuotes(actor, str(f, "confirm")));
+
+export const saveQuoteTypeAction: Action = action((actor, f) => saveQuoteType(actor, { id: str(f, "id") || undefined, name: str(f, "name"), code: str(f, "code") }));
+export const setQuoteTypeActiveAction: Action = action((actor, f) => setQuoteTypeActive(actor, str(f, "id"), str(f, "active") === "1"));
+export const deleteQuoteTypeAction: Action = action((actor, f) => deleteQuoteType(actor, str(f, "id")));

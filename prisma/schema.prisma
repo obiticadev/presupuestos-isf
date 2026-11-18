@@ -269,6 +269,9 @@ model Quote {
   seq            Int?
   revision       Int             @default(0)
   reference      String?         @unique
+  /// Tipo elegido en el primer borrador de un número; nulo en los antiguos.
+  typeId         String?
+  type           QuoteType?      @relation(fields: [typeId], references: [id], onDelete: Restrict)
   clientId       String
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
   locationId     String?
@@ -308,6 +311,16 @@ model Quote {
   @@index([date])
   @@index([clientId])
   @@index([ownerId])
+  @@index([typeId])
+}
+
+/// Tipo de presupuesto: su código (1-999) va en la referencia. Usado, no se borra ni cambia de código.
+model QuoteType {
+  id     String  @id @default(cuid())
+  name   String
+  code   Int     @unique
+  active Boolean @default(true)
+  quotes Quote[]
 }
 
 /// Partida (parentId null) o subpartida. Las líneas cuelgan siempre de una subpartida.

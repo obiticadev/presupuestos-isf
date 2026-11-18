@@ -38,6 +38,16 @@ export async function setUnitActiveAction(_prev: ActionResult | null, form: Form
   return run(LIST_PATHS, () => lists.setUnitActive(actor, String(form.get("id")), form.get("active") === "1"));
 }
 
+export async function deleteCategoryAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  return run(LIST_PATHS, () => lists.deleteCategory(actor, String(form.get("id"))));
+}
+
+export async function deleteUnitAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  return run(LIST_PATHS, () => lists.deleteUnit(actor, String(form.get("id"))));
+}
+
 const CATALOG = ["/catalogo"];
 
 /** Reads the concept form; checkboxes arrive only when ticked. */
