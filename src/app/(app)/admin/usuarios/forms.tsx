@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { ConfirmButton, SubmitOnBlur } from "@/components/action-form";
 import type { ActionResult } from "@/lib/action-result";
 import type { Role } from "@/modules/auth/session";
@@ -52,11 +52,18 @@ export function NewUserForm() {
 function RowForm({ action, children }: { action: Action; children: (pending: boolean) => React.ReactNode }) {
   const [state, run, pending] = useActionState<ActionResult | null, FormData>(action, null);
   const e = errorsOf(state);
+  const [saved, setSaved] = useState(false);
+  useEffect(() => {
+    if (!state?.ok) return;
+    setSaved(true);
+    const t = setTimeout(() => setSaved(false), 2500);
+    return () => clearTimeout(t);
+  }, [state]);
   return (
     <form action={run} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
       {children(pending)}
       <FieldError msg={e._ ?? e.password ?? e.role ?? e.name} />
-      {state?.ok && <span className="mut" role="status">Guardado</span>}
+      {saved && <span role="status" style={{ color: "var(--ok)", fontWeight: 600 }}>Guardado</span>}
     </form>
   );
 }
@@ -67,7 +74,7 @@ export function RoleForm({ userId, role }: { userId: string; role: Role }) {
       {(pending) => (
         <>
           <input type="hidden" name="userId" value={userId} />
-          <select name="role" defaultValue={role} aria-label="Rol" style={{ minHeight: 34, font: "inherit", border: "1.5px solid var(--ink)", padding: "4px 6px" }}>
+          <select name="role" defaultValue={role} aria-label="Rol" style={{ width: 150, minHeight: 34, font: "inherit", border: "1.5px solid var(--ink)", padding: "4px 6px" }}>
             <option value="presupuestador">Presupuestador</option>
             <option value="admin">Administrador</option>
           </select>
@@ -115,7 +122,7 @@ export function DeleteForm({ userId, name, drafts }: { userId: string; name: str
       {() => (
         <>
           <input type="hidden" name="userId" value={userId} />
-          <ConfirmButton label="Eliminar" className="btn danger" confirm={`¿Eliminar a ${name}? Sus ${drafts} borradores pasarán a ti`} />
+          <ConfirmButton label="Eliminar" className="btn danger" confirm={`¿Eliminar a ${name}?${drafts === 1 ? " Su borrador pasará a ti" : drafts ? ` Sus ${drafts} borradores pasarán a ti` : ""}`} />
         </>
       )}
     </RowForm>
