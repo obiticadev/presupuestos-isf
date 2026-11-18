@@ -15,6 +15,10 @@ export type AuditEntry = {
   summary: string;
 };
 
+/** Live name of the author, or the name copied when that user was deleted; null means the system. */
+export const authorLabel = (live: { name: string } | null, saved: string | null): string | null =>
+  live?.name ?? (saved ? `${saved} (eliminado)` : null);
+
 /** Receives the caller's transaction so the action and its log entry are saved together. */
 export async function logAction(
   tx: Prisma.TransactionClient | PrismaClient,
@@ -47,7 +51,7 @@ export async function listAudit(
     items: rows.map((r) => ({
       id: r.id,
       createdAt: r.createdAt,
-      userName: r.user?.name ?? null,
+      userName: authorLabel(r.user, r.userName),
       entity: r.entity,
       entityId: r.entityId,
       action: r.action,

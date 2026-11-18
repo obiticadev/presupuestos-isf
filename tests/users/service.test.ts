@@ -5,10 +5,19 @@ import {
   adminResetPassword,
   createUser,
   deactivateUser,
+  deleteUser,
   listUsers,
   reactivateUser,
+  renameUser,
   setRole,
 } from "@/modules/users/service";
+import type { CurrentUser } from "@/modules/auth/session";
+import { listAudit } from "@/modules/audit/service";
+import { issueQuote } from "@/modules/quotes/issue";
+import { createRevision } from "@/modules/quotes/lifecycle";
+import { addNote, editNote, listNotes } from "@/modules/quotes/notes";
+import { addCatalogLine, createDraft } from "@/modules/quotes/service";
+import { completeDraft, makeClient, makeDraft } from "../helpers/quotes";
 import { makeUser } from "../helpers/users";
 
 const LAST_ADMIN = "Debe quedar al menos un administrador activo";
@@ -98,3 +107,69 @@ test("listUsers muestra primero los activos y después por nombre", async () => 
     ["beta", false],
   ]);
 });
+
+describe("eliminar y renombrar", () => {
+  test("eliminar pasa sus borradores al admin y conserva su nombre en historial, notas y ajustes", async () => {
+    const { actor, admin, quote, sub } = await makeDraft();
+    await addNote(actor, quote.id, { text: "hola" });
+    const line = await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-despl", quantity: "1" });
+    await prisma.priceAdjustment.create({ data: { lineId: line.id, originalPrice: "1", newPrice: "2", reason: "r", userId: actor.id } });
+    await deleteUser(admin, actor.id);
+
+    expect(await prisma.user.findUnique({ where: { id: actor.id } })).toBeNull();
+    expect(await prisma.quote.findUniqueOrThrow({ where: { id: quote.id } })).toMatchObject({ ownerId: admin.id, createdById: admin.id });
+    const note = await prisma.quoteNote.findFirstOrThrow({ where: { quoteId: quote.id } });
+    expect([note.authorId, note.authorName]).toEqual([null, actor.name]);
+    expect((await listNotes(quote.id)).flatMap((g) => g.notes).map((n) => n.authorName)).toEqual([`${actor.name} (eliminado)`]);
+    const { items } = await listAudit(admin, { entity: "quote", entityId: quote.id });
+    expect(items.map((e) => e.userName)).toEqual(items.map(() => `${actor.name} (eliminado)`));
+    await editNote(admin, note.id, { text: "editada" });
+    const [edited] = (await listNotes(quote.id)).flatMap((g) => g.notes);
+    expect([edited.authorName, edited.versions.map((v) => v.authorName)]).toEqual([admin.name, [`${actor.name} (eliminado)`]]);
+    expect(await prisma.priceAdjustment.findFirstOrThrow({ where: { lineId: line.id } })).toMatchObject({ userId: null, userName: actor.name });
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { entity: "user", entityId: actor.id, action: "delete" } });
+    expect(log.summary).toContain(actor.email);
+  });
+
+  test("no se elimina a quien tiene algo emitido, a uno mismo ni lo hace un presupuestador", async () => {
+    const { actor, admin, quote } = await completeDraft();
+    await issueQuote(actor, quote.id);
+    await expect(deleteUser(admin, actor.id)).rejects.toThrow(ValidationError);
+    await expect(deleteUser(admin, admin.id)).rejects.toThrow(ValidationError);
+    const other = await makeUser("presupuestador");
+    await expect(deleteUser(other, admin.id)).rejects.toThrow(ForbiddenError);
+    expect(await prisma.user.count({ where: { id: { in: [actor.id, admin.id] } } })).toBe(2);
+  });
+
+  test("eliminar a quien tiene un borrador que es revisión de un emitido ajeno", async () => {
+    const { actor, admin, quote } = await completeDraft();
+    await issueQuote(actor, quote.id);
+    const rev = await createRevision(admin, quote.id);
+    const b = await makeUser("presupuestador");
+    await prisma.quote.update({ where: { id: rev.id }, data: { ownerId: b.id, createdById: b.id } });
+    await deleteUser(admin, b.id);
+    expect(await prisma.quote.findUniqueOrThrow({ where: { id: rev.id } })).toMatchObject({ ownerId: admin.id, parentId: quote.id });
+  });
+
+  test("listUsers cuenta emitidos y borradores", async () => {
+    const { actor, admin, quote } = await completeDraft();
+    await issueQuote(actor, quote.id);
+    await makeDraftFor(actor);
+    expect((await listUsers(admin)).find((u) => u.id === actor.id)).toMatchObject({ issued: 1, drafts: 1 });
+  });
+
+  test("renombrar solo a quien no ha emitido, con nombre no vacío", async () => {
+    const { actor, admin, quote } = await makeDraft();
+    await renameUser(admin, actor.id, "  Nuevo Nombre ");
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: actor.id } })).name).toBe("Nuevo Nombre");
+    await expect(renameUser(admin, actor.id, "  ")).rejects.toThrow(ValidationError);
+    await expect(renameUser(actor, actor.id, "X")).rejects.toThrow(ForbiddenError);
+    await prisma.quote.update({ where: { id: quote.id }, data: { status: "ISSUED" } });
+    await expect(renameUser(admin, actor.id, "Otro")).rejects.toThrow(ValidationError);
+  });
+});
+
+async function makeDraftFor(actor: CurrentUser) {
+  const { client } = await makeClient(actor);
+  return createDraft(actor, { clientId: client.id });
+}

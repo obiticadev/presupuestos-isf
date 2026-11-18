@@ -1,9 +1,10 @@
 "use client";
 
 import { startTransition, useActionState, useEffect, useRef } from "react";
+import { ConfirmButton, SubmitOnBlur } from "@/components/action-form";
 import type { ActionResult } from "@/lib/action-result";
 import type { Role } from "@/modules/auth/session";
-import { createUserAction, resetPasswordAction, setActiveAction, setRoleAction } from "@/modules/users/actions";
+import { createUserAction, deleteUserAction, renameUserAction, resetPasswordAction, setActiveAction, setRoleAction } from "@/modules/users/actions";
 
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
@@ -54,7 +55,7 @@ function RowForm({ action, children }: { action: Action; children: (pending: boo
   return (
     <form action={run} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
       {children(pending)}
-      <FieldError msg={e._ ?? e.password ?? e.role} />
+      <FieldError msg={e._ ?? e.password ?? e.role ?? e.name} />
       {state?.ok && <span className="mut" role="status">Guardado</span>}
     </form>
   );
@@ -87,6 +88,34 @@ export function ActiveForm({ userId, active }: { userId: string; active: boolean
           <button className={active ? "btn warn" : "btn"} disabled={pending} style={{ minHeight: 34, padding: "4px 10px" }}>
             {active ? "Desactivar" : "Reactivar"}
           </button>
+        </>
+      )}
+    </RowForm>
+  );
+}
+
+/** Saved when the field loses focus; only offered while the user has nothing issued. */
+export function NameForm({ userId, name }: { userId: string; name: string }) {
+  return (
+    <RowForm action={renameUserAction}>
+      {() => (
+        <SubmitOnBlur>
+          <input type="hidden" name="userId" value={userId} />
+          <input name="name" defaultValue={name} required maxLength={100} aria-label="Nombre"
+            style={{ minHeight: 34, font: "inherit", fontWeight: 600, border: "1.5px solid var(--ink)", padding: "4px 8px", background: "var(--sheet)" }} />
+        </SubmitOnBlur>
+      )}
+    </RowForm>
+  );
+}
+
+export function DeleteForm({ userId, name, drafts }: { userId: string; name: string; drafts: number }) {
+  return (
+    <RowForm action={deleteUserAction}>
+      {() => (
+        <>
+          <input type="hidden" name="userId" value={userId} />
+          <ConfirmButton label="Eliminar" className="btn danger" confirm={`¿Eliminar a ${name}? Sus ${drafts} borradores pasarán a ti`} />
         </>
       )}
     </RowForm>

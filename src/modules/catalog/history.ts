@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { formatDecimalEs } from "@/lib/decimal";
+import { authorLabel } from "@/modules/audit/service";
 import type { ConceptDetail } from "./service";
 
 export type ConceptSnapshot = {
@@ -62,7 +63,7 @@ export async function getConceptHistory(conceptId: string): Promise<ConceptVersi
   return rows.map((r) => {
     const data = r.data as { concept?: ConceptSnapshot; source?: HistorySource } | null;
     return {
-      id: r.id, at: r.createdAt, userName: r.user?.name ?? null, source: data?.source ?? null,
+      id: r.id, at: r.createdAt, userName: authorLabel(r.user, r.userName), source: data?.source ?? null,
       summary: r.summary, snapshot: data?.concept ?? null,
     };
   });

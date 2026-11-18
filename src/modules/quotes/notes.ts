@@ -5,11 +5,12 @@ import { NotFoundError } from "@/lib/errors";
 import { parseOrThrow } from "@/lib/validation";
 import type { Quote, QuoteNote } from "@/generated/prisma/client";
 import type { CurrentUser } from "@/modules/auth/session";
+import { authorLabel } from "@/modules/audit/service";
 import { noteInput } from "./schema";
 import { logQuote, quoteLabel, withDraft } from "./service";
 
 export type NoteView = {
-  id: string; text: string; authorId: string; authorName: string; updatedAt: Date; edited: boolean;
+  id: string; text: string; authorId: string | null; authorName: string; updatedAt: Date; edited: boolean;
   /** Earlier texts, oldest first. */
   versions: { text: string; authorName: string; createdAt: Date }[];
 };
@@ -33,8 +34,8 @@ export async function listNotes(quoteId: string): Promise<NoteGroup[]> {
   return chain.map((q) => ({
     quoteId: q.id, revision: q.revision, issuedAt: q.issuedAt, editable: q.id === quoteId && q.status === "DRAFT",
     notes: notes.filter((n) => n.quoteId === q.id).map((n) => ({
-      id: n.id, text: n.text, authorId: n.authorId, authorName: n.author.name, updatedAt: n.updatedAt, edited: n.edited,
-      versions: n.versions.map((v) => ({ text: v.text, authorName: v.author.name, createdAt: v.createdAt })),
+      id: n.id, text: n.text, authorId: n.authorId, authorName: authorLabel(n.author, n.authorName) ?? "", updatedAt: n.updatedAt, edited: n.edited,
+      versions: n.versions.map((v) => ({ text: v.text, authorName: authorLabel(v.author, v.authorName) ?? "", createdAt: v.createdAt })),
     })),
   }));
 }
@@ -64,8 +65,8 @@ export async function editNote(actor: CurrentUser, noteId: string, raw: { text: 
     const note = await tx.quoteNote.findUnique({ where: { id: noteId } });
     if (!note) throw new NotFoundError("La nota no existe");
     if (note.text === text) return;
-    await tx.quoteNoteVersion.create({ data: { noteId, authorId: note.authorId, text: note.text, createdAt: note.updatedAt } });
-    await tx.quoteNote.update({ where: { id: noteId }, data: { authorId: actor.id, text, edited: true, updatedAt: new Date() } });
+    await tx.quoteNoteVersion.create({ data: { noteId, authorId: note.authorId, authorName: note.authorName, text: note.text, createdAt: note.updatedAt } });
+    await tx.quoteNote.update({ where: { id: noteId }, data: { authorId: actor.id, authorName: null, text, edited: true, updatedAt: new Date() } });
     await logQuote(tx, actor, quote.id, "note.update", `Nota editada en ${quoteLabel(quote)}`);
   });
 }
