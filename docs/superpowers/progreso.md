@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-18 (Bloque 7 cerrado y aprobado por el usuario en 1.7.4; siguiente: Bloque 8).
+Última actualización: 2026-11-19 (Bloque 8 terminado en 1.8.4, pendiente de la revisión del usuario; con él se cierra `mejoras-uso-real`).
 
 ## Cronología
 
@@ -135,8 +135,13 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - Borradores: «Borrador-{instalación}» sin número, «Borrador-{referencia que tendrá}» con número.
   - Menores de la revisión final, arreglados en 1.7.4: una fila nueva de las tablas ya muestra «Guardado»; «Nueva revisión» y «Nueva ampliación» bloquean todo el número, así que a la vez solo sale adelante una (prueba en `lifecycle.test.ts`). Revisión final hecha por el propio agente (sin revisor independiente).
   - En local: `admin@isf.test` y `user@isf.test` con la contraseña de `ACCESOS-PRUEBAS.local.md` y una firma de prueba.
-- **Siguiente:** el Bloque 8 (falta escribir su diseño y su plan):
-  - Bloque 8, pendientes del despliegue en código: prueba intermitente de `kit-instances`, aviso si falla el PDF al emitir, encabezado huérfano y cierre más alto que una hoja en `paginate`, `tar` en `backup.sh`, versión de Playwright duplicada. Añadir aquí el caso improbable de una nota de la última partida sola en la hoja del cierre.
+- **Bloque 8 terminado el 2026-11-19 (1.8.1 a 1.8.4), pendiente de la revisión del usuario** (diseño `specs/2026-11-18-bloque-8-design.md`, plan `plans/2026-11-18-bloque-8.md`; ejecutado por el propio agente en esta sesión):
+  - `backup.sh`: el código 1 de GNU tar (un archivo cambió al leerlo) guarda la copia con un «AVISO» en el log; otro código sigue fallando (prueba de Docker con `CHANGED_TAR`; `FAIL_TAR` simula ahora el código 2).
+  - `tests/docker/versions.test.ts` falla si la versión de `playwright-core` del `Dockerfile` no es la de `package.json` (el `Dockerfile` no se toca).
+  - El emitido muestra «El PDF se generará al descargarlo» mientras `IssuedDocument.pdfPath` esté vacío (`QuoteDetail.issued`); comprobado en Chrome.
+  - `paginate`: al llevar el cierre a otra hoja, las filas van por bloques (encabezados y nota con su fila), así que no quedan partidas, subpartidas ni notas sueltas (solo pasaba con hojas de ~340 px); un cierre más alto que una hoja hace crecer la última hoja y Chromium lo continúa en las páginas siguientes con cabecera y pie (exclusiones de 8.000 caracteres: 8 páginas, comprobado en Chrome).
+  - Prueba intermitente de `kit-instances`: no reproducible en 30 pasadas del archivo y 5 de la suite completa (370/370) el 2026-11-19; cerrada sin cambios.
+  - Quedan para el usuario: comprobaciones en el servidor, cambio de credenciales y manual (puntos 4 a 6 de «Pendiente tras el despliegue»).
 - **Al retomar:** `git pull` en `mejoras-uso-real`, `mise x -- pnpm install`, `mise x -- pnpm exec prisma migrate deploy` (migraciones nuevas: `20261111205350_comments` y `20261112120000_installation`), la suite, y arrancar con `mise x -- pnpm dev`. Al hacer commit desde el equipo Linux, los archivos que tienen CRLF se añaden con `git -c core.autocrlf=false add` (la configuración global de git usa `autocrlf=input`).
 - **Usuarios de prueba (local y `:3101`):** `admin@isf.test` (admin) y `user@isf.test` (presupuestador), con la contraseña de `ACCESOS-PRUEBAS.local.md`; si en local no entran, se restauran con `ADMIN_PASSWORD=… pnpm admin reset-password --email <usuario>` (y `user@isf.test` se crea con `auth.api.createUser`, rol presupuestador).
 - **Datos de la BD de desarrollo:** el borrador «Ampliación del grupo de bombeo» (`cmw9urhye0012djm6hdo8szw4`) tiene nombres largos, comentarios y elementos «… de prueba UI» para revisar el editor.
@@ -376,14 +381,7 @@ Errores y cabos sueltos encontrados durante el despliegue y al preparar el manua
 - Reproducir: borrador con una partida de nombre largo y una línea de catálogo de descripción larga, ventana de 1440 px. Código en `src/app/(app)/presupuestos/[id]/sections.tsx`.
 - Probable arreglo: que esos campos ocupen el ancho de la columna «Denominación» (o un `min-width` razonable) y comprobarlo en Chrome a 1366, 1440, 1600 y 1920 px.
 
-**2. Prueba intermitente.** `tests/quotes/kit-instances.test.ts`, «sin manguera el conjunto queda incompleto y no suma; elegirla después lo valora», falló una vez en la verificación completa de la Tarea 8. Sola y repitiendo la suite (217/217) pasa. Buscar dependencia de orden, de tiempo o del estado compartido de `presupuestos_test`.
-
-**3. Menores aplazados de la revisión final del plan 4** (detalle en «Tarea 8» arriba):
-- no se muestra «El PDF se generará al descargarlo» si falla el PDF al emitir (spec 5.5.1);
-- al recolocar el cierre, un encabezado de partida o subpartida puede quedar solo al pie de una hoja (`src/pdf/templates/v1/paginate.ts`);
-- un cierre más alto que una hoja se corta sin aviso;
-- `tar` hace fallar la copia entera si un archivo cambia mientras se lee (`scripts/backup.sh`);
-- la versión de Playwright está duplicada en `Dockerfile` y `package.json`.
+**2 y 3. Prueba intermitente y menores del plan 4:** resueltos en el Bloque 8 (2026-11-19); detalle arriba, en «Mejoras tras el uso real».
 
 **4. Comprobaciones en el servidor sin hacer** (aceptación, `docs/despliegue.md` apartado 8):
 - el usuario creó el primer administrador y dice que la app funciona; falta una emisión de prueba con descarga del PDF desde un equipo de la oficina;
