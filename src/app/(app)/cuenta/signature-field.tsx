@@ -68,7 +68,7 @@ export function SignatureField({ signature, sello }: { signature: string | null;
         ) : <span className="mut">Sin firma. Pulsa para firmar.</span>}
       </button>
       {signature && (
-        <form action={async () => { await deleteSignatureAction(); }}>
+        <form className="sigdel" action={async () => { await deleteSignatureAction(); }}>
           <ConfirmButton label="Eliminar firma" confirm="Sin firma no podrás emitir presupuestos. Los ya emitidos conservan la suya." />
         </form>
       )}
