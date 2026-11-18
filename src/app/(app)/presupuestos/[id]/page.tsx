@@ -70,6 +70,7 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
         <div className="head">
           <h1>{title}</h1>
           <span className={`st ${STATUS_CLASS[q.status]}`}><i />{STATUS_LABEL[q.status]}</span>
+          {q.type && <span className="tiponame">{q.type.name}</span>}
         </div>
         {q.parent && <p className="mut" style={{ marginTop: 4 }}>Sustituye a <Link href={`/presupuestos/${q.parent.id}`}>R{String(q.parent.revision).padStart(2, "0")}</Link></p>}
         {editable && Number.isInteger(precios) && precios > 0 && (
@@ -84,10 +85,10 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
               <div className="tipocli">
                 {q.seq === null ? (
                   <label className="field tipo">Tipo
-                    {/* Narrow: closed, «002 · Nombre» is cut after the code; open, the whole name. */}
+                    {/* Closed, only the code; open, each code with its name (data-d, as the required concepts). */}
                     <select name="typeId" defaultValue={q.typeId ?? ""}>
-                      <option value="" disabled>—</option>
-                      {activeOrCurrent(types, q.typeId).map((t) => <option key={t.id} value={t.id}>{formatTypeCode(t.code)} · {t.name}</option>)}
+                      <option value="">—</option>
+                      {activeOrCurrent(types, q.typeId).map((t) => <option key={t.id} value={t.id} data-d={t.name}>{formatTypeCode(t.code)}</option>)}
                     </select>
                   </label>
                 ) : (
