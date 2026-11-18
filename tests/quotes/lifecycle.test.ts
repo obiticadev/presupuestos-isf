@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
-import { createRevision, duplicateQuote, isExpired, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
+import { createRevision, duplicateQuote, expireQuotes, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
 import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateLine } from "@/modules/quotes/service";
 import { conceptFields, completeDraft } from "../helpers/quotes";
 
@@ -76,11 +76,40 @@ test("el listado filtra por fechas y estado, cuenta por estado y suma solo la ú
   expect((await listQuoteHistory(r1.id)).length).toBeGreaterThan(3);
 });
 
-test("isExpired: emitido hace 31 días con validez 30 → caducado; aceptado nunca", () => {
-  const issuedAt = new Date("2026-10-01T10:00:00Z");
-  expect(isExpired({ status: "SENT", issuedAt, validityDays: 30 }, new Date("2026-11-01T10:00:00Z"))).toBe(true);
-  expect(isExpired({ status: "SENT", issuedAt, validityDays: 30 }, new Date("2026-10-30T10:00:00Z"))).toBe(false);
-  expect(isExpired({ status: "ACCEPTED", issuedAt, validityDays: 30 }, new Date("2027-01-01"))).toBe(false);
+test("expireQuotes caduca al día siguiente del vencimiento, contando días de Madrid", async () => {
+  const { actor, quote } = await completeDraft();
+  await issueQuote(actor, quote.id);
+  // 2026-03-01 23:30 en Madrid = 22:30 UTC; con 30 días vence el 31 de marzo.
+  await prisma.quote.update({ where: { id: quote.id }, data: { issuedAt: new Date("2026-03-01T22:30:00Z"), validityDays: 30 } });
+  await expireQuotes(new Date("2026-03-31T21:59:00Z")); // 31-03 23:59 en Madrid
+  expect((await getQuote(quote.id)).status).toBe("ISSUED");
+  expect(await expireQuotes(new Date("2026-03-31T22:01:00Z"))).toBeGreaterThanOrEqual(1); // 01-04 00:01 en Madrid
+  expect((await getQuote(quote.id)).status).toBe("EXPIRED");
+  const logs = await prisma.auditLog.findMany({ where: { entityId: quote.id, action: "status" } });
+  expect(logs.map((l) => [l.userId, l.summary])).toEqual([[null, expect.stringMatching(/Emitido → Caducado \(validez vencida\)$/)]]);
+  await expireQuotes(new Date("2026-04-02T10:00:00Z")); // idempotente: no hay segunda entrada
+  expect(await prisma.auditLog.count({ where: { entityId: quote.id, action: "status" } })).toBe(1);
+});
+
+test("expireQuotes no toca aceptados, rechazados, borradores ni revisiones sustituidas; sí los enviados", async () => {
+  const old = { issuedAt: new Date("2020-01-01T10:00:00Z"), validityDays: 1 };
+  const issued = async (status?: "ACCEPTED" | "REJECTED" | "SENT") => {
+    const { actor, quote } = await completeDraft();
+    await issueQuote(actor, quote.id);
+    await prisma.quote.update({ where: { id: quote.id }, data: { ...old, ...(status && { status }) } });
+    return { actor, id: quote.id };
+  };
+  const accepted = await issued("ACCEPTED"), rejected = await issued("REJECTED"), sent = await issued("SENT");
+  const replaced = await issued();
+  const r1 = await createRevision(replaced.actor, replaced.id);
+  await issueQuote(replaced.actor, r1.id);
+  await prisma.quote.update({ where: { id: r1.id }, data: { status: "ACCEPTED" } });
+  const { quote: draft } = await completeDraft();
+  await prisma.quote.update({ where: { id: draft.id }, data: old });
+  await expireQuotes();
+  const status = async (id: string) => (await getQuote(id)).status;
+  expect([await status(accepted.id), await status(rejected.id), await status(sent.id), await status(replaced.id), await status(draft.id)])
+    .toEqual(["ACCEPTED", "REJECTED", "EXPIRED", "ISSUED", "DRAFT"]);
 });
 
 test("setStatus rechaza estados que no existen, aunque sean nombres heredados", async () => {

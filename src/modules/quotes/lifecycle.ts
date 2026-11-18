@@ -3,7 +3,7 @@ import { todayMadrid } from "@/lib/dates";
 import { formatDecimalEs } from "@/lib/decimal";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { Prisma, type Quote, type QuoteStatus } from "@/generated/prisma/client";
-import type { AuditEntry } from "@/modules/audit/service";
+import { logAction, type AuditEntry } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { STATUS_LABEL } from "./labels";
 import { logQuote, quoteLabel, recalc, withDraft, type Tx } from "./service";
@@ -27,10 +27,24 @@ export async function setStatus(actor: CurrentUser, id: string, status: Settable
   });
 }
 
-/** Issued or sent, and the validity has run out: the app warns, it never changes the status by itself. */
-export function isExpired(q: { status: QuoteStatus; issuedAt: Date | null; validityDays: number }, today = new Date()): boolean {
-  if (!q.issuedAt || (q.status !== "ISSUED" && q.status !== "SENT")) return false;
-  return today.getTime() > q.issuedAt.getTime() + q.validityDays * 86_400_000;
+/**
+ * Issued or sent quotes whose validity ran out become «Caducado», counting Madrid days: issued on the 1st with 30 days,
+ * still valid on the 31st, expired from the 32nd. Idempotent; run on start and every hour (instrumentation.ts).
+ */
+export async function expireQuotes(now = new Date()): Promise<number> {
+  return prisma.$transaction(async (tx) => {
+    const rows = await tx.$queryRaw<{ id: string; reference: string; status: QuoteStatus }[]>`
+      WITH due AS (
+        SELECT id, reference, status FROM "Quote"
+        WHERE status IN ('ISSUED', 'SENT') AND "supersededById" IS NULL
+          AND ("issuedAt" AT TIME ZONE 'Europe/Madrid')::date + "validityDays" < (${now}::timestamptz AT TIME ZONE 'Europe/Madrid')::date
+        FOR UPDATE)
+      UPDATE "Quote" q SET status = 'EXPIRED', "updatedAt" = now() FROM due WHERE q.id = due.id
+      RETURNING due.id, due.reference, due.status`;
+    for (const r of rows)
+      await logAction(tx, { userId: null, entity: "quote", entityId: r.id, action: "status", summary: `Estado de ${r.reference}: ${STATUS_LABEL[r.status]} → ${STATUS_LABEL.EXPIRED} (validez vencida)` });
+    return rows.length;
+  });
 }
 
 /** Deep copy of sections, lines (with adjustments) and kit instances into another quote. */

@@ -6,7 +6,7 @@ import type { QuoteStatus } from "@/generated/prisma/client";
 import { requireUser } from "@/modules/auth/session";
 import { listClientOptions } from "@/modules/clients/service";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
-import { isExpired, listQuotes, QUOTES_PAGE_SIZE } from "@/modules/quotes/lifecycle";
+import { listQuotes, QUOTES_PAGE_SIZE } from "@/modules/quotes/lifecycle";
 import { quoteLabel } from "@/modules/quotes/service";
 import { listActiveUserNames } from "@/modules/users/service";
 
@@ -103,7 +103,6 @@ export default async function PresupuestosPage({ searchParams }: PageProps<"/">)
           <thead><tr><th>Referencia</th><th>Cliente</th><th>Asunto</th><th>Responsable</th><th>Fecha</th><th>Estado</th><th className="n">Total</th></tr></thead>
           <tbody>
             {items.map((r) => {
-              const expired = isExpired(r, now);
               const days = r.status === "SENT" && r.issuedAt ? Math.floor((now.getTime() - r.issuedAt.getTime()) / 86_400_000) : null;
               return (
                 <tr key={r.id}>
@@ -116,8 +115,7 @@ export default async function PresupuestosPage({ searchParams }: PageProps<"/">)
                   <td>{r.owner.name}</td>
                   <td style={{ whiteSpace: "nowrap" }}>{formatDateEs(r.date)}</td>
                   <td>
-                    <span className={`st ${expired ? "alerta" : STATUS_CLASS[r.status]}`}><i />{STATUS_LABEL[r.status]}{days !== null && ` · ${days} días`}</span>
-                    {expired && <><br /><span className="badge amber">Validez vencida</span></>}
+                    <span className={`st ${STATUS_CLASS[r.status]}`}><i />{STATUS_LABEL[r.status]}{days !== null && ` · ${days} días`}</span>
                   </td>
                   <td className="n" style={{ whiteSpace: "nowrap" }}>{formatDecimalEs(r.total)} €</td>
                 </tr>

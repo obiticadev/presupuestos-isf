@@ -4,7 +4,6 @@ import { Menu } from "@/components/disclosure";
 import type { AuditEntry } from "@/modules/audit/service";
 import { createRevisionAction, duplicateAction, refreshPricesAction, setStatusAction } from "@/modules/quotes/actions";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
-import { isExpired } from "@/modules/quotes/lifecycle";
 import type { QuoteDetail } from "@/modules/quotes/service";
 
 const rev = (n: number) => `R${String(n).padStart(2, "0")}`;
@@ -32,7 +31,6 @@ export function IssuedPanel({ q }: { q: QuoteDetail }) {
           </Menu>
         </ActionForm>
       )}
-      {isExpired(q) && <p className="warnbox">Validez vencida: han pasado más de {q.validityDays} días desde la emisión.</p>}
       {!next && (draftRevision ? (
         <Link className="btn" href={`/presupuestos/${draftRevision.id}`}>Abrir el borrador {rev(draftRevision.revision)}</Link>
       ) : (
