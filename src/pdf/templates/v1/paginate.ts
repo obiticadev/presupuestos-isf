@@ -7,7 +7,7 @@ export function paginate(sheetHeightPx: number): void {
   const first = document.querySelector<HTMLElement>(".sheet");
   if (!first) return;
   const thead = first.querySelector("thead")!;
-  const close = first.querySelector(".close")!;
+  const close = first.querySelector<HTMLElement>(".close")!;
   const rows = [...first.querySelectorAll("tbody > tr")];
   close.remove();
 

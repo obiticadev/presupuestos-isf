@@ -52,11 +52,12 @@ export function NewUserForm() {
 function RowForm({ action, children }: { action: Action; children: (pending: boolean) => React.ReactNode }) {
   const [state, run, pending] = useActionState<ActionResult | null, FormData>(action, null);
   const e = errorsOf(state);
-  const [saved, setSaved] = useState(false);
+  // «Guardado» is derived from the result and hidden 2,5 s later (as in ActionForm), so the effect never sets state synchronously.
+  const [expired, setExpired] = useState<ActionResult | null>(null);
+  const saved = state?.ok && expired !== state;
   useEffect(() => {
     if (!state?.ok) return;
-    setSaved(true);
-    const t = setTimeout(() => setSaved(false), 2500);
+    const t = setTimeout(() => setExpired(state), 2500);
     return () => clearTimeout(t);
   }, [state]);
   return (

@@ -237,7 +237,7 @@ export function DangerZone({ count }: { count: number }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [word, setWord] = useState("");
   const [state, action, pending] = useActionState<ActionResult | null, FormData>(deleteAllQuotesAction, null);
-  useEffect(() => { if (state?.ok) { dialog.current?.close(); setWord(""); } }, [state]);
+  useEffect(() => { if (state?.ok) dialog.current?.close(); }, [state]); // onClose clears the word
   return (
     <section className="danger-zone">
       <h2>Zona de peligro</h2>
