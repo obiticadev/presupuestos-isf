@@ -161,16 +161,19 @@ function SubmitWhenFilled({ children }: { children: ReactNode }) {
   );
 }
 
-function AutoRowView({ kind, row, onDone }: { kind: Kind; row?: AutoRow; onDone?: () => void }) {
+/** `onCreated` gets the new row's name; `flash` shows «Guardado» on the saved row that replaced it. */
+function AutoRowView({ kind, row, onDone, onCreated, flash }: { kind: Kind; row?: AutoRow; onDone?: () => void; onCreated?: (name: string) => void; flash?: boolean }) {
   const a = AUTO_ACTIONS[kind];
   const fid = useId();
+  const name = useRef<HTMLInputElement>(null);
   const Submit = row ? SubmitOnBlur : SubmitWhenFilled;
   return (
     <tr className={row && !row.active ? "off" : undefined}>
       <td>
-        <ActionForm action={a.save} id={fid} saved onSaved={onDone} className="autoform">
+        <ActionForm action={a.save} id={fid} saved onSaved={row ? undefined : () => onCreated?.(name.current?.value.trim() ?? "")} className="autoform">
           {row && <input type="hidden" name="id" value={row.id} />}
-          <Submit><input name="name" defaultValue={row?.name} required={!row} placeholder="Nombre" aria-label="Nombre" autoFocus={!row} /></Submit>
+          <Submit><input ref={name} name="name" defaultValue={row?.name} required={!row} placeholder="Nombre" aria-label="Nombre" autoFocus={!row} /></Submit>
+          {flash && <span role="status" className="saved">Guardado</span>}
         </ActionForm>
       </td>
       {kind === "type" && (
@@ -204,15 +207,24 @@ function AutoRowView({ kind, row, onDone }: { kind: Kind; row?: AutoRow; onDone?
 /** Tipos, categorías y unidades: each field saves when left; unused rows are deleted with ×, used ones deactivated. */
 export function AutoTable({ kind, title, rows }: { kind: Kind; title: string; rows: AutoRow[] }) {
   const [fresh, setFresh] = useState<number[]>([]);
+  const [flash, setFlash] = useState<string | null>(null);
   const next = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const drop = (k: number) => setFresh((f) => f.filter((x) => x !== k));
+  const created = (k: number, name: string) => {
+    drop(k);
+    setFlash(name);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setFlash(null), 2000);
+  };
   return (
     <section>
       <h2>{title}</h2>
       <table className="auto">
         <thead><tr><th>Nombre</th>{kind === "type" && <th className="cod">Código</th>}<th className="act"></th></tr></thead>
         <tbody>
-          {rows.map((r) => <AutoRowView key={`${r.id}-${r.active}-${r.used}`} kind={kind} row={r} />)}
-          {fresh.map((k) => <AutoRowView key={`new-${k}`} kind={kind} onDone={() => setFresh((f) => f.filter((x) => x !== k))} />)}
+          {rows.map((r) => <AutoRowView key={`${r.id}-${r.active}-${r.used}`} kind={kind} row={r} flash={r.name === flash} />)}
+          {fresh.map((k) => <AutoRowView key={`new-${k}`} kind={kind} onDone={() => drop(k)} onCreated={(name) => created(k, name)} />)}
         </tbody>
       </table>
       <button type="button" className="btn addrow" onClick={() => setFresh((f) => [...f, next.current++])}>+ Añadir fila</button>

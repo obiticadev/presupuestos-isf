@@ -288,3 +288,11 @@ test("el listado trae una fila por línea viva y el historial de la A01 incluye 
   expect((await listQuoteHistory(a1.id)).some((h) => h.entityId === quote.id)).toBe(true);
   expect((await listRevisions(a1.id)).map((r) => [r.extension, r.revision])).toEqual([[1, 0], [0, 0]]);
 });
+
+test("nueva ampliación y revisión de la A01 a la vez: solo una sale adelante", async () => {
+  for (let i = 0; i < 5; i++) {
+    const { actor, r0, a1 } = await withExtension();
+    const results = await Promise.allSettled([createExtension(actor, r0.id), createRevision(actor, a1.id)]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+  }
+});

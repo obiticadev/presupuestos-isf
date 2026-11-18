@@ -98,8 +98,7 @@ const HEADER = (q: Quote) => ({
 export async function createRevision(actor: CurrentUser, id: string): Promise<Quote & { refreshed: number }> {
   try {
     return await prisma.$transaction(async (tx) => {
-      const q = await tx.quote.findUnique({ where: { id } });
-      if (!q) throw new NotFoundError("El presupuesto no existe");
+      const q = await lockNumber(tx, id);
       if (q.status === "DRAFT") throw new ValidationError({ _: "Solo se revisa un presupuesto emitido" });
       if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: revisa la última" });
       if (await tx.quote.count({ where: { ...numberOf(q), extension: { gt: q.extension } } }))
@@ -127,15 +126,25 @@ export async function createRevision(actor: CurrentUser, id: string): Promise<Qu
 const numberOf = (q: Pick<Quote, "seqYear" | "typeCode" | "seq">) => ({ seqYear: q.seqYear, typeCode: q.typeCode, seq: q.seq });
 
 /**
+ * Locks every row of the quote's number (always in id order, so two callers never deadlock) and reads the quote again:
+ * a new revision and a new extension of the same number then run one after the other and each sees the other's draft.
+ */
+async function lockNumber(tx: Tx, id: string): Promise<Quote> {
+  const q = await tx.quote.findUnique({ where: { id } });
+  if (!q) throw new NotFoundError("El presupuesto no existe");
+  if (q.seq === null) await tx.$queryRaw`SELECT id FROM "Quote" WHERE id = ${id} FOR UPDATE`;
+  else await tx.$queryRaw`SELECT id FROM "Quote" WHERE "seqYear" = ${q.seqYear} AND "typeCode" = ${q.typeCode} AND "seq" = ${q.seq} ORDER BY id FOR UPDATE`;
+  return tx.quote.findUniqueOrThrow({ where: { id } });
+}
+
+/**
  * New extension (A01, A02…) of the latest issued main quote: same number, header copied, no sections or notes.
  * Only the newest line moves, so while the number has any draft no extension is created.
  */
 export async function createExtension(actor: CurrentUser, id: string): Promise<Quote> {
   try {
     return await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT id FROM "Quote" WHERE id = ${id} FOR UPDATE`;
-      const q = await tx.quote.findUnique({ where: { id } });
-      if (!q) throw new NotFoundError("El presupuesto no existe");
+      const q = await lockNumber(tx, id);
       if (q.status === "DRAFT") throw new ValidationError({ _: "Solo se amplía un presupuesto emitido" });
       if (q.extension > 0) throw new ValidationError({ _: "Solo se amplía la principal" });
       if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: amplía la última" });
