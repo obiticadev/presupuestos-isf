@@ -519,7 +519,7 @@ dialog.danger .foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 
 .tipocli { display: flex; gap: 12px; min-width: 0; }
 .tipocli > .field:last-child { flex: 1; min-width: 0; }
 .tipo { width: 6.5rem; flex: none; min-width: 0; }
-.tipo .box { text-align: center; }
+.tipo .box { min-width: 0; justify-content: center; }
 .tipo select { min-width: 0; justify-content: center; position: relative; }
 .tipo select::picker-icon { position: absolute; right: 10px; }
 .tipo select::picker(select) { min-width: 22rem; }
