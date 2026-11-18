@@ -60,10 +60,11 @@ test("cambiar la contraseña exige la actual y que las nuevas coincidan", async 
   expect(await prisma.auditLog.count({ where: { entityId: u.id, action: "password" } })).toBe(1);
 });
 
-test("cambiar la contraseña cierra las demás sesiones", async () => {
+test("cambiar la contraseña cierra las demás sesiones y conserva la actual", async () => {
   const u = await makeUser("presupuestador", { password: "contraseña-vieja-1" });
   const other = await sessionHeaders(u.email, "contraseña-vieja-1");
   const mine = await sessionHeaders(u.email, "contraseña-vieja-1");
   await changeOwnPassword(u, { current: "contraseña-vieja-1", next: "contraseña-nueva-1", repeat: "contraseña-nueva-1" }, mine);
   expect(await auth.api.getSession({ headers: other })).toBeNull();
+  expect((await auth.api.getSession({ headers: mine }))?.user.id).toBe(u.id); // la sesión de quien la cambia sigue abierta
 });

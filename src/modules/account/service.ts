@@ -44,14 +44,18 @@ export async function deleteSignature(actor: CurrentUser): Promise<void> {
   });
 }
 
-/** Changes the signed-in user's password through Better Auth and signs out their other sessions. */
+/** Changes the signed-in user's password through Better Auth and signs out their other sessions, keeping this one. */
 export async function changeOwnPassword(actor: CurrentUser, input: PasswordInput, headers: Headers): Promise<void> {
   const { current, next } = parseOrThrow(passwordInput, input);
   try {
-    await auth.api.changePassword({ body: { currentPassword: current, newPassword: next, revokeOtherSessions: true }, headers });
+    // Not Better Auth's revokeOtherSessions: it replaces the current session too, and the page re-rendered
+    // after the action still carries the old cookie, so the user would land on /login.
+    await auth.api.changePassword({ body: { currentPassword: current, newPassword: next }, headers });
   } catch (e) {
     if (e instanceof APIError && e.body?.code === "INVALID_PASSWORD") throw new ValidationError({ current: "La contraseña actual no es correcta" });
     throw e;
   }
+  const own = await auth.api.getSession({ headers });
+  await prisma.session.deleteMany({ where: { userId: actor.id, ...(own && { NOT: { token: own.session.token } }) } });
   await logAction(prisma, { userId: actor.id, entity: "user", entityId: actor.id, action: "password", summary: "Contraseña cambiada" });
 }
