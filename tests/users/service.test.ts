@@ -14,7 +14,7 @@ import {
 import type { CurrentUser } from "@/modules/auth/session";
 import { listAudit } from "@/modules/audit/service";
 import { issueQuote } from "@/modules/quotes/issue";
-import { createRevision } from "@/modules/quotes/lifecycle";
+import { createRevision, listQuoteHistory } from "@/modules/quotes/lifecycle";
 import { addNote, editNote, listNotes } from "@/modules/quotes/notes";
 import { addCatalogLine, createDraft } from "@/modules/quotes/service";
 import { completeDraft, makeClient, makeDraft } from "../helpers/quotes";
@@ -123,6 +123,8 @@ describe("eliminar y renombrar", () => {
     expect((await listNotes(quote.id)).flatMap((g) => g.notes).map((n) => n.authorName)).toEqual([`${actor.name} (eliminado)`]);
     const { items } = await listAudit(admin, { entity: "quote", entityId: quote.id });
     expect(items.map((e) => e.userName)).toEqual(items.map(() => `${actor.name} (eliminado)`));
+    const own = await listQuoteHistory(quote.id);
+    expect(own.map((e) => e.userName)).toEqual(own.map(() => `${actor.name} (eliminado)`));
     await editNote(admin, note.id, { text: "editada" });
     const [edited] = (await listNotes(quote.id)).flatMap((g) => g.notes);
     expect([edited.authorName, edited.versions.map((v) => v.authorName)]).toEqual([admin.name, [`${actor.name} (eliminado)`]]);

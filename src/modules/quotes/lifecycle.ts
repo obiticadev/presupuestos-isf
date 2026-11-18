@@ -3,7 +3,7 @@ import { todayMadrid } from "@/lib/dates";
 import { formatDecimalEs } from "@/lib/decimal";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { Prisma, type Quote, type QuoteStatus } from "@/generated/prisma/client";
-import { logAction, type AuditEntry } from "@/modules/audit/service";
+import { authorLabel, logAction, type AuditEntry } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { STATUS_LABEL } from "./labels";
 import { logQuote, quoteLabel, recalc, withDraft, type Tx } from "./service";
@@ -228,5 +228,5 @@ export async function listQuoteHistory(id: string): Promise<AuditEntry[]> {
     where: { entity: "quote", entityId: { in: ids } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 200,
     include: { user: { select: { name: true } } },
   });
-  return rows.map((r) => ({ id: r.id, createdAt: r.createdAt, userName: r.user?.name ?? null, entity: r.entity, entityId: r.entityId, action: r.action, summary: r.summary }));
+  return rows.map((r) => ({ id: r.id, createdAt: r.createdAt, userName: authorLabel(r.user, r.userName), entity: r.entity, entityId: r.entityId, action: r.action, summary: r.summary }));
 }

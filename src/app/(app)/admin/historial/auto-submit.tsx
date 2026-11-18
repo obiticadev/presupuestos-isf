@@ -10,6 +10,8 @@ export function AutoSubmit({ children }: { children: ReactNode }) {
       style={{ display: "contents" }}
       onChange={(e) => {
         const t = e.target as HTMLInputElement;
+        // Typing a year by keyboard passes through "0002", "0020"…: wait until it is a plausible year (or cleared).
+        if (t.type === "date" && t.value && !/^(19|20)\d\d-/.test(t.value)) return;
         if (t.type !== "search") t.form?.requestSubmit();
       }}
       onInput={(e) => {
