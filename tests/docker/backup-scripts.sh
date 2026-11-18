@@ -39,7 +39,9 @@ cat >"$bin/bash" <<'EOF'
 EOF
 cat >"$bin/tar" <<'EOF'
 #!/bin/sh
-[ "${FAIL_TAR:-0}" = 0 ] || exit 1
+[ "${FAIL_TAR:-0}" = 0 ] || exit 2
+# Código 1 de GNU tar: un archivo cambió mientras se leía, pero el archivo queda completo.
+[ "${CHANGED_TAR:-0}" = 0 ] || { /bin/tar "$@"; exit 1; }
 exec /bin/tar "$@"
 EOF
 chmod +x "$bin"/*
@@ -58,6 +60,11 @@ no_pair
 must_fail env FAIL_TAR=1 sh "$backup" now
 no_pair
 [ ! -e "$db.tmp" ] && [ ! -e "$files.tmp" ]
+# Un archivo que cambia al leerlo no hace fallar la copia: queda guardada con un aviso.
+env CHANGED_TAR=1 sh "$backup" now >/tmp/changed.log 2>&1 || { cat /tmp/changed.log >&2; echo "ERROR: la copia con un archivo cambiado debía salir bien" >&2; exit 1; }
+[ -e "$db" ] && [ -e "$files" ] && grep -q AVISO /tmp/changed.log
+rm -f "$db" "$files"
+no_pair
 
 # Retención independiente de ambos tipos, sin borrar archivos ajenos ni temporales.
 i=1

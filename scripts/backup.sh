@@ -26,7 +26,8 @@ backup_now() {
   [ ! -e "$db" ] && [ ! -e "$files" ] || { log "ERROR: ya existe una copia de $stamp; espera al siguiente minuto"; exit 1; }
   # Completar los dos temporales antes de publicar ninguno.
   pg_dump -Fc -f "$db.tmp"
-  tar -czf "$files.tmp" -C /data .
+  # GNU tar sale con 1 si un archivo cambió mientras se leía: el archivo queda completo y válido. Otro código, fallo.
+  tar -czf "$files.tmp" -C /data . || { [ $? -eq 1 ] && log "AVISO: un archivo de /data cambió mientras se copiaba; la copia se guarda igualmente"; }
   mv "$files.tmp" "$files"
   mv "$db.tmp" "$db"
   prune /backups/db .dump
