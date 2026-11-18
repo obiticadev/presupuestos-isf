@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { todayMadrid } from "@/lib/dates";
 import { ValidationError } from "@/lib/errors";
 import { Prisma, type Concept, type Quote, type RequiredConcept } from "@/generated/prisma/client";
+import { getSignature } from "@/modules/account/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { formatReference, nextNumber } from "./numbering";
 import { LOCKED } from "./schema";
@@ -10,9 +11,13 @@ import { getQuote, logQuote, type QuoteDetail } from "./service";
 export type IssueProblem = { code: string; message: string; anchor: string };
 export const TEMPLATE_VERSION = "v1";
 
-/** Spec 5.6: everything a draft needs before it can be issued, each with the element to jump to. */
-export function issueChecks(q: QuoteDetail, required: (RequiredConcept & { concept: Concept })[]): IssueProblem[] {
+/**
+ * Spec 5.6: everything a draft needs before it can be issued, each with the element to jump to.
+ * `hasSignature`: whether whoever would issue it (the viewer) has a signature; the issuer signs the PDF.
+ */
+export function issueChecks(q: QuoteDetail, required: (RequiredConcept & { concept: Concept })[], hasSignature = true): IssueProblem[] {
   const out: IssueProblem[] = [];
+  if (!hasSignature) out.push({ code: "signature", message: "Falta tu firma: configúrala en Mi cuenta", anchor: "/cuenta" });
   const subs = q.sections.flatMap((s) => s.children);
   const lines = subs.flatMap((s) => s.lines.map((l) => ({ ...l, mode: s.mode })));
   if (!q.locationId) out.push({ code: "location", message: "Falta la instalación", anchor: "#cabecera" });
@@ -62,7 +67,8 @@ function issueInTx(actor: CurrentUser, id: string): Promise<Quote> {
     const q = await getQuote(id, tx);
     if (q.status !== "DRAFT") throw new ValidationError({ _: LOCKED });
     const required = await tx.requiredConcept.findMany({ include: { concept: true }, orderBy: { concept: { code: "asc" } } });
-    const problems = issueChecks(q, required);
+    const signature = await getSignature(actor.id, tx);
+    const problems = issueChecks(q, required, signature !== null);
     if (problems.length) throw new ValidationError({ _: `No se puede emitir: ${problems.map((p) => p.message).join(" · ")}` });
 
     const settings = await tx.companySettings.findUniqueOrThrow({ where: { id: 1 } });
@@ -78,7 +84,8 @@ function issueInTx(actor: CurrentUser, id: string): Promise<Quote> {
     const issued = await tx.quote.update({ where: { id }, data: { status: "ISSUED", issuedAt: now, seqYear, seq, reference, ownerId: actor.id } }); // the issuer is the responsible
     // JSON round-trip: Decimals become strings and Dates ISO strings; the snapshot never changes afterwards.
     const { id: _id, updatedAt: _updated, ...company } = settings;
-    const snapshot = JSON.parse(JSON.stringify({ company, quote: { ...q, ...issued } })) as Prisma.InputJsonValue;
+    const signer = { name: actor.name, signature: Buffer.from(signature!).toString("base64") }; // frozen: a later change of signature does not reach it
+    const snapshot = JSON.parse(JSON.stringify({ company, quote: { ...q, ...issued }, signer })) as Prisma.InputJsonValue;
     await tx.issuedDocument.create({ data: { quoteId: id, snapshot, templateVersion: TEMPLATE_VERSION } });
     await logQuote(tx, actor, id, "issue", `Emisión de ${reference}`);
     return issued;

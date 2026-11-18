@@ -5,6 +5,7 @@ import { formatDateEs } from "@/lib/dates";
 import { formatDecimalEs } from "@/lib/decimal";
 import { prisma } from "@/lib/db";
 import { NotFoundError } from "@/lib/errors";
+import { getSignature } from "@/modules/account/service";
 import { requireUser } from "@/modules/auth/session";
 import { listConceptOptions } from "@/modules/catalog/service";
 import { installationLabel } from "@/modules/clients/labels";
@@ -157,7 +158,7 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
 
         <Notes groups={notes} meId={me.id} />
 
-        {editable ? <IssuePanel q={q} required={required} /> : <IssuedPanel q={q} />}
+        {editable ? <IssuePanel q={q} required={required} hasSignature={(await getSignature(me.id)) !== null} /> : <IssuedPanel q={q} />}
 
         {editable && (
           <ActionForm action={deleteDraftAction}>

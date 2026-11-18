@@ -10,7 +10,9 @@ import {
   addCatalogLine, addRequiredConcept, getQuote, listRequiredConcepts, removeRequiredConcept, setWaiver, updateHeader, updateSection,
 } from "@/modules/quotes/service";
 import { conceptFields, completeDraft, makeDraft } from "../helpers/quotes";
-import { makeUser } from "../helpers/users";
+import { makeUser, TEST_SIGNATURE } from "../helpers/users";
+import { saveSignature } from "@/modules/account/service";
+import { createRevision } from "@/modules/quotes/lifecycle";
 
 const year = todayMadrid().getUTCFullYear(); // the issue year is Madrid's, as in issueQuote
 
@@ -136,4 +138,29 @@ test("sin asunto no se puede emitir", async () => {
   await updateHeader(actor, quote.id, { subject: "   " });
   const problems = issueChecks(await getQuote(quote.id), await listRequiredConcepts());
   expect(problems).toEqual([{ code: "subject", message: "Falta el asunto", anchor: "#cabecera" }]);
+});
+
+test("sin firma no se emite, aunque se llame directamente al servidor", async () => {
+  const { quote } = await completeDraft();
+  const unsigned = await makeUser("presupuestador", { signature: false });
+  await expect(issueQuote(unsigned, quote.id)).rejects.toThrow("Falta tu firma");
+  expect((await getQuote(quote.id)).status).toBe("DRAFT");
+  const signature = issueChecks(await getQuote(quote.id), await listRequiredConcepts(), false).find((p) => p.code === "signature");
+  expect(signature).toEqual({ code: "signature", message: "Falta tu firma: configúrala en Mi cuenta", anchor: "/cuenta" });
+});
+
+test("la instantánea guarda la firma y el nombre de quien emite; una revisión, los de quien la emite", async () => {
+  const { actor, quote } = await completeDraft();
+  await issueQuote(actor, quote.id);
+  const signer = async (id: string) => ((await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: id } })).snapshot as { signer: unknown }).signer;
+  expect(await signer(quote.id)).toEqual({ name: actor.name, signature: Buffer.from(TEST_SIGNATURE).toString("base64") });
+
+  const other = await makeUser("presupuestador");
+  const otherPng = Buffer.from(TEST_SIGNATURE);
+  otherPng[otherPng.length - 20] ^= 1; // distinta de la del primero (el contenido no se valida más allá de la cabecera)
+  await saveSignature(other, otherPng);
+  const r1 = await createRevision(other, quote.id);
+  await issueQuote(other, r1.id);
+  expect(await signer(r1.id)).toEqual({ name: other.name, signature: otherPng.toString("base64") });
+  expect(await signer(quote.id)).toEqual({ name: actor.name, signature: Buffer.from(TEST_SIGNATURE).toString("base64") });
 });

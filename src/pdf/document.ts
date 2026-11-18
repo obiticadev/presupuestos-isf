@@ -27,7 +27,11 @@ export type PdfSource = {
     letterGreeting: string; letterIntro: string; letterClosing: string; letterPlace: string;
   };
   quote: SnapshotQuote;
+  /** Who issued it, with their signature (PNG base64). Absent in snapshots issued before 2026-11-18 and in draft previews without one. */
+  signer?: Signer | null;
 };
+
+export type Signer = { name: string; signature: string };
 
 export type PdfRow =
   | { kind: "part" | "sub"; number: string; title: string; total: string }
@@ -44,6 +48,7 @@ export type PdfDocument = {
   totals: { base: string; taxes: { label: string; amount: string }[]; total: string };
   conditions: { exclusions: string; paymentTerms: string; validity: string };
   place: string;
+  signer: Signer | null;
 };
 
 const note = (rows: PdfRow[], of: "line" | "kit" | "sub" | "part", comment: string | undefined, kit = false) => {
@@ -53,7 +58,7 @@ const money = (x: string) => `${formatDecimalEs(x)} €`;
 const textLines = (s: string) => s.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 const LONG_DATE = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
-export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: boolean }): PdfDocument {
+export function buildDocument({ company, quote: q, signer }: PdfSource, opts: { draft: boolean }): PdfDocument {
   const [y, m, day] = q.date.slice(0, 10).split("-").map(Number);
   const longDate = LONG_DATE.format(new Date(q.date)); // a date without time stored at UTC midnight
   const loc = q.location;
@@ -106,6 +111,7 @@ export function buildDocument({ company, quote: q }: PdfSource, opts: { draft: b
     },
     conditions: { exclusions: q.exclusions, paymentTerms: q.paymentTerms, validity: `${q.validityDays} días` },
     place: `${company.letterPlace} a ${longDate}`,
+    signer: signer ?? null,
   };
 }
 
