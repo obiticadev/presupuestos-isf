@@ -472,3 +472,17 @@ dialog.sign::backdrop{background:#0f1f1dcc}
   .sign .pad{height:calc(100dvh - 120px)}
   .pdfpreview{max-width:none;zoom:.45}
 }
+/* Historial: buscador, filtros plegados y etiquetas (Bloque 6) */
+.searchrow{display:flex;gap:10px;margin:18px 0 0;flex-wrap:wrap}
+.searchrow .field{flex:1;min-width:240px}
+.more{border:1.5px solid var(--ink);background:var(--sheet);margin:12px 0 0}
+.more summary{cursor:pointer;padding:10px 12px;font-weight:600;font-size:14px}
+.more .filters{margin:0;padding:0 12px 12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:8px 0 14px;font-size:13px}
+.chip{border:1.5px solid var(--green);color:var(--green);padding:3px 8px;font-weight:600;text-decoration:none}
+/* Usuarios: anchos fijos para que nada se mueva al desplegar (Bloque 6) */
+.users{table-layout:fixed}
+.users td{vertical-align:middle}
+.users .btn{min-height:34px;padding:4px 10px}
+.users input:not([type=hidden]),.users select{max-width:100%}
+.users input[type=password]{width:170px}
