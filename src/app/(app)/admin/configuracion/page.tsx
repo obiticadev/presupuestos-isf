@@ -1,22 +1,23 @@
 import type { Metadata } from "next";
 import { ActionForm } from "@/components/action-form";
 import { todayMadrid } from "@/lib/dates";
+import { prisma } from "@/lib/db";
 import { listCategories, listUnits } from "@/modules/catalog/lists";
 import { listConceptOptions } from "@/modules/catalog/service";
 import { addRequiredConceptAction, removeRequiredConceptAction } from "@/modules/quotes/actions";
 import { formatReference } from "@/modules/quotes/numbering";
 import { listRequiredConcepts } from "@/modules/quotes/service";
 import { getSettings, listTaxes } from "@/modules/settings/service";
-import { ListTable, LogoForm, SettingsSection, TaxesTable } from "./forms";
+import { DangerZone, ListTable, LogoForm, SettingsSection, TaxesTable } from "./forms";
 
 export const metadata: Metadata = { title: "Configuración · ISF Presupuestos" };
 
 const es = (d: { toFixed(n: number): string }) => d.toFixed(2).replace(".", ",");
 
 export default async function ConfiguracionPage() {
-  const [s, taxes, categories, units, required, concepts] = await Promise.all([
+  const [s, taxes, categories, units, required, concepts, quoteCount] = await Promise.all([
     getSettings(), listTaxes({ includeInactive: true }), listCategories({ includeInactive: true }), listUnits({ includeInactive: true }),
-    listRequiredConcepts(), listConceptOptions(),
+    listRequiredConcepts(), listConceptOptions(), prisma.quote.count(),
   ]);
   const year = todayMadrid().getUTCFullYear();
   const addable = concepts.filter((c) => c.active && !required.some((r) => r.conceptId === c.id));
@@ -110,6 +111,7 @@ export default async function ConfiguracionPage() {
         <ListTable kind="category" title="Categorías del catálogo" rows={categories} />
         <ListTable kind="unit" title="Unidades de cobro" rows={units} />
       </div>
+      <DangerZone count={quoteCount} />
     </>
   );
 }

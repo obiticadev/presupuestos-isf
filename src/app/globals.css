@@ -486,3 +486,13 @@ dialog.sign::backdrop{background:#0f1f1dcc}
 .users .btn{min-height:34px;padding:4px 10px}
 .users input:not([type=hidden]),.users select{max-width:100%}
 .users input[type=password]{width:170px}
+/* Configuración: zona de peligro (Bloque 6) */
+.danger-zone{border:1.5px solid var(--red);background:#fdf3f2;padding:16px;margin-top:24px}
+.danger-zone h2{color:var(--red);margin:0 0 6px}
+.danger-zone>p{margin:0 0 12px;font-size:14px}
+dialog.danger{margin:auto;border:1.5px solid var(--ink);padding:0;width:min(560px,calc(100vw - 32px));background:var(--sheet);color:var(--ink)}
+dialog.danger::backdrop{background:#0f1f1dcc}
+dialog.danger .bar{padding:12px 14px;border-bottom:1.5px solid var(--ink);font-weight:800;color:var(--red)}
+dialog.danger .body{padding:14px;display:grid;gap:12px;font-size:14px}
+dialog.danger input{border-color:var(--red)}
+dialog.danger .foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 14px;border-top:1.5px solid var(--rule)}

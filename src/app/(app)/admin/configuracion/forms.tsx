@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
 import type { ActionResult } from "@/lib/action-result";
+import { deleteAllQuotesAction } from "@/modules/quotes/actions";
 import { saveCategoryAction, saveUnitAction, setCategoryActiveAction, setUnitActiveAction } from "@/modules/catalog/actions";
 import { saveLogoAction, saveTaxAction, setTaxActiveAction, updateSettingsAction } from "@/modules/settings/actions";
 
@@ -195,6 +196,43 @@ export function ListTable({ kind, title, rows }: { kind: "category" | "unit"; ti
           <tr><td colSpan={2}><ListNameForm kind={kind} /></td></tr>
         </tbody>
       </table>
+    </section>
+  );
+}
+
+/** Danger zone (variant B): the button opens a dialog where BORRAR must be typed. */
+export function DangerZone({ count }: { count: number }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [word, setWord] = useState("");
+  const [state, action, pending] = useActionState<ActionResult | null, FormData>(deleteAllQuotesAction, null);
+  useEffect(() => { if (state?.ok) { dialog.current?.close(); setWord(""); } }, [state]);
+  return (
+    <section className="danger-zone">
+      <h2>Zona de peligro</h2>
+      <p><b>Borrar todos los presupuestos y reiniciar la numeración.</b> Borra los {count} presupuestos, sus PDF, notas e historial, y la numeración vuelve a empezar.</p>
+      <button type="button" className="btn danger" onClick={() => dialog.current?.showModal()}>Borrar todos los presupuestos…</button>
+      {state?.ok && <span role="status" style={{ marginLeft: 12, color: "var(--ok)", fontWeight: 600 }}>Presupuestos borrados</span>}
+      <dialog ref={dialog} className="danger" aria-labelledby="danger-title" onClose={() => setWord("")}>
+        <form action={action}>
+          <div className="bar" id="danger-title">¿Borrar los {count} presupuestos?</div>
+          <div className="body">
+            <p style={{ margin: 0 }}>
+              Se borran sus PDF, sus notas y sus entradas del historial. Los números nuevos <b>pueden coincidir con los de presupuestos borrados</b>.
+              No se puede deshacer: haz antes una copia manual (docs/despliegue.md).
+            </p>
+            <label className="field">
+              Escribe BORRAR para confirmar
+              <input name="confirm" autoComplete="off" placeholder="BORRAR" value={word} onChange={(e) => setWord(e.target.value)} />
+              <Msg state={state} field="confirm" />
+            </label>
+            <Msg state={state} />
+          </div>
+          <div className="foot">
+            <button type="button" className="btn" onClick={() => dialog.current?.close()}>Cancelar</button>
+            <button className="btn danger" disabled={word !== "BORRAR" || pending}>Borrar</button>
+          </div>
+        </form>
+      </dialog>
     </section>
   );
 }

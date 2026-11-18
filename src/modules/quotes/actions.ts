@@ -6,6 +6,7 @@ import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
 import { addKitInstance, removeKitInstance, updateKitInstance } from "./kit-instances";
 import { addNote, deleteNote, editNote } from "./notes";
+import { deleteAllQuotes } from "./reset";
 import * as quotes from "./service";
 
 // Thin wrappers: read the form, call the service (which checks the draft and logs), refresh the pages that show quotes.
@@ -124,3 +125,6 @@ export async function duplicateAction(_prev: ActionResult | null, form: FormData
 export const addNoteAction: Action = action((actor, f) => addNote(actor, str(f, "quoteId"), { text: str(f, "text") }));
 export const editNoteAction: Action = action((actor, f) => editNote(actor, str(f, "id"), { text: str(f, "text") }));
 export const deleteNoteAction: Action = action((actor, f) => deleteNote(actor, str(f, "id")));
+
+// Danger zone (Configuración): deletes every quote; the service checks the role and the typed word.
+export const deleteAllQuotesAction: Action = action((actor, f) => deleteAllQuotes(actor, str(f, "confirm")));
