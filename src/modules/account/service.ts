@@ -13,7 +13,8 @@ const MAX_SIGNATURE_BYTES = 200 * 1024;
 
 /** Trust boundary for the drawn signature: a real PNG, at most 200 KB, between 20×10 and 4000×2000 px. */
 export function checkSignaturePng(bytes: Uint8Array): void {
-  if (bytes.length < 24 || PNG_MAGIC.some((b, i) => bytes[i] !== b)) throw new ValidationError({ signature: "La firma debe ser una imagen PNG" });
+  const ihdr = String.fromCharCode(...bytes.subarray(12, 16)); // the first chunk of a PNG is always IHDR
+  if (bytes.length < 24 || PNG_MAGIC.some((b, i) => bytes[i] !== b) || ihdr !== "IHDR") throw new ValidationError({ signature: "La firma debe ser una imagen PNG" });
   if (bytes.length > MAX_SIGNATURE_BYTES) throw new ValidationError({ signature: "La firma no puede pasar de 200 KB" });
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const [w, h] = [view.getUint32(16), view.getUint32(20)]; // IHDR width and height, big-endian

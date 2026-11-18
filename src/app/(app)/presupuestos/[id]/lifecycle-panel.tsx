@@ -4,15 +4,17 @@ import { Menu } from "@/components/disclosure";
 import type { AuditEntry } from "@/modules/audit/service";
 import { createRevisionAction, duplicateAction, refreshPricesAction, setStatusAction } from "@/modules/quotes/actions";
 import { STATUS_CLASS, STATUS_LABEL } from "@/modules/quotes/labels";
+import { validityRunOut } from "@/modules/quotes/lifecycle";
 import type { QuoteDetail } from "@/modules/quotes/service";
 
 const rev = (n: number) => `R${String(n).padStart(2, "0")}`;
 const fmt = new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Madrid" });
 
-/** Issued quote: status selector (or «Sustituido por»), validity warning, new revision and duplicate. */
+/** Issued quote: status selector (or «Sustituido por»), new revision and duplicate. */
 export function IssuedPanel({ q }: { q: QuoteDetail }) {
   const next = q.revisions.find((r) => r.id === q.supersededById);
   const draftRevision = q.revisions.find((r) => r.status === "DRAFT");
+  const runOut = validityRunOut(q); // Emitido or Enviado would turn back into Caducado within the hour
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <h3>Estado</h3>
@@ -23,7 +25,7 @@ export function IssuedPanel({ q }: { q: QuoteDetail }) {
           <input type="hidden" name="id" value={q.id} />
           <Menu className="status" summaryClassName="btn" label={<><span className={`st ${STATUS_CLASS[q.status]}`}><i />{STATUS_LABEL[q.status]}</span><span aria-hidden>▾</span></>}>
             {(Object.keys(STATUS_LABEL) as (keyof typeof STATUS_LABEL)[]).filter((s) => s !== "DRAFT").map((s) => (
-              <button key={s} name="status" value={s} disabled={s === q.status}>
+              <button key={s} name="status" value={s} disabled={s === q.status || ((s === "ISSUED" || s === "SENT") && runOut)}>
                 <span className={`st ${STATUS_CLASS[s]}`}><i />{STATUS_LABEL[s]}</span>
                 {s === q.status && <small>estado actual</small>}
               </button>

@@ -7,6 +7,7 @@ import { makeUser, TEST_SIGNATURE } from "../helpers/users";
 function png(width: number, height: number, length = 64): Uint8Array {
   const b = Buffer.alloc(length);
   Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]).copy(b);
+  b.write("IHDR", 12, "ascii");
   b.writeUInt32BE(width, 16);
   b.writeUInt32BE(height, 20);
   return b;
@@ -22,6 +23,9 @@ test("checkSignaturePng solo acepta un PNG de hasta 200 KB y tamaño razonable",
   expect(() => checkSignaturePng(png(400, 100, 204_801))).toThrow("La firma no puede pasar de 200 KB");
   expect(() => checkSignaturePng(png(5000, 100))).toThrow("Tamaño de firma no válido");
   expect(() => checkSignaturePng(png(10, 5))).toThrow("Tamaño de firma no válido");
+  const noIhdr = Buffer.from(png(400, 100));
+  noIhdr.write("tEXt", 12, "ascii");
+  expect(() => checkSignaturePng(noIhdr)).toThrow("La firma debe ser una imagen PNG");
   expect(() => checkSignaturePng(TEST_SIGNATURE)).not.toThrow();
 });
 

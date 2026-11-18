@@ -29,6 +29,7 @@ export function SignatureField({ signature, sello }: { signature: string | null;
   const pad = useRef<SignaturePad | null>(null);
   const [drawn, setDrawn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
   // Sizes the canvas to its box at ≥ 2× resolution (sharp strokes), within the 4000×2000 the server accepts, and clears it.
@@ -69,8 +70,12 @@ export function SignatureField({ signature, sello }: { signature: string | null;
         ) : <span className="mut">Sin firma. Pulsa para firmar.</span>}
       </button>
       {signature && (
-        <form className="sigdel" action={async () => { await deleteSignatureAction(); }}>
+        <form className="sigdel" action={async () => {
+          const r = await deleteSignatureAction();
+          setDeleteError(r.ok ? null : Object.values(r.errors).join(" · "));
+        }}>
           <ConfirmButton label="Eliminar firma" confirm="Sin firma no podrás emitir presupuestos. Los ya emitidos conservan la suya." />
+          {deleteError && <p className="err" role="alert">{deleteError}</p>}
         </form>
       )}
 

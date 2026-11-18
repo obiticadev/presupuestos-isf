@@ -7,4 +7,5 @@ export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Also in production: instrumentation.ts and the app may load this module apart, and must share one pool.
+globalForPrisma.prisma = prisma;

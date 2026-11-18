@@ -5,6 +5,6 @@ export async function register(): Promise<void> {
   if (g.__expireTimer) return; // `pnpm dev` may call register again: keep a single timer
   const { expireQuotes } = await import("@/modules/quotes/lifecycle");
   const run = () => expireQuotes().catch((e) => console.error("expireQuotes:", e));
-  await run(); // catches up after the app was stopped
+  void run(); // catches up after the app was stopped, without holding up the start
   g.__expireTimer = setInterval(run, 3_600_000);
 }

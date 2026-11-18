@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getSignature } from "@/modules/account/service";
 import { requireUser } from "@/modules/auth/session";
+import { getSettings } from "@/modules/settings/service";
 import { archivoFontFace } from "@/pdf/fonts";
 import { selloDataUri } from "@/pdf/stamp";
 import { closeHtml } from "@/pdf/templates/v1";
@@ -10,13 +11,14 @@ import { SignatureField } from "./signature-field";
 
 export const metadata: Metadata = { title: "Mi cuenta · ISF Presupuestos" };
 
+const LONG_DATE = new Intl.DateTimeFormat("es-ES", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Madrid" });
 const ROLE_LABEL = { admin: "Administrador", presupuestador: "Presupuestador" } as const;
 
 /** Sample close of a quote, drawn by the PDF template itself, so «Así saldrá en el PDF» is exactly that. */
-function previewDoc(signer: { name: string; signature: string } | null): string {
+function previewDoc(place: string, signer: { name: string; signature: string } | null): string {
   const close = closeHtml({
     conditions: { exclusions: "Obra civil y legalizaciones.", paymentTerms: "30 días fecha factura.", validity: "30 días." },
-    place: "Alcalá de Henares a 18 de noviembre de 2026",
+    place,
     totals: { base: "12.480,00 €", taxes: [{ label: "IVA 21 %", amount: "2.620,80 €" }], total: "15.100,80 €" },
     signer,
   });
@@ -27,6 +29,7 @@ export default async function CuentaPage() {
   const user = await requireUser();
   const png = await getSignature(user.id);
   const signature = png && Buffer.from(png).toString("base64");
+  const place = `${(await getSettings()).letterPlace} a ${LONG_DATE.format(new Date())}`;
   return (
     <>
       <div className="crumb">Mi cuenta</div>
@@ -39,7 +42,7 @@ export default async function CuentaPage() {
       <h2>Así saldrá en el PDF</h2>
       <iframe
         className="pdfpreview" title="Pie de la última hoja del PDF"
-        srcDoc={previewDoc(signature ? { name: user.name, signature } : null)}
+        srcDoc={previewDoc(place, signature ? { name: user.name, signature } : null)}
       />
     </>
   );

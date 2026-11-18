@@ -22,9 +22,16 @@ export async function setStatus(actor: CurrentUser, id: string, status: Settable
     if (q.status === "DRAFT") throw new ValidationError({ _: "Un borrador se emite; su estado no se cambia a mano" });
     if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: ya no cambia de estado" });
     if (q.status === status) return;
+    if ((status === "ISSUED" || status === "SENT") && validityRunOut(q))
+      throw new ValidationError({ status: "La validez ya venció: solo puede quedar Aceptado, Rechazado o Caducado. Para volver a ofertarlo, crea una revisión." });
     await tx.quote.update({ where: { id }, data: { status } });
     await logQuote(tx, actor, id, "status", `Estado de ${quoteLabel(q)}: ${STATUS_LABEL[q.status]} → ${STATUS_LABEL[status]}`);
   });
+}
+
+/** The validity ran out (Madrid days, as expireQuotes): the hourly task would turn Emitido or Enviado back into Caducado. */
+export function validityRunOut(q: { issuedAt: Date | null; validityDays: number }, now = new Date()): boolean {
+  return !!q.issuedAt && todayMadrid(q.issuedAt).getTime() + q.validityDays * 86_400_000 < todayMadrid(now).getTime();
 }
 
 /**

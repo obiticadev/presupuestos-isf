@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
-import { createRevision, duplicateQuote, expireQuotes, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
+import { createRevision, duplicateQuote, expireQuotes, validityRunOut, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
 import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateLine } from "@/modules/quotes/service";
 import { conceptFields, completeDraft } from "../helpers/quotes";
 
@@ -100,6 +100,22 @@ test("expireQuotes cuenta el día de emisión de Madrid aunque en UTC sea el dí
   expect((await getQuote(quote.id)).status).toBe("ISSUED");
   await expireQuotes(new Date("2026-04-01T22:30:00Z")); // 02-04 00:30 en Madrid
   expect((await getQuote(quote.id)).status).toBe("EXPIRED");
+});
+
+test("con la validez vencida no se vuelve a Emitido ni Enviado a mano (la tarea lo caducaría); sí a Aceptado o Rechazado", async () => {
+  const { actor, quote } = await completeDraft();
+  await issueQuote(actor, quote.id);
+  await prisma.quote.update({ where: { id: quote.id }, data: { issuedAt: new Date("2020-01-01T10:00:00Z"), validityDays: 30 } });
+  await expireQuotes();
+  await expect(setStatus(actor, quote.id, "SENT")).rejects.toThrow("La validez ya venció");
+  await expect(setStatus(actor, quote.id, "ISSUED")).rejects.toThrow("La validez ya venció");
+  await setStatus(actor, quote.id, "ACCEPTED");
+  await expect(setStatus(actor, quote.id, "SENT")).rejects.toThrow("La validez ya venció");
+  expect(validityRunOut((await getQuote(quote.id)))).toBe(true);
+  const { actor: a2, quote: fresh } = await completeDraft();
+  await issueQuote(a2, fresh.id);
+  await setStatus(a2, fresh.id, "SENT"); // vigente: sin cambios
+  expect(validityRunOut(await getQuote(fresh.id))).toBe(false);
 });
 
 test("expireQuotes no toca aceptados, rechazados, borradores ni revisiones sustituidas; sí los enviados", async () => {
