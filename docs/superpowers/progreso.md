@@ -2,7 +2,7 @@
 
 Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente, para retomar el trabajo desde cualquier equipo. Las reglas para agentes y el estado resumido están en `AGENTS.md`; aquí va el detalle.
 
-Última actualización: 2026-11-18 (Bloque 6 cerrado y aprobado por el usuario en 1.6.4; siguiente: plan del Bloque 7).
+Última actualización: 2026-11-18 (Bloque 6 cerrado y aprobado por el usuario en 1.6.4; plan del Bloque 7 escrito, sin empezar).
 
 ## Cronología
 
@@ -127,7 +127,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - Los usuarios de las pruebas se crean con una firma de ejemplo (`TEST_SIGNATURE`); los reales tienen que firmar en Mi cuenta antes de emitir.
 - **Diseños de los Bloques 6 y 7 aprobados por el usuario el 2026-11-18** (con maquetas elegidas): `specs/2026-11-18-bloque-6-design.md` (maqueta `docs/diseno/maquetas/bloque-6.html`) y `specs/2026-11-18-bloque-7-design.md` (maqueta `docs/diseno/maquetas/bloque-7.html`). Se quitaron las series de numeración y el reinicio manual (el reinicio anual ya existe). **Versión por tarea:** cada tarea del plan sube un parche, 1.6.1, 1.6.2… (Bloque 6) y 1.7.1… (Bloque 7).
 - **Bloque 6 cerrado y aprobado por el usuario (2026-11-18, 1.6.1 a 1.6.4)**, plan `plans/2026-11-18-bloque-6.md`: «Notas internas», desplegable de conceptos obligatorios con estilo, pie del PDF centrado, datos registrales en una línea y dirección en varias; eliminar y **renombrar** usuarios sin emitidos (petición del usuario), con tabla de anchos fijos y «Guardado» que se va a los 2,5 s; historial con buscador y filtros que se aplican solos (`next/form`); zona de peligro con ventana y BORRAR. **Decisión aprobada:** el nombre del autor (`userName`/`authorName`) se copia solo al eliminar al usuario, no en cada alta. Migración `20261118140000_author_names` (columnas nuevas y FK `SET NULL`, sin tocar datos): probarla sobre una copia restaurada antes de producción. «Borrar todos» no se probó pulsando en la BD local (se perderían los presupuestos de desarrollo); lo cubre `tests/quotes/reset.test.ts`.
-- **Siguiente:** plan y ejecución del Bloque 7. Pendiente, en este orden:
+- **Siguiente:** ejecutar el Bloque 7 desde la Tarea 1 con el plan `plans/2026-11-18-bloque-7.md` (escrito y revisado con el usuario el 2026-11-18; aún sin código: tope del contador en 999 y borradores con número llamados «Borrador-{referencia}»). Pendiente, en este orden:
   - Bloque 7: tipos de presupuesto con contador por tipo, ampliaciones (`-A01-R00`), tablas de administración que se guardan solas y «Borrador-{instalación}».
   - Bloque 8, pendientes del despliegue en código: prueba intermitente de `kit-instances`, aviso si falla el PDF al emitir, encabezado huérfano y cierre más alto que una hoja en `paginate`, `tar` en `backup.sh`, versión de Playwright duplicada. Añadir aquí el caso improbable de una nota de la última partida sola en la hoja del cierre.
 - **Al retomar:** `git pull` en `mejoras-uso-real`, `mise x -- pnpm install`, `mise x -- pnpm exec prisma migrate deploy` (migraciones nuevas: `20261111205350_comments` y `20261112120000_installation`), la suite, y arrancar con `mise x -- pnpm dev`. Al hacer commit desde el equipo Linux, los archivos que tienen CRLF se añaden con `git -c core.autocrlf=false add` (la configuración global de git usa `autocrlf=input`).
