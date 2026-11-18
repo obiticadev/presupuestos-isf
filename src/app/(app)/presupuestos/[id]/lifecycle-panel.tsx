@@ -68,6 +68,7 @@ export function IssuedPanel({ q, number }: { q: QuoteDetail; number: NumberRow[]
       {!next && later && (
         <p className="locked">{q.extension ? "Hay una ampliación posterior: esta ya no admite nuevas revisiones." : "Ya tiene ampliaciones: la principal no admite nuevas revisiones."}</p>
       )}
+      {!q.issued?.pdfPath && <p className="warnbox" role="status">El PDF se generará al descargarlo.</p>}
       <a className="btn" href={`/api/presupuestos/${q.id}/pdf`} target="_blank" rel="noopener">Descargar PDF</a>
       <DuplicateButton id={q.id} />
     </div>

@@ -32,6 +32,7 @@ const SUB_INCLUDE = {
 const DETAIL = {
   client: true, location: true, contact: true, type: true, owner: { select: { id: true, name: true } },
   parent: { select: { id: true, revision: true } },
+  issued: { select: { pdfPath: true } }, // no path yet: the PDF failed at issue and is made on download
   revisions: { select: { id: true, revision: true, status: true } },
   sections: {
     where: { parentId: null }, orderBy: { position: "asc" },
