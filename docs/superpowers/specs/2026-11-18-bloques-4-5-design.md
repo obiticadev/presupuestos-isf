@@ -103,7 +103,7 @@ Maqueta aprobada: `docs/diseno/maquetas/cuenta-firma.html` (se ve servida desde 
 - Código en inglés, interfaz en español. Permisos en el servidor. Formularios con `ActionForm`.
 - Lo emitido no se modifica.
 - Cada tarea del plan se cierra con su commit y `git push` a `origin/mejoras-uso-real`, para verla en el entorno de pruebas `:3101`. Fusionar en `master` o desplegar producción exige el visto bueno del usuario.
-- Versión de la app: los bloques cerrados la suben (regla de `AGENTS.md`); decisión del agente: 1.4.0 al cerrar este plan conjunto.
+- Versión de la app: los bloques cerrados la suben (regla de `AGENTS.md`); 1.5.0 al cerrar este plan conjunto (uno por bloque; decisión del usuario).
 
 ## Pruebas
 
