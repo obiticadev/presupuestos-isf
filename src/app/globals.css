@@ -500,7 +500,11 @@ dialog.danger .foot{display:flex;justify-content:flex-end;gap:10px;padding:12px 
 /* Tablas que se guardan solas al salir del campo (Bloque 7) */
 .auto { width: 100%; }
 .auto td { vertical-align: middle; }
-.auto .autoform { display: grid; gap: 4px; }
+/* Error y «Guardado» dentro del campo, a la derecha: la fila no crece */
+.auto .autoform { position: relative; }
+.auto .autoform input:not([type="hidden"]) { padding-right: 9rem; }
+.auto .autoform .formerr, .auto .autoform .saved { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); margin: 0; padding: 0; background: none; font-size: 12px; font-weight: 600; pointer-events: none; width: auto; max-width: 8.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.auto tr:has(.formerr) input:not([type="hidden"]) { border-color: var(--red); }
 .auto input:not([type="hidden"]) { width: 100%; font: 400 14px var(--font-archivo), sans-serif; color: var(--ink); border: 1.5px solid var(--ink); background: var(--sheet); padding: 8px 10px; min-height: 40px; }
 .auto input:focus { outline: 2px solid var(--green); outline-offset: 1px; }
 .auto .cod { width: 6.5rem; }
