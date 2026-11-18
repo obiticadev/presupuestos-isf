@@ -118,3 +118,41 @@ test("paginación: con un comentario en cada línea, ninguna hoja empieza por un
   expect(firsts.length).toBeGreaterThan(50);
   expect(firsts.filter((c) => c === "note")).toEqual([]);
 });
+
+test("paginación: al recolocar el cierre, ninguna hoja acaba en partida o subpartida ni empieza por una nota, sea cual sea el alto", async () => {
+  const src = withParts(exampleParts());
+  for (const s of src.quote.sections) for (const c of s.children) c.lines.forEach((l, i) => { l.comment = `Comentario ${c.id}-${i}: tendido por bandeja existente.`; });
+  const body = TEMPLATES.v1.body(buildDocument(src, { draft: false }));
+  const edges = await withPage(async (page) => {
+    const out: { h: number; firstIsNote: boolean; lastIsHead: boolean }[] = [];
+    // From very short sheets up: the orphan heading only shows where the close barely fits.
+    for (let h = 300; h <= SHEET_PX; h += 3) {
+      await page.setContent(body);
+      await page.evaluate(paginate, h);
+      out.push(...(await page.evaluate(() => [...document.querySelectorAll(".sheet tbody")].map((t, i) => ({
+        firstIsNote: i > 0 && !!t.firstElementChild?.classList.contains("note"),
+        lastIsHead: ["part", "sub"].some((k) => t.lastElementChild?.classList.contains(k)),
+      })))).map((e) => ({ h, ...e })));
+    }
+    return out;
+  });
+  expect(edges.filter((e) => e.lastIsHead)).toEqual([]);
+  expect(edges.filter((e) => e.firstIsNote)).toEqual([]);
+});
+
+test("cierre más alto que una hoja: las exclusiones de 8.000 caracteres siguen en la página siguiente sin perder texto", async () => {
+  const src = pdfSource();
+  const phrases = Array.from({ length: 110 }, (_, i) => `Exclusión ${String(i + 1).padStart(3, "0")}: obra civil y ayudas de albañilería en la zona de bombeo.`);
+  src.quote.exclusions = phrases.join(" ");
+  expect(src.quote.exclusions.length).toBeGreaterThan(7500);
+  const p = await pages(src);
+  // The text runs over page breaks, where the footer and the totals column interleave: count the phrases instead.
+  const all = p.join("");
+  expect(p.length).toBeGreaterThanOrEqual(5);
+  expect(all.match(/exclusión/g)?.length).toBe(phrases.length);
+  expect(all).toContain(norm(phrases.at(-1)!));
+  expect(all).toContain(norm("Transferencia a 60 días."));
+  for (const s of ["Total presupuesto", "1.474,99 €", "Firma y sello"]) expect(all).toContain(norm(s));
+  const s = await sheets(src);
+  expect(s.at(-1)!.closeGap).not.toBeNull();
+});

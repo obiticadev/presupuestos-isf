@@ -28,6 +28,14 @@ export function paginate(sheetHeightPx: number): void {
     return s;
   };
 
+  // A closing block taller than a sheet (very long conditions): the sheet grows and Chromium continues it on the next page.
+  const flow = (s: HTMLElement) => {
+    if (!over(s)) return;
+    s.style.height = "auto";
+    s.style.overflow = "visible";
+    close.style.breakInside = "auto";
+  };
+
   first.style.height = `${sheetHeightPx}px`;
   let sheet = first;
   let tbody = first.querySelector("tbody")!;
@@ -49,7 +57,7 @@ export function paginate(sheetHeightPx: number): void {
   // The closing block does not fit: it moves to a new sheet with the last sub (and its part if just before),
   // so the total is never alone. Rows are carried from the end only while they still fit with the closing block.
   const rs = [...tbody.children];
-  if (rs.length < 2) return; // shortcut: a sheet of a single row cannot give one away; not seen in practice
+  if (rs.length < 2) return flow(sheet);
   let from = rs.map((x) => x.classList.contains("sub")).lastIndexOf(true);
   while (from > 0 && leads(rs[from - 1], rs[from])) from--;
   if (from <= 0) {
@@ -60,13 +68,18 @@ export function paginate(sheetHeightPx: number): void {
   sheet = newSheet(sheet);
   const target = sheet.querySelector("tbody")!;
   sheet.append(close);
-  for (let i = rs.length - 1; i >= from; i--) {
-    target.prepend(rs[i]);
-    if (i < rs.length - 1 && over(sheet)) {
-      tbody.append(rs[i]);
-      // A comment that would now open the sheet goes back with the row it comments (it fitted there before).
-      while (target.children.length > 1 && is(target.firstElementChild!, "note")) tbody.append(target.firstElementChild!);
+  // Carried in blocks (a row with the heads before it and its note), so no heading or note is left apart from its row.
+  for (let i = rs.length - 1; i >= from; ) {
+    let j = i;
+    while (j > from && leads(rs[j - 1], rs[j])) j--;
+    const block = rs.slice(j, i + 1);
+    const firstBlock = target.children.length === 0;
+    target.prepend(...block);
+    if (!firstBlock && over(sheet)) {
+      tbody.append(...block); // it fitted there before the closing block was added
       break;
     }
+    i = j - 1;
   }
+  flow(sheet);
 }
