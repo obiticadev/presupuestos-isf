@@ -71,14 +71,14 @@ export default async function ConfiguracionPage() {
         <SettingsSection
           title="Numeración"
           fields={[
-            { name: "numberPattern", label: "Patrón ({AAAA} año, {NNNNNN} número, {RR} revisión)", value: s.numberPattern },
+            { name: "numberPattern", label: "Patrón ({AAAA} año, {TTT} tipo, {NNN} número, {RR} revisión)", value: s.numberPattern },
             { name: "numberYearlyReset", label: "Reiniciar la numeración cada año", value: s.numberYearlyReset ? "si" : "no", kind: "yesno" },
             { name: "numberStart", label: "Valor inicial", value: String(s.numberStart), kind: "days" },
           ]}
         >
           <p className="mut" style={{ fontSize: 13 }}>
-            Ejemplo con lo guardado: <b className="code">{formatReference(s.numberPattern, { year, seq: s.numberStart, revision: 0 })}</b>.
-            El valor inicial solo cuenta cuando aún no se ha emitido ningún presupuesto{s.numberYearlyReset ? " ese año" : ""}.
+            Ejemplo con lo guardado: <b className="code">{formatReference(s.numberPattern, { year, typeCode: 1, seq: s.numberStart, extension: 0, revision: 0 })}</b>.
+            Cada tipo lleva su propio contador; el valor inicial solo cuenta cuando aún no se ha emitido ningún presupuesto de ese tipo{s.numberYearlyReset ? " ese año" : ""}.
           </p>
         </SettingsSection>
         <section>

@@ -132,3 +132,10 @@ test("la configuración trae los textos de la carta por defecto", async () => {
   expect(s.offerValidityDays).toBe(30);
   expect(s.defaultMarginPct.toFixed(2)).toBe("35.00");
 });
+
+test("el patrón debe llevar el tipo", async () => {
+  const admin = await makeUser("admin");
+  await expect(updateSettings(admin, { numberPattern: "PR-{AAAA}{NNNNNN}-R{RR}" })).rejects.toMatchObject({
+    issues: { numberPattern: "Debe llevar el número ({NNN}), el tipo ({TTT}) y la revisión ({RR})" },
+  });
+});

@@ -8,7 +8,7 @@ import {
   addCatalogLine, addCustomLine, addSection, createDraft, deleteDraft, getQuote, listRequiredConcepts,
   moveSection, removeLine, removeSection, setWaiver, updateHeader, updateLine, updateSection,
 } from "@/modules/quotes/service";
-import { conceptFields, makeClient, makeDraft } from "../helpers/quotes";
+import { conceptFields, makeClient, makeDraft, quoteType } from "../helpers/quotes";
 import { makeUser } from "../helpers/users";
 
 test("un borrador nuevo copia las condiciones del cliente y trae la partida 1 con la 1.1", async () => {
@@ -202,4 +202,26 @@ test("cualquier cambio en el borrador deja como responsable a quien lo hace", as
   expect((await getQuote(quote.id)).ownerId).toBe(other.id);
   await updateSection(actor, sub.id, { title: "Equipos" });
   expect((await getQuote(quote.id)).ownerId).toBe(actor.id);
+});
+
+test("el tipo solo se elige en el primer borrador y ha de estar activo", async () => {
+  const t1 = await quoteType(1);
+  const t2 = await quoteType(2);
+  const { actor, quote } = await makeDraft();
+  await prisma.quoteType.update({ where: { id: t2.id }, data: { active: false } });
+  await expect(updateHeader(actor, quote.id, { typeId: t2.id })).rejects.toMatchObject({ issues: { typeId: "Elige un tipo activo" } });
+  await updateHeader(actor, quote.id, { typeId: t1.id });
+  expect((await getQuote(quote.id)).typeId).toBe(t1.id);
+  await prisma.quote.update({ where: { id: quote.id }, data: { seq: 3, seqYear: 2026, typeCode: 1, revision: 1 } });
+  await prisma.quoteType.update({ where: { id: t2.id }, data: { active: true } });
+  await expect(updateHeader(actor, quote.id, { typeId: t2.id })).rejects.toMatchObject({ issues: { typeId: "El tipo solo se elige en el primer borrador" } });
+});
+
+test("con un solo tipo activo, el borrador nuevo lo trae elegido; con dos, no", async () => {
+  const t1 = await quoteType(1);
+  const a = await makeDraft();
+  expect(a.quote.typeId).toBe(t1.id);
+  await quoteType(2);
+  const b = await makeDraft();
+  expect(b.quote.typeId).toBeNull();
 });

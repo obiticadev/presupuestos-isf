@@ -120,8 +120,8 @@ model CompanySettings {
   offerValidityDays   Int      @default(30)
   defaultMarginPct    Decimal  @default(35) @db.Decimal(5, 2)
   travelOriginText    String   @default("Alcalá de Henares")
-  /// Numeración (spec 5.6): {AAAA} año, {N…} número con ceros a la izquierda, {RR} revisión.
-  numberPattern       String   @default("PR-{AAAA}{NNNNNN}-R{RR}")
+  /// Numeración (spec 5.6): {AAAA} año, {TTT} tipo, {N…} número con ceros a la izquierda, {RR} revisión.
+  numberPattern       String   @default("PR-{AAAA}{TTT}{NNN}-R{RR}")
   numberYearlyReset   Boolean  @default(false)
   numberStart         Int      @default(1)
   updatedAt           DateTime @updatedAt
@@ -266,8 +266,14 @@ model Quote {
   id             String          @id @default(cuid())
   status         QuoteStatus     @default(DRAFT)
   seqYear        Int?
+  /// Código del tipo con el que se numeró (0 en los antiguos); se copia a revisiones y ampliaciones.
+  typeCode       Int             @default(0)
   seq            Int?
+  /// 0 = principal; 1, 2… = ampliación A01, A02…
+  extension      Int             @default(0)
   revision       Int             @default(0)
+  /// Patrón con el que se numeró: revisiones y ampliaciones se formatean con él aunque cambie en Configuración.
+  numberPattern  String?
   reference      String?         @unique
   /// Tipo elegido en el primer borrador de un número; nulo en los antiguos.
   typeId         String?
@@ -306,7 +312,7 @@ model Quote {
   /// Notas internas: nunca van al PDF ni a la instantánea emitida.
   notes          QuoteNote[]
 
-  @@unique([seqYear, seq, revision])
+  @@unique([seqYear, typeCode, seq, extension, revision])
   @@index([status])
   @@index([date])
   @@index([clientId])

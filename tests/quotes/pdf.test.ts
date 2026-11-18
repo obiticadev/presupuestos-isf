@@ -47,7 +47,7 @@ beforeEach(async () => {
 test("el PDF del emitido se genera una vez, con su hash, y la segunda llamada no lo reescribe", async () => {
   const { actor, quote } = await issued();
   const r = await ensureIssuedPdf(actor, quote.id);
-  expect(r.path).toBe(`pdf/${year}/PR-${year}000001-R00.pdf`);
+  expect(r.path).toBe(`pdf/${year}/PR-${year}001001-R00.pdf`);
   const file = await readFile(abs(r.path));
   const doc = await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: quote.id } });
   expect([doc.pdfPath, doc.sha256]).toEqual([r.path, sha(file)]);
@@ -97,7 +97,7 @@ test("regenerado tras cambiar el catálogo y la empresa, el PDF conserva los dat
 test("descargar registra la descarga en el historial", async () => {
   const { actor, quote } = await issued();
   await readIssuedPdf(actor, quote.id);
-  expect(await pdfLog(quote.id, "download")).toEqual([{ summary: `Descarga de PR-${year}000001-R00`, userId: actor.id }]);
+  expect(await pdfLog(quote.id, "download")).toEqual([{ summary: `Descarga de PR-${year}001001-R00`, userId: actor.id }]);
 });
 
 test("un archivo alterado se regenera al descargar", async () => {
@@ -127,7 +127,7 @@ test("pdfResponse del emitido: su nombre, inline y sin caché", async () => {
   const { actor, quote } = await issued();
   const res = await pdfResponse(actor, quote.id);
   expect(res.status).toBe(200);
-  expect(res.headers.get("content-disposition")).toBe(`inline; filename="PR-${year}000001-R00.pdf"`);
+  expect(res.headers.get("content-disposition")).toBe(`inline; filename="PR-${year}001001-R00.pdf"`);
   expect(res.headers.get("cache-control")).toBe("private, no-store");
 });
 

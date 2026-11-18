@@ -49,7 +49,7 @@ export async function deleteDraftAction(_prev: ActionResult | null, form: FormDa
 
 // Whoever edits the draft becomes its responsible; issuing records the issuer.
 export const updateHeaderAction: Action = action((actor, f) =>
-  quotes.updateHeader(actor, str(f, "id"), { ...present(f, ["clientId", "locationId", "contactId", "date", "subject", "paymentTerms", "exclusions", "validityDays"]), ownerId: actor.id }));
+  quotes.updateHeader(actor, str(f, "id"), { ...present(f, ["typeId", "clientId", "locationId", "contactId", "date", "subject", "paymentTerms", "exclusions", "validityDays"]), ownerId: actor.id }));
 
 export const addSectionAction: Action = action((actor, f) =>
   quotes.addSection(actor, str(f, "quoteId"), { parentId: str(f, "parentId") || undefined, title: str(f, "title") }));

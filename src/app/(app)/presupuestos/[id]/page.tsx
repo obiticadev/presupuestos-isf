@@ -19,6 +19,7 @@ import { getQuote, listRequiredConcepts, quoteLabel, type QuoteDetail } from "@/
 import { listTaxes } from "@/modules/settings/service";
 import { OpenKitFromHash } from "@/components/disclosure";
 import { InstallationFields } from "./installation-fields";
+import { formatTypeCode, listQuoteTypes } from "@/modules/quotes/types";
 import { IssuePanel } from "./issue-panel";
 import { DuplicateButton, IssuedPanel, PriceWarnings, QuoteHistory, Revisions } from "./lifecycle-panel";
 import { Comment } from "./comment";
@@ -48,9 +49,9 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
     );
   }
   const editable = q.status === "DRAFT";
-  const [client, clients, taxes, concepts, kits, notes, required, history, warnings, revisions] = await Promise.all([
+  const [client, clients, taxes, concepts, kits, notes, required, history, warnings, revisions, types] = await Promise.all([
     getClient(q.clientId), listClientOptions(), listTaxes(), listConceptOptions(), listKits(), listNotes(q.id), listRequiredConcepts(),
-    listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [], listRevisions(q.id),
+    listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [], listRevisions(q.id), listQuoteTypes({ includeInactive: true }),
   ]);
   const ctx: EditorContext = {
     editable, quoteId: q.id, totals: q.totals,
@@ -67,7 +68,7 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
       <div style={{ minWidth: 0 }}>
         <div className="crumb"><Link href="/">Presupuestos</Link> / {title}</div>
         <div className="head">
-          <h1>{q.reference ?? (q.seq !== null ? title : "Borrador · sin número")}</h1>
+          <h1>{title}</h1>
           <span className={`st ${STATUS_CLASS[q.status]}`}><i />{STATUS_LABEL[q.status]}</span>
         </div>
         {q.parent && <p className="mut" style={{ marginTop: 4 }}>Sustituye a <Link href={`/presupuestos/${q.parent.id}`}>R{String(q.parent.revision).padStart(2, "0")}</Link></p>}
@@ -80,12 +81,25 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
           {editable ? (
             <ActionForm action={updateHeaderAction} key={q.updatedAt.getTime()} className="sheet headform">
               <input type="hidden" name="id" value={q.id} />
-              <label className="field">Cliente
-                <select name="clientId" defaultValue={q.clientId}>
-                  {!clients.some((c) => c.id === q.clientId) && <option value={q.clientId}>{q.client.legalName} (desactivado)</option>}
-                  {clients.map((c) => <option key={c.id} value={c.id}>{c.legalName}</option>)}
-                </select>
-              </label>
+              <div className="tipocli">
+                {q.seq === null ? (
+                  <label className="field tipo">Tipo
+                    {/* Narrow: closed, «002 · Nombre» is cut after the code; open, the whole name. */}
+                    <select name="typeId" defaultValue={q.typeId ?? ""}>
+                      <option value="" disabled>—</option>
+                      {activeOrCurrent(types, q.typeId).map((t) => <option key={t.id} value={t.id}>{formatTypeCode(t.code)} · {t.name}</option>)}
+                    </select>
+                  </label>
+                ) : (
+                  <div className="field tipo">Tipo<output className="box" tabIndex={0}>{q.typeCode ? formatTypeCode(q.typeCode) : "—"}</output></div>
+                )}
+                <label className="field">Cliente
+                  <select name="clientId" defaultValue={q.clientId}>
+                    {!clients.some((c) => c.id === q.clientId) && <option value={q.clientId}>{q.client.legalName} (desactivado)</option>}
+                    {clients.map((c) => <option key={c.id} value={c.id}>{c.legalName}</option>)}
+                  </select>
+                </label>
+              </div>
               <InstallationFields
                 options={activeOrCurrent(client.locations, q.locationId).map((l) => ({ id: l.id, name: l.name, label: installationLabel(l) }))}
                 current={q.locationId}
@@ -113,6 +127,7 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
           ) : (
             <div className="sheet">
               <dl>
+                {q.typeCode > 0 && <><dt>Tipo</dt><dd>{formatTypeCode(q.typeCode)} · {q.type?.name}</dd></>}
                 <dt>Cliente</dt><dd><Link href={`/clientes/${q.clientId}`}>{q.client.legalName}</Link></dd>
                 <dt>Nombre</dt><dd>{q.location?.name ?? "—"}</dd>
                 <dt>Instalación</dt><dd>{installationLabel(q.location)}</dd>

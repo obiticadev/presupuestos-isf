@@ -9,6 +9,7 @@ import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { getSettings } from "@/modules/settings/service";
 import { calculateQuote, type CalcSection, type QuoteTotals } from "./calculation";
+import { formatReference } from "./numbering";
 import {
   catalogLineInput, commentInput, customLineInput, headerInput, lineUpdateInput, LOCKED, priceAdjustInput, sectionInput,
   type CatalogLineInput, type CommentInput, type CustomLineInput, type HeaderInput, type LineUpdateInput, type PriceAdjustInput, type SectionInput,
@@ -29,7 +30,7 @@ const SUB_INCLUDE = {
   kits: { orderBy: { position: "asc" } },
 } satisfies Prisma.QuoteSectionInclude;
 const DETAIL = {
-  client: true, location: true, contact: true, owner: { select: { id: true, name: true } },
+  client: true, location: true, contact: true, type: true, owner: { select: { id: true, name: true } },
   parent: { select: { id: true, revision: true } },
   revisions: { select: { id: true, revision: true, status: true } },
   sections: {
@@ -87,8 +88,18 @@ export async function withDraft<T>(actor: CurrentUser | null, quoteId: string, f
   });
 }
 
-export const quoteLabel = (q: Pick<Quote, "reference" | "revision" | "seq">) =>
-  q.reference ?? (q.seq !== null ? `Borrador de la revisión R${String(q.revision).padStart(2, "0")}` : "Borrador");
+/**
+ * The issued reference; a numbered draft (revision or extension) is «Borrador-» + the reference it will get,
+ * an unnumbered one «Borrador-{instalación}» (or «Borrador» until one is chosen).
+ */
+export function quoteLabel(
+  q: Pick<Quote, "reference" | "revision" | "seq" | "extension" | "seqYear" | "typeCode" | "numberPattern"> & { location?: { name: string } | null },
+): string {
+  if (q.reference) return q.reference;
+  if (q.seq !== null && q.numberPattern)
+    return `Borrador-${formatReference(q.numberPattern, { year: q.seqYear!, typeCode: q.typeCode, seq: q.seq, extension: q.extension, revision: q.revision })}`;
+  return q.location ? `Borrador-${q.location.name}` : "Borrador";
+}
 
 export async function logQuote(tx: Tx, actor: CurrentUser, quoteId: string, action: string, summary: string, data?: unknown) {
   await logAction(tx, { userId: actor.id, entity: "quote", entityId: quoteId, action, summary, data });
@@ -138,7 +149,7 @@ async function activeTax(tx: Tx, taxId: string) {
 export async function listClientQuotes(clientId: string) {
   return prisma.quote.findMany({
     where: { clientId }, orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    select: { id: true, reference: true, seq: true, revision: true, status: true, date: true, subject: true, total: true, supersededById: true },
+    select: { id: true, reference: true, seq: true, seqYear: true, typeCode: true, extension: true, numberPattern: true, revision: true, location: { select: { name: true } }, status: true, date: true, subject: true, total: true, supersededById: true },
   });
 }
 
@@ -152,10 +163,12 @@ export async function createDraft(actor: CurrentUser, input: { clientId: string 
   ]);
   if (!client) throw new NotFoundError("El cliente no existe");
   if (!client.active) throw new ValidationError({ clientId: "El cliente está desactivado" });
+  const types = await prisma.quoteType.findMany({ where: { active: true }, select: { id: true }, take: 2 });
   return prisma.$transaction(async (tx) => {
     const quote = await tx.quote.create({
       data: {
         clientId: client.id,
+        typeId: types.length === 1 ? types[0].id : null,
         // A single active location or contact is the obvious choice; with several, the user picks.
         locationId: client.locations.length === 1 ? client.locations[0].id : null,
         contactId: client.contacts.length === 1 ? client.contacts[0].id : null,
@@ -213,6 +226,11 @@ export async function updateHeader(actor: CurrentUser, id: string, raw: HeaderIn
     if (clientId === quote.clientId && contactId && contactId !== quote.contactId) {
       const c = await tx.clientContact.findUnique({ where: { id: contactId } });
       if (!c || c.clientId !== clientId || !c.active) throw new ValidationError({ contactId: "Elige un contacto de este cliente" });
+    }
+    if (input.typeId !== undefined && input.typeId !== quote.typeId) {
+      if (quote.seq !== null) throw new ValidationError({ typeId: "El tipo solo se elige en el primer borrador" });
+      const t = input.typeId ? await tx.quoteType.findUnique({ where: { id: input.typeId } }) : null;
+      if (input.typeId && !t?.active) throw new ValidationError({ typeId: "Elige un tipo activo" });
     }
     if (input.ownerId && input.ownerId !== quote.ownerId) {
       const u = await tx.user.findUnique({ where: { id: input.ownerId } });

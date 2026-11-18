@@ -3,7 +3,7 @@ import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/s
 import { issueQuote } from "@/modules/quotes/issue";
 import { createRevision, duplicateQuote, expireQuotes, validityRunOut, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
 import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateLine } from "@/modules/quotes/service";
-import { conceptFields, completeDraft } from "../helpers/quotes";
+import { conceptFields, completeDraft, quoteType } from "../helpers/quotes";
 
 test("revisar crea R01 en borrador; al emitirla, R00 queda sustituida y ya no cambia de estado", async () => {
   const { actor, quote } = await completeDraft();
@@ -188,4 +188,21 @@ test("la revisión respeta los precios ajustados a mano", async () => {
   const rev = await createRevision(actor, quote.id);
   expect(rev.refreshed).toBe(0);
   expect((await listQuoteHistory(rev.id)).map((e) => e.summary)).toContain(`Revisión de ${(await getQuote(quote.id)).reference}`);
+});
+
+test("las revisiones de un número no mezclan tipos con el mismo número", async () => {
+  const t2 = await quoteType(2);
+  const a = await completeDraft();
+  const b = await completeDraft();
+  await prisma.quote.update({ where: { id: b.quote.id }, data: { typeId: t2.id } });
+  await issueQuote(a.actor, a.quote.id);
+  await issueQuote(b.actor, b.quote.id);
+  expect((await listRevisions(a.quote.id)).map((r) => r.id)).toEqual([a.quote.id]);
+  expect((await listQuoteHistory(a.quote.id)).every((h) => h.entityId === a.quote.id)).toBe(true);
+});
+
+test("duplicar copia el tipo", async () => {
+  const { actor, quote } = await completeDraft();
+  const { quote: dup } = await duplicateQuote(actor, quote.id);
+  expect(dup.typeId).toBe((await getQuote(quote.id)).typeId);
 });

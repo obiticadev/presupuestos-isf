@@ -89,7 +89,7 @@ async function copyContent(tx: Tx, fromId: string, toId: string): Promise<void> 
 }
 
 const HEADER = (q: Quote) => ({
-  clientId: q.clientId, locationId: q.locationId, contactId: q.contactId, subject: q.subject, paymentTerms: q.paymentTerms,
+  typeId: q.typeId, clientId: q.clientId, locationId: q.locationId, contactId: q.contactId, subject: q.subject, paymentTerms: q.paymentTerms,
   exclusions: q.exclusions, validityDays: q.validityDays, waivers: q.waivers as Prisma.InputJsonValue,
   base: q.base, total: q.total,
 });
@@ -103,7 +103,7 @@ export async function createRevision(actor: CurrentUser, id: string): Promise<Qu
       if (q.status === "DRAFT") throw new ValidationError({ _: "Solo se revisa un presupuesto emitido" });
       if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: revisa la última" });
       const rev = await tx.quote.create({
-        data: { ...HEADER(q), seqYear: q.seqYear, seq: q.seq, revision: q.revision + 1, parentId: q.id, ownerId: actor.id, createdById: actor.id, date: todayMadrid() },
+        data: { ...HEADER(q), seqYear: q.seqYear, typeCode: q.typeCode, numberPattern: q.numberPattern, seq: q.seq, extension: q.extension, revision: q.revision + 1, parentId: q.id, ownerId: actor.id, createdById: actor.id, date: todayMadrid() },
       });
       await copyContent(tx, q.id, rev.id);
       const refreshed = await refreshLines(tx, rev.id); // a revision starts from today's catalog prices
@@ -197,7 +197,7 @@ export async function listQuotes(filter: QuoteFilter) {
   const [items, total, agg, groups] = await Promise.all([
     prisma.quote.findMany({
       where, orderBy: [{ date: "desc" }, { createdAt: "desc" }], skip: (page - 1) * QUOTES_PAGE_SIZE, take: QUOTES_PAGE_SIZE,
-      include: { client: { select: { legalName: true } }, owner: { select: { name: true } }, parent: { select: { revision: true } } },
+      include: { client: { select: { legalName: true } }, owner: { select: { name: true } }, parent: { select: { revision: true } }, location: { select: { name: true } } },
     }),
     prisma.quote.count({ where }),
     prisma.quote.aggregate({ where, _sum: { total: true } }),
@@ -211,10 +211,10 @@ export type QuoteRow = Awaited<ReturnType<typeof listQuotes>>["items"][number];
 
 /** Every revision of the quote's number, newest first; empty while it has no number. */
 export async function listRevisions(id: string) {
-  const q = await prisma.quote.findUnique({ where: { id }, select: { seqYear: true, seq: true } });
+  const q = await prisma.quote.findUnique({ where: { id }, select: { seqYear: true, typeCode: true, seq: true } });
   if (!q || q.seq === null) return [];
   return prisma.quote.findMany({
-    where: { seqYear: q.seqYear, seq: q.seq }, orderBy: { revision: "desc" },
+    where: { seqYear: q.seqYear, typeCode: q.typeCode, seq: q.seq }, orderBy: { revision: "desc" },
     select: { id: true, revision: true, status: true, reference: true, issuedAt: true, owner: { select: { name: true } } },
   });
 }
@@ -223,7 +223,7 @@ export async function listRevisions(id: string) {
 export async function listQuoteHistory(id: string): Promise<AuditEntry[]> {
   const q = await prisma.quote.findUnique({ where: { id } });
   if (!q) throw new NotFoundError("El presupuesto no existe");
-  const ids = q.seq !== null ? (await prisma.quote.findMany({ where: { seqYear: q.seqYear, seq: q.seq }, select: { id: true } })).map((x) => x.id) : [id];
+  const ids = q.seq !== null ? (await prisma.quote.findMany({ where: { seqYear: q.seqYear, typeCode: q.typeCode, seq: q.seq }, select: { id: true } })).map((x) => x.id) : [id];
   const rows = await prisma.auditLog.findMany({
     where: { entity: "quote", entityId: { in: ids } }, orderBy: [{ createdAt: "desc" }, { id: "desc" }], take: 200,
     include: { user: { select: { name: true } } },

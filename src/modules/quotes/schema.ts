@@ -10,6 +10,7 @@ const optionalId = z.string().optional().transform((s) => (s ? s : null));
 /** Every header field is optional: the editor saves one block at a time. */
 export const headerInput = z.object({
   clientId: z.string().min(1),
+  typeId: optionalId,
   locationId: optionalId,
   contactId: optionalId,
   ownerId: z.string().min(1),

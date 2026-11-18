@@ -20,6 +20,9 @@ export function issueChecks(q: QuoteDetail, required: (RequiredConcept & { conce
   if (!hasSignature) out.push({ code: "signature", message: "Falta tu firma: configúrala en Mi cuenta", anchor: "/cuenta" });
   const subs = q.sections.flatMap((s) => s.children);
   const lines = subs.flatMap((s) => s.lines.map((l) => ({ ...l, mode: s.mode })));
+  // The type is chosen once per number; revisions and extensions carry the frozen code, even old ones without a type.
+  if (q.seq === null && !q.type) out.push({ code: "type", message: "Falta el tipo", anchor: "#cabecera" });
+  else if (q.seq === null && !q.type!.active) out.push({ code: "type", message: "El tipo está desactivado: elige otro", anchor: "#cabecera" });
   if (!q.locationId) out.push({ code: "location", message: "Falta la instalación", anchor: "#cabecera" });
   else if (!q.location?.active || q.location.clientId !== q.clientId)
     out.push({ code: "location", message: "La instalación ya no está activa en el cliente: elige otra", anchor: "#cabecera" });
@@ -74,14 +77,17 @@ function issueInTx(actor: CurrentUser, id: string): Promise<Quote> {
     const settings = await tx.companySettings.findUniqueOrThrow({ where: { id: 1 } });
     const now = new Date();
     const seqYear = q.seqYear ?? todayMadrid(now).getUTCFullYear();
-    const seq = q.seq ?? (await nextNumber(tx, seqYear, settings));
-    const reference = formatReference(settings.numberPattern, { year: seqYear, seq, revision: q.revision });
+    // A number keeps the pattern and type code it was issued with, so its revisions and extensions keep its shape.
+    const numberPattern = q.numberPattern ?? settings.numberPattern;
+    const typeCode = q.seq !== null ? q.typeCode : q.type!.code;
+    const seq = q.seq ?? (await nextNumber(tx, seqYear, q.type!, settings));
+    const reference = formatReference(numberPattern, { year: seqYear, typeCode, seq, extension: q.extension, revision: q.revision });
     if (q.parentId) {
       const parent = await tx.quote.findUniqueOrThrow({ where: { id: q.parentId } });
       if (parent.supersededById) throw new ValidationError({ _: "La revisión anterior ya está sustituida por otra" });
       await tx.quote.update({ where: { id: parent.id }, data: { supersededById: id } });
     }
-    const issued = await tx.quote.update({ where: { id }, data: { status: "ISSUED", issuedAt: now, seqYear, seq, reference, ownerId: actor.id } }); // the issuer is the responsible
+    const issued = await tx.quote.update({ where: { id }, data: { status: "ISSUED", issuedAt: now, seqYear, typeCode, seq, numberPattern, reference, ownerId: actor.id } }); // the issuer is the responsible
     // JSON round-trip: Decimals become strings and Dates ISO strings; the snapshot never changes afterwards.
     const { id: _id, updatedAt: _updated, ...company } = settings;
     const signer = { name: actor.name, signature: Buffer.from(signature!).toString("base64") }; // frozen: a later change of signature does not reach it
