@@ -373,8 +373,8 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .phonesheet{display:contents}
 .onlyphone{display:none!important}
 .hcol{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
-:is(.hhead,.panelhead) .x{font-weight:600;font-size:18px;width:40px;height:40px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);text-decoration:none;display:grid;place-items:center;flex:none}
-:is(.hhead,.panelhead) .x:hover{background:var(--band)}
+:is(.hhead,.panelhead,.sign .bar) .x{font-weight:600;font-size:18px;width:40px;height:40px;border:1.5px solid var(--ink);background:var(--sheet);color:var(--ink);text-decoration:none;display:grid;place-items:center;flex:none}
+:is(.hhead,.panelhead,.sign .bar) .x:hover{background:var(--band)}
 .hhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
 .hhead h2{margin:0}
 .hhead p{font-size:13px;color:var(--mut);margin-top:4px}
@@ -446,3 +446,28 @@ fieldset[disabled] input,fieldset[disabled] textarea{cursor:default}
 
 /* Versión de la app: pie del menú lateral y del panel del login */
 .ver{display:block;margin-top:10px;font-size:11px;letter-spacing:.06em;color:#a9c6bf}
+
+/* Mi cuenta (maqueta cuenta-firma.html): dos columnas, firma sobre el sello y ventana para firmar. */
+.acc{display:grid;gap:24px;max-width:1100px;grid-template-columns:minmax(0,360px) minmax(0,1fr)}
+.stack{display:grid;gap:12px;align-content:start}
+.okmsg{color:var(--ok);font-weight:600;font-size:13px}
+.sigthumb{all:unset;box-sizing:border-box;cursor:pointer;display:grid;place-items:center;height:150px;border:1.5px dashed var(--mut);background:#fff}
+.sigthumb:hover{border-color:var(--ink);background:#f9faf8}
+.sigthumb:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.sigthumb .signed{display:block;position:relative;width:200px;height:80px}
+.sigthumb .sello{display:block;width:100%;height:100%}
+.sigthumb .firma{position:absolute;left:50%;top:50%;width:125%;height:130%;object-fit:contain;transform:translate(-50%,-55%) rotate(-3deg)}
+dialog.sign{margin:auto;border:1.5px solid var(--ink);padding:0;width:min(960px,calc(100vw - 32px));max-height:calc(100vh - 32px);background:var(--sheet);color:var(--ink)}
+dialog.sign::backdrop{background:#0f1f1dcc}
+.sign .bar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1.5px solid var(--ink)}
+.sign .bar h2{margin:0;flex:1}
+.sign .area{padding:16px;position:relative}
+.sign .pad{display:block;width:100%;height:min(420px,calc(100vh - 160px));background:#fff;border:1.5px dashed var(--rule);touch-action:none;cursor:crosshair}
+.sign .base{position:absolute;left:56px;right:56px;bottom:70px;border-top:1px solid var(--rule);font-size:12px;color:var(--mut);padding-top:4px;pointer-events:none}
+.pdfpreview{display:block;width:210mm;max-width:100%;height:84mm;border:0;background:#fff;box-shadow:0 1px 6px #0003;padding:0 18mm;box-sizing:border-box}
+@media (max-width:900px){.acc{grid-template-columns:1fr}}
+@media (max-width:600px){
+  dialog.sign{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh}
+  .sign .pad{height:calc(100dvh - 120px)}
+  .pdfpreview{max-width:none;zoom:.45}
+}

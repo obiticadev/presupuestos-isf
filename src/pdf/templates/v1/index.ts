@@ -30,13 +30,31 @@ export function stampHtml(signer: PdfDocument["signer"]): string {
 <div class="fdo">Fdo.: ${signer.name}</div>`.__html;
 }
 
-function body(d: PdfDocument): string {
-  const c = d.company;
+/** Close of the last sheet: conditions, place and date | totals and signature. Also the preview in «Mi cuenta». */
+export function closeHtml(d: Pick<PdfDocument, "conditions" | "place" | "totals" | "signer">): string {
   const conditions = [
     ["Exclusiones", d.conditions.exclusions],
     ["Forma de pago", d.conditions.paymentTerms],
     ["Validez de la oferta", d.conditions.validity],
   ].filter(([, text]) => text.trim());
+  return html`  <div class="close">
+    <div class="left">
+      <div class="cond">${conditions.map(([h, p]) => html`<h2>${h}</h2><p>${p}</p>`)}</div>
+      <div class="place">${d.place}</div>
+    </div>
+    <div class="right">
+      <div class="totals">
+        <div><span>Importe del presupuesto</span><span>${d.totals.base}</span></div>
+        ${d.totals.taxes.map((t) => html`<div><span>${t.label}</span><span>${t.amount}</span></div>`)}
+        <div class="big"><span>Total presupuesto</span><span>${d.totals.total}</span></div>
+      </div>
+      ${safe(stampHtml(d.signer))}
+    </div>
+  </div>`.__html;
+}
+
+function body(d: PdfDocument): string {
+  const c = d.company;
   return html`<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${safe(archivoFontFace() + STYLES)}</style></head><body>
 ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
 <section class="letter">
@@ -54,20 +72,7 @@ ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
     <thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead>
     <tbody>${d.rows.map(row)}</tbody>
   </table>
-  <div class="close">
-    <div class="left">
-      <div class="cond">${conditions.map(([h, p]) => html`<h2>${h}</h2><p>${p}</p>`)}</div>
-      <div class="place">${d.place}</div>
-    </div>
-    <div class="right">
-      <div class="totals">
-        <div><span>Importe del presupuesto</span><span>${d.totals.base}</span></div>
-        ${d.totals.taxes.map((t) => html`<div><span>${t.label}</span><span>${t.amount}</span></div>`)}
-        <div class="big"><span>Total presupuesto</span><span>${d.totals.total}</span></div>
-      </div>
-      ${safe(stampHtml(d.signer))}
-    </div>
-  </div>
+  ${safe(closeHtml(d))}
 </section>
 </body></html>`.__html;
 }
