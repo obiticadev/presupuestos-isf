@@ -151,11 +151,13 @@ cd /etc/dokploy/compose/presupuestos-isf-app-oy9un2/code
 )
 ```
 
+Si la copia es de una versión anterior al código (ensayo de una actualización), se restaura en la base vacía **antes** de `migrate`: con `migrate` primero, `pg_restore --clean` no borra las tablas nuevas y la migración choca con ellas.
+
 Usa la misma carpeta de copias que producción, pero no arranca su `backup`, así que no escribe ni borra copias. Es un proyecto Compose aparte creado por consola, no un proyecto de Dokploy: así no aparece en el panel ni se despliega por error.
 
 | Fecha | Copia usada | Último PDF y SHA-256 | Resultado | Quién |
 |---|---|---|---|---|
-| | | | | |
+| 2026-11-19 | `20261119-0835` (producción, plan 4) con el código de `mejoras-uso-real` (`10dd5d4`), ensayo de la actualización | 5 PDF emitidos, SHA-256 iguales en disco y al descargarlos | Bien: 7 migraciones aplicadas, recuentos iguales, `travelNote` pasa a nota interna, emitidos con su formato antiguo | Claude |
 
 ## 8. Comprobaciones de aceptación
 
