@@ -10,7 +10,7 @@ import { clientInput, contactInput, locationInput, type ClientInput, type Contac
 // Spec 5.1: every signed-in user manages clients, so these functions take the actor only for the history.
 
 export const CLIENTS_PAGE_SIZE = 50;
-const ACTIVE_FIRST = [{ active: "desc" }, { name: "asc" }] as const;
+const ACTIVE_FIRST = [{ active: "desc" }, { name: "asc" }, { id: "asc" }] as const; // same order as importClients matches repeated names
 const DETAIL = { contacts: { orderBy: [...ACTIVE_FIRST] }, locations: { orderBy: [...ACTIVE_FIRST] } } satisfies Prisma.ClientInclude;
 export type ClientDetail = Prisma.ClientGetPayload<{ include: typeof DETAIL }>;
 export type ClientRow = Prisma.ClientGetPayload<{ include: { _count: { select: { locations: true } } } }>;
@@ -41,6 +41,11 @@ export async function listClients(filter: { q?: string; status?: "active" | "ina
 /** Active clients in a light shape, for pickers. */
 export async function listClientOptions(): Promise<{ id: string; legalName: string; taxId: string }[]> {
   return prisma.client.findMany({ where: { active: true }, select: { id: true, legalName: true, taxId: true }, orderBy: { legalName: "asc" } });
+}
+
+/** Every client, active or not, with its contacts and installations: the Excel export. */
+export async function exportClients(): Promise<ClientDetail[]> {
+  return prisma.client.findMany({ include: DETAIL, orderBy: { legalName: "asc" } });
 }
 
 export async function getClient(id: string): Promise<ClientDetail> {
@@ -124,9 +129,9 @@ export async function saveLocation(actor: CurrentUser, clientId: string, raw: Lo
   return prisma.$transaction(async (tx) => {
     const client = await tx.client.findUnique({ where: { id: clientId } });
     if (!client) throw new NotFoundError("El cliente no existe");
-    if (id && !(await tx.clientLocation.findFirst({ where: { id, clientId } }))) throw new NotFoundError("La ubicación no existe");
+    if (id && !(await tx.clientLocation.findFirst({ where: { id, clientId } }))) throw new NotFoundError("La instalación no existe");
     const location = id ? await tx.clientLocation.update({ where: { id }, data }) : await tx.clientLocation.create({ data: { ...data, clientId } });
-    await log(tx, actor, clientId, id ? "update" : "create", `${client.legalName}: ubicación ${location.name} ${id ? "modificada" : "añadida"}`);
+    await log(tx, actor, clientId, id ? "update" : "create", `${client.legalName}: instalación ${location.name} ${id ? "modificada" : "añadida"}`);
     return location;
   });
 }
@@ -149,8 +154,8 @@ export async function removeContact(actor: CurrentUser, contactId: string): Prom
 
 export async function removeLocation(actor: CurrentUser, locationId: string): Promise<"deleted" | "deactivated"> {
   const location = await prisma.clientLocation.findUnique({ where: { id: locationId }, include: { client: true } });
-  if (!location) throw new NotFoundError("La ubicación no existe");
-  const summary = (what: string) => `${location.client.legalName}: ubicación ${location.name} ${what}`;
+  if (!location) throw new NotFoundError("La instalación no existe");
+  const summary = (what: string) => `${location.client.legalName}: instalación ${location.name} ${what}`;
   return deleteOrDeactivate(
     () => prisma.$transaction(async (tx) => {
       await tx.clientLocation.delete({ where: { id: locationId } });

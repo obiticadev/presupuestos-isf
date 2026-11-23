@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState, type ReactNode } from "react";
+import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react";
+import { ActionForm, SubmitOnBlur } from "@/components/action-form";
 import type { ActionResult } from "@/lib/action-result";
-import { saveCategoryAction, saveUnitAction, setCategoryActiveAction, setUnitActiveAction } from "@/modules/catalog/actions";
+import { deleteAllQuotesAction, deleteQuoteTypeAction, saveQuoteTypeAction, setQuoteTypeActiveAction } from "@/modules/quotes/actions";
+import { deleteCategoryAction, deleteUnitAction, saveCategoryAction, saveUnitAction, setCategoryActiveAction, setUnitActiveAction } from "@/modules/catalog/actions";
 import { saveLogoAction, saveTaxAction, setTaxActiveAction, updateSettingsAction } from "@/modules/settings/actions";
 
 type Field = { name: string; label: string; value: string; kind?: "text" | "textarea" | "email" | "decimal" | "days" | "yesno" };
@@ -142,59 +144,127 @@ export function TaxesTable({ taxes }: { taxes: TaxRow[] }) {
 }
 
 type Act = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
-export type ListRow = { id: string; name: string; active: boolean };
-const LIST_ACTIONS: Record<"category" | "unit", { save: Act; setActive: Act }> = {
-  category: { save: saveCategoryAction, setActive: setCategoryActiveAction },
-  unit: { save: saveUnitAction, setActive: setUnitActiveAction },
+type Kind = "type" | "category" | "unit";
+export type AutoRow = { id: string; name: string; code?: string; active: boolean; used: boolean };
+const AUTO_ACTIONS: Record<Kind, { save: Act; setActive: Act; remove: Act }> = {
+  type: { save: saveQuoteTypeAction, setActive: setQuoteTypeActiveAction, remove: deleteQuoteTypeAction },
+  category: { save: saveCategoryAction, setActive: setCategoryActiveAction, remove: deleteCategoryAction },
+  unit: { save: saveUnitAction, setActive: setUnitActiveAction, remove: deleteUnitAction },
 };
 
-function ListNameForm({ kind, row }: { kind: "category" | "unit"; row?: ListRow }) {
-  const [state, action, pending] = useActionState<ActionResult | null, FormData>(LIST_ACTIONS[kind].save, null);
+/** A new row is created only once every field is filled; until then leaving a field does nothing. */
+function SubmitWhenFilled({ children }: { children: ReactNode }) {
   return (
-    <form action={action} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-      {row && <input type="hidden" name="id" value={row.id} />}
-      <input name="name" defaultValue={row?.name} aria-label="Nombre" placeholder="Nombre" required style={{ ...input, width: 180 }} />
-      <button className={row ? "btn" : "btn pri"} disabled={pending} style={small}>{row ? "Guardar" : "Añadir"}</button>
-      <Msg state={state} field="name" />
-      <Msg state={state} />
-    </form>
+    <span style={{ display: "contents" }} onBlur={(e) => { const f = (e.target as HTMLInputElement).form; if (f?.checkValidity()) f.requestSubmit(); }}>
+      {children}
+    </span>
   );
 }
 
-function ListActiveForm({ kind, row }: { kind: "category" | "unit"; row: ListRow }) {
-  const [state, action, pending] = useActionState<ActionResult | null, FormData>(LIST_ACTIONS[kind].setActive, null);
+/** `onCreated` gets the new row's name; `flash` shows «Guardado» on the saved row that replaced it. */
+function AutoRowView({ kind, row, onDone, onCreated, flash }: { kind: Kind; row?: AutoRow; onDone?: () => void; onCreated?: (name: string) => void; flash?: boolean }) {
+  const a = AUTO_ACTIONS[kind];
+  const fid = useId();
+  const name = useRef<HTMLInputElement>(null);
+  const Submit = row ? SubmitOnBlur : SubmitWhenFilled;
   return (
-    <form action={action} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-      <input type="hidden" name="id" value={row.id} />
-      <input type="hidden" name="active" value={row.active ? "0" : "1"} />
-      <button className={row.active ? "btn warn" : "btn"} disabled={pending} style={small}>{row.active ? "Desactivar" : "Activar"}</button>
-      <Msg state={state} />
-    </form>
+    <tr className={row && !row.active ? "off" : undefined}>
+      <td>
+        <ActionForm action={a.save} id={fid} saved onSaved={row ? undefined : () => onCreated?.(name.current?.value.trim() ?? "")} className="autoform">
+          {row && <input type="hidden" name="id" value={row.id} />}
+          <Submit><input ref={name} name="name" defaultValue={row?.name} required={!row} placeholder="Nombre" aria-label="Nombre" autoFocus={!row} /></Submit>
+          {flash && <span role="status" className="saved">Guardado</span>}
+        </ActionForm>
+      </td>
+      {kind === "type" && (
+        <td className="cod">
+          <Submit>
+            <input name="code" form={fid} defaultValue={row?.code} required={!row}
+              inputMode="numeric" placeholder="001" aria-label="Código" />
+          </Submit>
+        </td>
+      )}
+      <td className="act">
+        {!row ? (
+          <button type="button" className="x" aria-label="Quitar fila" onClick={onDone}>×</button>
+        ) : row.used ? (
+          <ActionForm action={a.setActive}>
+            <input type="hidden" name="id" value={row.id} />
+            <input type="hidden" name="active" value={row.active ? "0" : "1"} />
+            <button className={row.active ? "btn sm warn" : "btn sm"}>{row.active ? "Desactivar" : "Reactivar"}</button>
+          </ActionForm>
+        ) : (
+          <ActionForm action={a.remove}>
+            <input type="hidden" name="id" value={row.id} />
+            <button className="x" aria-label={`Borrar ${row.name}`}>×</button>
+          </ActionForm>
+        )}
+      </td>
+    </tr>
   );
 }
 
-/** Categories or units: rename, add, deactivate. Nothing is deleted, so concepts keep their references. */
-export function ListTable({ kind, title, rows }: { kind: "category" | "unit"; title: string; rows: ListRow[] }) {
+/** Tipos, categorías y unidades: each field saves when left; unused rows are deleted with ×, used ones deactivated. */
+export function AutoTable({ kind, title, rows }: { kind: Kind; title: string; rows: AutoRow[] }) {
+  const [fresh, setFresh] = useState<number[]>([]);
+  const [flash, setFlash] = useState<string | null>(null);
+  const next = useRef(0);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const drop = (k: number) => setFresh((f) => f.filter((x) => x !== k));
+  const created = (k: number, name: string) => {
+    drop(k);
+    setFlash(name);
+    clearTimeout(timer.current);
+    timer.current = setTimeout(() => setFlash(null), 2000);
+  };
   return (
     <section>
       <h2>{title}</h2>
-      <table>
-        <thead><tr><th>Nombre</th><th>Estado</th></tr></thead>
+      <table className="auto">
+        <thead><tr><th>Nombre</th>{kind === "type" && <th className="cod">Código</th>}<th className="act"></th></tr></thead>
         <tbody>
-          {rows.map((r) => (
-            <tr key={`${r.id}-${r.active}`} style={r.active ? undefined : { opacity: 0.6 }}>
-              <td><ListNameForm kind={kind} row={r} /></td>
-              <td>
-                <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  {!r.active && <span className="badge off">Desactivado</span>}
-                  <ListActiveForm kind={kind} row={r} />
-                </div>
-              </td>
-            </tr>
-          ))}
-          <tr><td colSpan={2}><ListNameForm kind={kind} /></td></tr>
+          {rows.map((r) => <AutoRowView key={`${r.id}-${r.active}-${r.used}`} kind={kind} row={r} flash={r.name === flash} />)}
+          {fresh.map((k) => <AutoRowView key={`new-${k}`} kind={kind} onDone={() => drop(k)} onCreated={(name) => created(k, name)} />)}
         </tbody>
       </table>
+      <button type="button" className="btn addrow" onClick={() => setFresh((f) => [...f, next.current++])}>+ Añadir fila</button>
+    </section>
+  );
+}
+
+/** Danger zone (variant B): the button opens a dialog where BORRAR must be typed. */
+export function DangerZone({ count }: { count: number }) {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [word, setWord] = useState("");
+  const [state, action, pending] = useActionState<ActionResult | null, FormData>(deleteAllQuotesAction, null);
+  useEffect(() => { if (state?.ok) dialog.current?.close(); }, [state]); // onClose clears the word
+  return (
+    <section className="danger-zone">
+      <h2>Zona de peligro</h2>
+      <p><b>Borrar todos los presupuestos y reiniciar la numeración.</b> Borra los {count} presupuestos, sus PDF, notas e historial, y la numeración vuelve a empezar.</p>
+      <button type="button" className="btn danger" onClick={() => dialog.current?.showModal()}>Borrar todos los presupuestos…</button>
+      {state?.ok && <span role="status" style={{ marginLeft: 12, color: "var(--ok)", fontWeight: 600 }}>Presupuestos borrados</span>}
+      <dialog ref={dialog} className="danger" aria-labelledby="danger-title" onClose={() => setWord("")}>
+        <form action={action}>
+          <div className="bar" id="danger-title">¿Borrar los {count} presupuestos?</div>
+          <div className="body">
+            <p style={{ margin: 0 }}>
+              Se borran sus PDF, sus notas y sus entradas del historial. Los números nuevos <b>pueden coincidir con los de presupuestos borrados</b>.
+              No se puede deshacer: haz antes una copia manual (docs/despliegue.md).
+            </p>
+            <label className="field">
+              Escribe BORRAR para confirmar
+              <input name="confirm" autoComplete="off" placeholder="BORRAR" value={word} onChange={(e) => setWord(e.target.value)} />
+              <Msg state={state} field="confirm" />
+            </label>
+            <Msg state={state} />
+          </div>
+          <div className="foot">
+            <button type="button" className="btn" onClick={() => dialog.current?.close()}>Cancelar</button>
+            <button className="btn danger" disabled={word !== "BORRAR" || pending}>Borrar</button>
+          </div>
+        </form>
+      </dialog>
     </section>
   );
 }

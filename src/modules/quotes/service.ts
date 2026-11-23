@@ -9,9 +9,10 @@ import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { getSettings } from "@/modules/settings/service";
 import { calculateQuote, type CalcSection, type QuoteTotals } from "./calculation";
+import { formatReference } from "./numbering";
 import {
-  catalogLineInput, customLineInput, headerInput, lineUpdateInput, LOCKED, priceAdjustInput, sectionInput,
-  type CatalogLineInput, type CustomLineInput, type HeaderInput, type LineUpdateInput, type PriceAdjustInput, type SectionInput,
+  catalogLineInput, commentInput, customLineInput, headerInput, lineUpdateInput, LOCKED, priceAdjustInput, sectionInput,
+  type CatalogLineInput, type CommentInput, type CustomLineInput, type HeaderInput, type LineUpdateInput, type PriceAdjustInput, type SectionInput,
 } from "./schema";
 
 // Spec 5.1: every signed-in user edits every quote, so these functions take the actor for the history only.
@@ -24,12 +25,14 @@ const LINE_INCLUDE = {
   adjustments: { orderBy: { createdAt: "asc" } },
 } satisfies Prisma.QuoteLineInclude;
 const SUB_INCLUDE = {
-  lines: { orderBy: [{ kitInstanceId: "asc" }, { position: "asc" }], include: LINE_INCLUDE },
+  // Loose lines first, then each kit's lines, as the editor shows them (PostgreSQL would put the nulls last).
+  lines: { orderBy: [{ kitInstanceId: { sort: "asc", nulls: "first" } }, { position: "asc" }], include: LINE_INCLUDE },
   kits: { orderBy: { position: "asc" } },
 } satisfies Prisma.QuoteSectionInclude;
 const DETAIL = {
-  client: true, location: true, contact: true, owner: { select: { id: true, name: true } },
+  client: true, location: true, contact: true, type: true, owner: { select: { id: true, name: true } },
   parent: { select: { id: true, revision: true } },
+  issued: { select: { pdfPath: true } }, // no path yet: the PDF failed at issue and is made on download
   revisions: { select: { id: true, revision: true, status: true } },
   sections: {
     where: { parentId: null }, orderBy: { position: "asc" },
@@ -63,27 +66,41 @@ export function toCalc(sections: CalcShape[]): CalcSection[] {
   }));
 }
 
-async function recalc(tx: Tx, quoteId: string): Promise<void> {
+export async function recalc(tx: Tx, quoteId: string, ownerId: string): Promise<void> {
   const sections = await tx.quoteSection.findMany({ where: { quoteId, parentId: null }, include: { children: { include: { lines: true } } } });
   const t = calculateQuote(toCalc(sections));
-  await tx.quote.update({ where: { id: quoteId }, data: { base: t.base.toFixed(2), total: t.total.toFixed(2) } });
+  await tx.quote.update({ where: { id: quoteId }, data: { base: t.base.toFixed(2), total: t.total.toFixed(2), ownerId } });
 }
 
-/** Locks the quote row, refuses anything but a draft, runs `fn` and stores the new totals, in one transaction. */
-export async function withDraft<T>(quoteId: string, fn: (tx: Tx, quote: Quote) => Promise<T>): Promise<T> {
+/**
+ * Locks the quote row, refuses anything but a draft, runs `fn` and stores the new totals, in one transaction.
+ * Whoever changes the draft becomes its responsible; `actor` null (internal notes) leaves the quote row as it was.
+ */
+export async function withDraft<T>(actor: CurrentUser | null, quoteId: string, fn: (tx: Tx, quote: Quote) => Promise<T>): Promise<T> {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Quote" WHERE id = ${quoteId} FOR UPDATE`;
     const quote = await tx.quote.findUnique({ where: { id: quoteId } });
     if (!quote) throw new NotFoundError("El presupuesto no existe");
     if (quote.status !== "DRAFT") throw new ValidationError({ _: LOCKED });
     const result = await fn(tx, quote);
-    await recalc(tx, quoteId);
+    // Notes (null actor) change neither totals nor the quote: leave its row, and its updatedAt, untouched.
+    if (actor) await recalc(tx, quoteId, actor.id);
     return result;
   });
 }
 
-export const quoteLabel = (q: Pick<Quote, "reference" | "revision" | "seq">) =>
-  q.reference ?? (q.seq !== null ? `Borrador de la revisión R${String(q.revision).padStart(2, "0")}` : "Borrador");
+/**
+ * The issued reference; a numbered draft (revision or extension) is «Borrador-» + the reference it will get,
+ * an unnumbered one «Borrador-{instalación}» (or «Borrador» until one is chosen).
+ */
+export function quoteLabel(
+  q: Pick<Quote, "reference" | "revision" | "seq" | "extension" | "seqYear" | "typeCode" | "numberPattern"> & { location?: { name: string } | null },
+): string {
+  if (q.reference) return q.reference;
+  if (q.seq !== null && q.numberPattern)
+    return `Borrador-${formatReference(q.numberPattern, { year: q.seqYear!, typeCode: q.typeCode, seq: q.seq, extension: q.extension, revision: q.revision })}`;
+  return q.location ? `Borrador-${q.location.name}` : "Borrador";
+}
 
 export async function logQuote(tx: Tx, actor: CurrentUser, quoteId: string, action: string, summary: string, data?: unknown) {
   await logAction(tx, { userId: actor.id, entity: "quote", entityId: quoteId, action, summary, data });
@@ -115,7 +132,7 @@ async function nextPosition(tx: Tx, where: { quoteId: string; parentId: string |
 }
 
 /** A partida always comes with its first subpartida, so there is somewhere to add lines. */
-async function insertSection(tx: Tx, quoteId: string, parentId: string | null, title: string): Promise<QuoteSection> {
+export async function insertSection(tx: Tx, quoteId: string, parentId: string | null, title: string): Promise<QuoteSection> {
   const section = await tx.quoteSection.create({ data: { quoteId, parentId, title, position: await nextPosition(tx, { quoteId, parentId }) } });
   if (!parentId) await tx.quoteSection.create({ data: { quoteId, parentId: section.id, title: "", position: 1 } });
   return section;
@@ -133,7 +150,7 @@ async function activeTax(tx: Tx, taxId: string) {
 export async function listClientQuotes(clientId: string) {
   return prisma.quote.findMany({
     where: { clientId }, orderBy: [{ date: "desc" }, { createdAt: "desc" }],
-    select: { id: true, reference: true, seq: true, revision: true, status: true, date: true, subject: true, total: true, supersededById: true },
+    select: { id: true, reference: true, seq: true, seqYear: true, typeCode: true, extension: true, numberPattern: true, revision: true, location: { select: { name: true } }, status: true, date: true, subject: true, total: true, supersededById: true },
   });
 }
 
@@ -147,10 +164,12 @@ export async function createDraft(actor: CurrentUser, input: { clientId: string 
   ]);
   if (!client) throw new NotFoundError("El cliente no existe");
   if (!client.active) throw new ValidationError({ clientId: "El cliente está desactivado" });
+  const types = await prisma.quoteType.findMany({ where: { active: true }, select: { id: true }, take: 2 });
   return prisma.$transaction(async (tx) => {
     const quote = await tx.quote.create({
       data: {
         clientId: client.id,
+        typeId: types.length === 1 ? types[0].id : null,
         // A single active location or contact is the obvious choice; with several, the user picks.
         locationId: client.locations.length === 1 ? client.locations[0].id : null,
         contactId: client.contacts.length === 1 ? client.contacts[0].id : null,
@@ -185,7 +204,7 @@ export async function getQuote(id: string, db: Tx | typeof prisma = prisma): Pro
 
 export async function updateHeader(actor: CurrentUser, id: string, raw: HeaderInput): Promise<void> {
   const input = parseOrThrow(headerInput, raw);
-  await withDraft(id, async (tx, quote) => {
+  await withDraft(actor, id, async (tx, quote) => {
     const clientId = input.clientId ?? quote.clientId;
     const data: Prisma.QuoteUncheckedUpdateInput = { ...input };
     if (clientId !== quote.clientId) {
@@ -202,12 +221,20 @@ export async function updateHeader(actor: CurrentUser, id: string, raw: HeaderIn
     const locationId = data.locationId as string | null | undefined;
     if (clientId === quote.clientId && locationId && locationId !== quote.locationId) {
       const loc = await tx.clientLocation.findUnique({ where: { id: locationId } });
-      if (!loc || loc.clientId !== clientId || !loc.active) throw new ValidationError({ locationId: "Elige una ubicación de este cliente" });
+      if (!loc || loc.clientId !== clientId || !loc.active) throw new ValidationError({ locationId: "Elige una instalación de este cliente" });
     }
     const contactId = data.contactId as string | null | undefined;
     if (clientId === quote.clientId && contactId && contactId !== quote.contactId) {
       const c = await tx.clientContact.findUnique({ where: { id: contactId } });
       if (!c || c.clientId !== clientId || !c.active) throw new ValidationError({ contactId: "Elige un contacto de este cliente" });
+    }
+    const changes = (k: "clientId" | "locationId" | "typeId") => input[k] !== undefined && input[k] !== quote[k];
+    if (quote.extension > 0 && (changes("clientId") || changes("locationId") || changes("typeId")))
+      throw new ValidationError({ _: "En una ampliación no se cambian tipo, cliente ni instalación" });
+    if (input.typeId !== undefined && input.typeId !== quote.typeId) {
+      if (quote.seq !== null) throw new ValidationError({ typeId: "El tipo solo se elige en el primer borrador" });
+      const t = input.typeId ? await tx.quoteType.findUnique({ where: { id: input.typeId } }) : null;
+      if (input.typeId && !t?.active) throw new ValidationError({ typeId: "Elige un tipo activo" });
     }
     if (input.ownerId && input.ownerId !== quote.ownerId) {
       const u = await tx.user.findUnique({ where: { id: input.ownerId } });
@@ -222,7 +249,7 @@ export async function updateHeader(actor: CurrentUser, id: string, raw: HeaderIn
 
 export async function addSection(actor: CurrentUser, quoteId: string, input: { parentId?: string; title: string }): Promise<QuoteSection> {
   const title = input.title.trim().slice(0, 300);
-  return withDraft(quoteId, async (tx) => {
+  return withDraft(actor, quoteId, async (tx) => {
     if (input.parentId) {
       const parent = await tx.quoteSection.findUnique({ where: { id: input.parentId } });
       if (!parent || parent.quoteId !== quoteId || parent.parentId) throw new ValidationError({ _: "La partida no existe" });
@@ -236,7 +263,7 @@ export async function addSection(actor: CurrentUser, quoteId: string, input: { p
 export async function updateSection(actor: CurrentUser, sectionId: string, raw: SectionInput): Promise<void> {
   const input = parseOrThrow(sectionInput, raw);
   const section = await findSection(sectionId);
-  await withDraft(section.quoteId, async (tx) => {
+  await withDraft(actor, section.quoteId, async (tx) => {
     const data: Prisma.QuoteSectionUpdateInput = {};
     if (input.title !== undefined) data.title = input.title;
     if (section.parentId) {
@@ -259,7 +286,7 @@ export async function updateSection(actor: CurrentUser, sectionId: string, raw: 
 
 export async function moveSection(actor: CurrentUser, sectionId: string, dir: -1 | 1): Promise<void> {
   const section = await findSection(sectionId);
-  await withDraft(section.quoteId, async (tx) => {
+  await withDraft(actor, section.quoteId, async (tx) => {
     const siblings = await tx.quoteSection.findMany({ where: { quoteId: section.quoteId, parentId: section.parentId }, orderBy: { position: "asc" } });
     const i = siblings.findIndex((s) => s.id === sectionId);
     const other = siblings[i + dir];
@@ -271,7 +298,7 @@ export async function moveSection(actor: CurrentUser, sectionId: string, dir: -1
 
 export async function removeSection(actor: CurrentUser, sectionId: string): Promise<void> {
   const section = await findSection(sectionId);
-  await withDraft(section.quoteId, async (tx) => {
+  await withDraft(actor, section.quoteId, async (tx) => {
     await tx.quoteSection.delete({ where: { id: sectionId } });
     await logQuote(tx, actor, section.quoteId, "update", `${section.parentId ? "Subpartida" : "Partida"} eliminada${section.title ? `: ${section.title}` : ""}`);
   });
@@ -283,7 +310,7 @@ export async function removeSection(actor: CurrentUser, sectionId: string): Prom
 export async function addCatalogLine(actor: CurrentUser, subsectionId: string, raw: CatalogLineInput): Promise<QuoteLine> {
   const input = parseOrThrow(catalogLineInput, raw);
   const sub = await findSubsection(subsectionId);
-  return withDraft(sub.quoteId, async (tx) => {
+  return withDraft(actor, sub.quoteId, async (tx) => {
     const c = await tx.concept.findUnique({ where: { id: input.conceptId }, include: { unit: true, tax: true } });
     if (!c) throw new NotFoundError("El concepto no existe");
     if (!c.active) throw new ValidationError({ conceptId: "El concepto está desactivado" });
@@ -305,7 +332,7 @@ export async function addCatalogLine(actor: CurrentUser, subsectionId: string, r
 export async function addCustomLine(actor: CurrentUser, subsectionId: string, raw: CustomLineInput): Promise<QuoteLine> {
   const input = parseOrThrow(customLineInput, raw);
   const sub = await findSubsection(subsectionId);
-  return withDraft(sub.quoteId, async (tx) => {
+  return withDraft(actor, sub.quoteId, async (tx) => {
     const descriptive = sub.mode === "GLOBAL";
     let tax: { name: string; ratePct: Prisma.Decimal } | null = null;
     if (!descriptive) {
@@ -331,7 +358,7 @@ export async function updateLine(actor: CurrentUser, lineId: string, raw: LineUp
   const input = parseOrThrow(lineUpdateInput, raw);
   const line = await findLine(lineId);
   if (line.kitInstanceId && (input.description !== undefined || input.quantity !== null)) throw new ValidationError({ _: KIT_LINE });
-  await withDraft(line.section.quoteId, async (tx) => {
+  await withDraft(actor, line.section.quoteId, async (tx) => {
     const data: Prisma.QuoteLineUpdateInput = {};
     if (input.description !== undefined) data.description = input.description;
     if (input.quantity !== null) data.quantity = input.quantity;
@@ -344,7 +371,7 @@ export async function updateLine(actor: CurrentUser, lineId: string, raw: LineUp
 export async function moveLine(actor: CurrentUser, lineId: string, dir: -1 | 1): Promise<void> {
   const line = await findLine(lineId);
   if (line.kitInstanceId) throw new ValidationError({ _: KIT_LINE });
-  await withDraft(line.section.quoteId, async (tx) => {
+  await withDraft(actor, line.section.quoteId, async (tx) => {
     const siblings = await tx.quoteLine.findMany({ where: { sectionId: line.sectionId, kitInstanceId: null }, orderBy: { position: "asc" } });
     const i = siblings.findIndex((l) => l.id === lineId);
     const other = siblings[i + dir];
@@ -357,7 +384,7 @@ export async function moveLine(actor: CurrentUser, lineId: string, dir: -1 | 1):
 export async function removeLine(actor: CurrentUser, lineId: string): Promise<void> {
   const line = await findLine(lineId);
   if (line.kitInstanceId) throw new ValidationError({ _: KIT_LINE });
-  await withDraft(line.section.quoteId, async (tx) => {
+  await withDraft(actor, line.section.quoteId, async (tx) => {
     await tx.quoteLine.delete({ where: { id: lineId } });
     await logQuote(tx, actor, line.section.quoteId, "update", `Línea eliminada: ${line.description}`);
   });
@@ -367,13 +394,33 @@ export async function removeLine(actor: CurrentUser, lineId: string): Promise<vo
 export async function adjustPrice(actor: CurrentUser, lineId: string, raw: PriceAdjustInput): Promise<void> {
   const input = parseOrThrow(priceAdjustInput, raw);
   const line = await findLine(lineId);
-  await withDraft(line.section.quoteId, async (tx) => {
+  await withDraft(actor, line.section.quoteId, async (tx) => {
     const current = await tx.quoteLine.findUniqueOrThrow({ where: { id: lineId }, include: { section: true } });
     if (current.unitPrice === null || current.section.mode === "GLOBAL") throw new ValidationError({ _: "Esta línea es descriptiva: no tiene precio que ajustar" });
     await tx.priceAdjustment.create({ data: { lineId, originalPrice: current.unitPrice, newPrice: input.newPrice, reason: input.reason, userId: actor.id } });
     await tx.quoteLine.update({ where: { id: lineId }, data: { unitPrice: input.newPrice } });
     const fmt = (v: { toString(): string }) => formatDecimalEs(v, { max: 4 });
     await logQuote(tx, actor, line.section.quoteId, "adjust", `Ajuste de precio: ${current.description} ${fmt(current.unitPrice)} → ${fmt(input.newPrice)} (${input.reason})`);
+  });
+}
+
+// ── Comments ───────────────────────────────────────────────────────────────────
+
+/** Sets or clears (empty text) the comment of a line, a kit or a partida/subpartida of a draft. */
+export async function setComment(actor: CurrentUser, raw: CommentInput): Promise<void> {
+  const { kind, id, comment } = parseOrThrow(commentInput, raw);
+  const target = kind === "line"
+    ? await prisma.quoteLine.findUnique({ where: { id }, include: { section: true } }).then((l) => l && { quoteId: l.section.quoteId, label: `la línea «${l.description}»` })
+    : kind === "kit"
+      ? await prisma.kitInstance.findUnique({ where: { id }, include: { section: true } }).then((k) => k && { quoteId: k.section.quoteId, label: `el conjunto «${k.name}»` })
+      : await prisma.quoteSection.findUnique({ where: { id } }).then((s) => s && { quoteId: s.quoteId, label: `la ${s.parentId ? "subpartida" : "partida"} «${s.title}»` });
+  if (!target) throw new NotFoundError("El elemento no existe");
+  await withDraft(actor, target.quoteId, async (tx) => {
+    const data = { comment };
+    if (kind === "line") await tx.quoteLine.update({ where: { id }, data });
+    else if (kind === "kit") await tx.kitInstance.update({ where: { id }, data });
+    else await tx.quoteSection.update({ where: { id }, data });
+    await logQuote(tx, actor, target.quoteId, "update", `Comentario ${comment ? "guardado" : "quitado"} en ${target.label}`);
   });
 }
 
@@ -387,7 +434,7 @@ export async function listRequiredConcepts(): Promise<(RequiredConcept & { conce
 export async function setWaiver(actor: CurrentUser, quoteId: string, conceptId: string, reason: string | null): Promise<void> {
   const text = reason?.trim() ?? null;
   if (text !== null && (text.length === 0 || text.length > 300)) throw new ValidationError({ reason: "Escribe el motivo (máximo 300 caracteres)" });
-  await withDraft(quoteId, async (tx, quote) => {
+  await withDraft(actor, quoteId, async (tx, quote) => {
     const required = await tx.requiredConcept.findUnique({ where: { conceptId }, include: { concept: true } });
     if (!required) throw new ValidationError({ _: "Ese concepto no es obligatorio" });
     const waivers = { ...((quote.waivers ?? {}) as Record<string, string>) };

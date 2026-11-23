@@ -6,8 +6,8 @@ import { issueChecks } from "@/modules/quotes/issue";
 import type { QuoteDetail } from "@/modules/quotes/service";
 
 /** «Para emitir»: each required concept with its quantity (or «Marcar 0 con motivo»), the other problems and the issue button. */
-export function IssuePanel({ q, required }: { q: QuoteDetail; required: (RequiredConcept & { concept: Concept })[] }) {
-  const problems = issueChecks(q, required);
+export function IssuePanel({ q, required, hasSignature }: { q: QuoteDetail; required: (RequiredConcept & { concept: Concept })[]; hasSignature: boolean }) {
+  const problems = issueChecks(q, required, hasSignature);
   const others = problems.filter((p) => p.code !== "required");
   const lines = q.sections.flatMap((s) => s.children.flatMap((c) => c.lines));
   return (
@@ -41,7 +41,7 @@ export function IssuePanel({ q, required }: { q: QuoteDetail; required: (Require
                       <ActionForm action={setWaiverAction} close style={{ display: "grid", gap: 6, marginTop: 6 }}>
                         <input type="hidden" name="quoteId" value={q.id} />
                         <input type="hidden" name="conceptId" value={r.conceptId} />
-                        <input name="reason" required maxLength={300} aria-label={`Motivo para no incluir ${r.concept.description}`} placeholder="Motivo" />
+                        <label className="field">Motivo<input name="reason" required maxLength={300} aria-label={`Motivo para no incluir ${r.concept.description}`} /></label>
                         <button className="btn" style={{ justifySelf: "start" }}>Marcar 0</button>
                       </ActionForm>
                     </details>

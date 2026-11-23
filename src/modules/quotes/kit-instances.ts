@@ -29,7 +29,9 @@ async function regenerate(tx: Tx, actor: CurrentUser, quoteId: string, instance:
     id: c.id, code: c.code, categoryId: c.categoryId, description: c.description, unitName: c.unit.name,
     salePrice: c.salePrice, taxName: c.tax.name, taxRatePct: c.tax.ratePct, active: c.active,
   }]));
-  const expansion = expandKit(def, { quantity: instance.quantity.toString(), params: instance.params as Record<string, string>, choices }, concepts);
+  const section = await tx.quoteSection.findUniqueOrThrow({ where: { id: instance.sectionId }, select: { mode: true } });
+  const input = { quantity: instance.quantity.toString(), params: instance.params as Record<string, string>, choices };
+  const expansion = expandKit(def, input, concepts, section.mode === "GLOBAL");
 
   const existing = await tx.quoteLine.findMany({ where: { kitInstanceId: instance.id }, include: { adjustments: true } });
   const keep = new Set<string>();
@@ -67,11 +69,10 @@ export async function addKitInstance(actor: CurrentUser, subsectionId: string, r
   const sub = await prisma.quoteSection.findUnique({ where: { id: subsectionId } });
   if (!sub) throw new NotFoundError("La partida no existe");
   if (!sub.parentId) throw new ValidationError({ _: "Los conjuntos van dentro de una subpartida" });
-  if (sub.mode === "GLOBAL") throw new ValidationError({ _: "Una subpartida de precio global no lleva conjuntos: cámbiala a «por suma»" });
   const template = await prisma.kitTemplate.findUnique({ where: { id: raw.templateId } });
   if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
   const def = kitDefinition.parse(template.definition);
-  return withDraft(sub.quoteId, async (tx) => {
+  return withDraft(actor, sub.quoteId, async (tx) => {
     const max = (await tx.kitInstance.aggregate({ where: { sectionId: sub.id }, _max: { position: true } }))._max.position ?? 0;
     const instance = await tx.kitInstance.create({
       data: {
@@ -90,7 +91,7 @@ export async function updateKitInstance(actor: CurrentUser, instanceId: string, 
   const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
   if (!found) throw new NotFoundError("El conjunto no existe");
   const def = kitDefinition.parse(found.definition);
-  await withDraft(found.section.quoteId, async (tx) => {
+  await withDraft(actor, found.section.quoteId, async (tx) => {
     const instance = await tx.kitInstance.update({ where: { id: instanceId }, data: { quantity: input.quantity, ...clean(def, input) } });
     const missing = await regenerate(tx, actor, found.section.quoteId, instance);
     await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto modificado: ${found.name} × ${input.quantity.replace(".", ",")}${missing.length ? " (incompleto)" : ""}`);
@@ -100,7 +101,7 @@ export async function updateKitInstance(actor: CurrentUser, instanceId: string, 
 export async function removeKitInstance(actor: CurrentUser, instanceId: string): Promise<void> {
   const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
   if (!found) throw new NotFoundError("El conjunto no existe");
-  await withDraft(found.section.quoteId, async (tx) => {
+  await withDraft(actor, found.section.quoteId, async (tx) => {
     await tx.kitInstance.delete({ where: { id: instanceId } });
     await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto eliminado: ${found.name}`);
   });

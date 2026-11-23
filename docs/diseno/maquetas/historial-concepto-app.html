@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Historial de concepto · pantalla</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<!-- Los estilos reales de la app: lo que se ve aquí es lo que dará la app. -->
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+/* ---------- Lo nuevo de esta maqueta ---------- */
+.panelhead{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.panelhead .links{display:flex;gap:14px;align-items:baseline}
+.histbtn{font:600 13px var(--font-archivo),sans-serif;background:none;border:0;border-bottom:1.5px solid var(--ink);padding:0;cursor:pointer;color:var(--ink)}
+.histbtn span{color:var(--mut);font-weight:400}
+/* Modo historial: el historial ocupa el sitio de la lista; el panel queda a su derecha. */
+.split.hist{grid-template-columns:minmax(0,1fr) 380px}
+.split.hist>*{min-width:0}
+@media (max-width:1360px){.split.hist{grid-template-columns:minmax(0,1fr) 360px}}
+@media (max-width:900px){.split.hist{grid-template-columns:1fr}}
+.hcol{position:sticky;top:16px;max-height:calc(100vh - 32px);overflow-y:auto}
+@media (max-width:900px){.hcol{position:static;max-height:none;overflow:visible}}
+.x{font:600 18px var(--font-archivo),sans-serif;width:40px;height:40px;border:1.5px solid var(--ink);background:var(--sheet);cursor:pointer;display:grid;place-items:center;flex:none}
+.x:hover{background:var(--band)}
+.hhead{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}
+.hhead h2{margin:0}
+.hhead p{font-size:13px;color:var(--mut);margin-top:4px}
+.ronly{background:var(--band);border-left:4px solid var(--ink);padding:10px 12px;font-size:13px;font-weight:600}
+/* Campo que cambia en la versión elegida */
+.field.chg{color:var(--amber)}
+.field.chg input,.field.chg select,.field.chg textarea,.field.chg .box{border-color:var(--amber-line);background:var(--amber-bg)}
+.field .was{font-size:12px;font-weight:600;letter-spacing:0;color:var(--amber)}
+.field .was s{color:var(--mut);font-weight:400}
+.chkchg{background:var(--amber-bg);outline:1.5px solid var(--amber-line);outline-offset:4px;color:var(--amber)}
+fieldset{border:0;display:grid;gap:12px}
+fieldset[disabled] input,fieldset[disabled] select,fieldset[disabled] textarea{cursor:default}
+.field .box{min-width:0}
+.legacy{border:1.5px dashed var(--rule);padding:10px 12px;font-size:13px;color:var(--mut)}
+.who{font-size:12px;color:var(--mut)}
+.imp{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--mut);color:var(--mut);padding:1px 5px;margin-left:6px}
+
+/* A · Lista de versiones */
+.vlist{display:grid;gap:0;border-top:1.5px solid var(--ink)}
+.vlist button{all:unset;cursor:pointer;display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:12px 10px;border-bottom:1px solid var(--rule);background:var(--sheet)}
+.vlist button:hover{background:#f9faf8}
+.vlist button[aria-current]{background:var(--band);box-shadow:inset 4px 0 var(--green)}
+.vlist .d{font-weight:700;white-space:nowrap}
+.vlist .s{grid-column:2;font-size:13px}
+.vlist .s b{color:var(--amber)}
+@media (max-width:900px){
+ .vlist{display:flex;overflow-x:auto;border-top:0;gap:8px;padding-bottom:6px;scroll-snap-type:x mandatory}
+ .vlist button{flex:0 0 200px;display:block;border:1.5px solid var(--rule);scroll-snap-align:start}
+ .vlist .who,.vlist .s{display:block;margin-top:2px}
+ .vlist button[aria-current]{border-color:var(--ink);box-shadow:inset 0 4px var(--green)}
+}
+
+/* B · Tabla de cambios */
+.ctab td,.ctab th{padding:8px 10px;font-size:13px}
+.ctab tbody tr{cursor:pointer}
+.ctab tr[aria-current] td{background:var(--band)}
+.ctab tr[aria-current] td:first-child{box-shadow:inset 4px 0 var(--green)}
+.ctab .arrow{white-space:nowrap;max-width:300px;overflow:hidden;text-overflow:ellipsis}
+.ctab .arrow s{color:var(--mut)}
+.ctab .arrow b{color:var(--amber)}
+@media (max-width:900px){
+ .ctab thead{display:none}
+ .ctab tr{display:grid;grid-template-columns:1fr auto;border-bottom:1px solid var(--rule)}
+ .ctab td{border:0;padding:6px 10px}
+ .ctab td.chgs{grid-column:1/-1;padding-top:0}
+}
+
+/* C · Línea unifilar: cada versión dibuja su tramo de línea, así el círculo siempre queda centrado sobre ella */
+.wireline{border-top:1.5px solid var(--ink);padding-top:10px}
+.wireline button{all:unset;cursor:pointer;display:block;position:relative;padding:4px 0 14px 40px}
+.wireline button::before{content:"";box-sizing:border-box;position:absolute;z-index:1;left:4px;top:4px;width:22px;height:22px;border:2px solid var(--ink);background:var(--sheet);border-radius:50%}
+.wireline button::after{content:"";position:absolute;left:14px;width:2px;top:0;bottom:0;background:var(--ink)}
+.wireline button:first-child::after{top:15px}
+.wireline button:last-child::after{bottom:auto;height:15px}
+.wireline button.leg::before{border-style:dashed;border-color:var(--mut)}
+.wireline button[aria-current]::before{background:var(--green);border-color:var(--green)}
+.wireline .t{display:block;padding:2px 8px}
+.wireline button:hover .t{background:#f9faf8}
+.wireline button[aria-current] .t{background:var(--band)}
+.wireline .d{font-weight:700}
+.wireline .s{display:block;font-size:13px;margin-top:2px}.wireline .s b{color:var(--amber)}
+.wirewrap{display:block}
+.wirewrap .nav{display:none}
+@media (max-width:900px){
+ .wirewrap{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:6px;border-top:1.5px solid var(--ink);padding-top:10px}
+ .wirewrap .nav{display:grid;place-items:center;width:32px;height:32px;border:1.5px solid var(--ink);background:var(--sheet);font:700 16px var(--font-archivo),sans-serif;cursor:pointer}
+ .wirewrap .nav:disabled{border-color:var(--rule);color:var(--rule);cursor:default}
+ .wireline{border-top:0;padding-top:0;display:flex;overflow-x:auto;scroll-behavior:smooth;scrollbar-width:none}
+ .wireline::-webkit-scrollbar{display:none}
+ .wireline button{flex:0 0 150px;padding:34px 0 4px}
+ .wireline button::before{left:8px}
+ .wireline button::after{left:0;right:0;width:auto;top:14px;bottom:auto;height:2px}
+ .wireline button:first-child::after{left:19px;top:14px}
+ .wireline button:last-child::after{right:auto;width:19px;height:2px}
+ .wireline .s{display:none}
+}
+
+/* D · Paso a paso */
+.stepper{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;border:1.5px solid var(--ink);background:var(--sheet);padding:10px}
+.stepper .mid{text-align:center}
+.stepper .btn{white-space:nowrap;padding:6px 10px}
+.stepper .mid b{display:block;font-size:22px;font-stretch:88%}
+.dots{display:flex;gap:6px;justify-content:center;margin-top:8px}
+.dots i{width:10px;height:10px;border:1.5px solid var(--ink);display:block}
+.dots i.on{background:var(--green);border-color:var(--green)}
+.whatchg{margin-top:14px;display:grid;gap:6px}
+.whatchg li{list-style:none;padding:8px 10px;border-left:3px solid var(--amber-line);background:var(--amber-bg);color:var(--amber);font-weight:600;font-size:13px}
+.whatchg li s{color:var(--mut);font-weight:400}
+
+/* Móvil: el concepto (y su historial) se abre a pantalla completa sobre el catálogo; la X vuelve a la lista */
+.phonesheet{position:fixed;inset:0;z-index:30;background:var(--paper);overflow-y:auto;padding:12px;display:grid;gap:12px;align-content:start}
+.phonesheet .panel,.phonesheet .hcol{position:static;max-height:none}
+/* Lista tapada en móvil y iPad: en modo historial no se ve */
+.split.hist>.list{display:none}
+</style>
+</head>
+<body>
+<div class="app">
+ <nav class="rail" aria-label="Principal">
+  <div class="brand">ISF<small>PRESUPUESTOS</small></div>
+  <button type="button" class="menubtn">Menú</button>
+  <div class="links">
+   <a href="#">Presupuestos <span>48</span></a>
+   <a href="#">Clientes <span>132</span></a>
+   <a class="on" href="#">Catálogo <span>214</span></a>
+   <a href="#">Conjuntos <span>9</span></a>
+   <div class="sep">Administración</div>
+   <a href="#">Usuarios</a><a href="#">Configuración</a><a href="#">Historial</a>
+   <div class="me">A. Gil<br><span style="color:#a9c6bf">Administrador</span></div>
+  </div>
+ </nav>
+ <main id="main"></main>
+</div>
+<script>
+const P = new URLSearchParams(location.search);
+const PROP = P.get("p") || "A";                 // A, B, C o D
+let open = P.get("v") !== "normal";             // historial abierto o cerrado
+let sel = 0;
+let panelOpen = true;                            // concepto elegido
+const PHONE = matchMedia("(max-width:600px)");
+const prop = () => PROP==="C" && PHONE.matches ? "D" : PROP;  // la elegida: C, y D en móvil                                    // índice de la versión elegida (0 = la actual)
+
+// Versiones de DEMO-BANDEJA, de la más reciente a la más antigua. `s` = foto completa; sin `s`, cambio anterior a este bloque.
+const V = [
+ { d:"13/11/2026 09:10", u:"A. Gil", s:{desc:"Bandeja portacables perforada galvanizada de 100 mm",cat:"Material",unit:"m",cost:"10,40",sale:"16,75",tax:"IVA 21 %",val:true,notes:"DATOS FICTICIOS: solo para pruebas locales.",man:"Unex",sup:"Electro Norte",ref:"66 100"} },
+ { d:"12/11/2026 17:02", u:"O. Bitica", imp:true, s:{desc:"Bandeja portacables perforada galvanizada de 100 mm",cat:"Material",unit:"m",cost:"10,40",sale:"15,90",tax:"IVA 21 %",val:false,notes:"DATOS FICTICIOS: solo para pruebas locales.",man:"Unex",sup:"Electro Norte",ref:"66 100"} },
+ { d:"10/11/2026 12:45", u:"A. Gil", s:{desc:"Bandeja perforada galvanizada 100 mm",cat:"Material",unit:"m",cost:"10,40",sale:"15,90",tax:"IVA 21 %",val:false,notes:"",man:"",sup:"",ref:""} },
+ { d:"08/11/2026 10:03", u:"O. Bitica", imp:true, txt:"precio 15,20 → 15,90, coste 9,80 → 10,40" },
+ { d:"06/11/2026 16:30", u:"O. Bitica", txt:"Alta de DEMO-BANDEJA" },
+];
+const LABEL = {desc:"Descripción",cat:"Categoría",unit:"Unidad",cost:"Coste",sale:"Precio de venta",tax:"Impuesto",val:"Validado",notes:"Observaciones",man:"Fabricante",sup:"Proveedor",ref:"Referencia"};
+const show = (k,v) => k==="val" ? (v?"sí":"no") : (v===""?"vacío":v);
+// Campos que cambian respecto de la versión anterior (solo si las dos tienen foto).
+function diff(i){ const a=V[i].s, b=V[i+1]?.s; if(!a||!b) return {}; const o={}; for(const k in a) if(a[k]!==b[k]) o[k]=b[k]; return o; }
+function summary(i){
+ if(!V[i].s) return V[i].txt;
+ const d=diff(i), ks=Object.keys(d);
+ if(!V[i+1]) return "Alta";
+ if(!V[i+1].s) return "Primera foto completa";
+ // Importes con su valor; textos solo con el nombre del campo, para que la fila no crezca.
+ return ks.map(k=>k==="val"?(V[i].s.val?"validado":"sin validar"):k==="cost"||k==="sale"?`${LABEL[k].toLowerCase()} <b>${show(k,V[i].s[k])}</b>`:LABEL[k].toLowerCase()).join(", ");
+}
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/"/g,"&quot;");
+
+/* ---------- Lista (igual que hoy) ---------- */
+const ROWS = [
+ ["DEMO-BANDEJA","Bandeja portacables perforada galvanizada de 100 mm","Material","m","10,40 €","16,75 €",""],
+ ["DEMO-CABLE","Cable RZ1-K 0,6/1 kV 3G2,5","Material","m","0,92 €","1,40 €","amber"],
+ ["DEMO-CUADRO","Cuadro de protección 12 módulos","Material","ud","38,00 €","57,30 €",""],
+ ["DEMO-MO-OF1","Mano de obra oficial 1ª","Mano de obra","h","—","32,00 €",""],
+ ["DEMO-TUBO","Tubo corrugado 20 mm","Material","m","0,25 €","0,45 €","amber"],
+];
+function list(){
+ return `<div class="list" style="min-width:0;overflow-x:auto"><table><thead><tr><th>Código</th><th>Descripción</th><th>Categoría</th><th>Unidad</th><th class="n">Coste</th><th class="n">Venta</th><th>IVA</th><th></th></tr></thead><tbody>
+ ${ROWS.map((r,i)=>`<tr${i===0&&panelOpen?' style="background:var(--band)"':""}><td class="code"><a href="#" onclick="openPanel();return false">${r[0]}</a></td><td>${r[1]}</td><td>${r[2]}</td><td>${r[3]}</td><td class="n mut">${r[4]}</td><td class="n">${r[5]}</td><td>21&nbsp;%</td><td>${r[6]?'<span class="badge amber">Sin validar</span>':""}</td></tr>`).join("")}
+ </tbody></table><div class="sumbar"><span class="mut">5 resultados · página 1 de 1.</span></div></div>`;
+}
+
+/* ---------- Panel del concepto ---------- */
+function field(k, label, val, d, opts={}){
+ const ch = k in d, cls = ch ? "field chg" : "field";
+ const was = ch ? `<span class="was">Antes: <s>${esc(show(k,d[k]))}</s></span>` : "";
+ if(opts.area) return `<label class="${cls}">${label}<textarea rows="3"${opts.ro?" readonly":""}>${esc(val)}</textarea>${was}</label>`;
+ if(opts.sel) return `<label class="${cls}">${label}<select${opts.ro?" disabled":""}><option>${esc(val)}</option></select>${was}</label>`;
+ return `<label class="${cls}">${label}<input value="${esc(val)}"${opts.ro?" readonly":""}${opts.ph?` placeholder="${opts.ph}"`:""}>${was}</label>`;
+}
+function panel(){
+ const hist = open;
+ const v = V[hist ? sel : 0];
+ const s = v.s || V[0].s, d = hist ? diff(hist?sel:0) : {}, ro = hist;
+ const anyProv = ["man","sup","ref"].some(k=>k in d);
+ const head = hist
+  ? `<div class="panelhead"><h2 style="margin:0">Concepto · versión</h2><span class="who">${v.d}</span></div>
+     <p class="ronly" style="margin-top:12px">${sel===0?"Versión actual":"Versión del "+v.d.slice(0,10)+" · "+v.u}. Solo lectura: cierra el historial (X) para editar.</p>`
+  : `<div class="panelhead"><h2 style="margin:0">Concepto</h2><span class="links"><button class="histbtn" onclick="toggle(true)">Historial <span>(${V.length})</span></button>${PHONE.matches?'<button class="x" onclick="closePanel()" aria-label="Volver al catálogo">×</button>':'<a class="mut" href="#" onclick="closePanel();return false">Cerrar</a>'}</span></div>`;
+ const legacy = hist && !v.s ? `<p class="legacy">Este cambio es anterior al historial completo: solo se guardó el resumen «${v.txt}». Los campos muestran la versión actual.</p>` : "";
+ return `<aside id="panel" class="sheet panel">${head}
+ <div style="display:grid;gap:14px;margin-top:14px">${legacy}
+ <fieldset${ro?" disabled":""}>
+  ${field("code","Código","DEMO-BANDEJA",{}, {ro})}
+  ${field("desc","Descripción",s.desc,d,{ro})}
+  <div class="pair">
+   ${field("cat","Categoría",s.cat,d,{sel:1,ro})}
+   ${field("unit","Unidad",s.unit,d,{sel:1,ro})}
+   ${field("cost","Coste",s.cost,d,{ro,ph:"Opcional"})}
+   ${field("sale","Precio de venta",s.sale,d,{ro})}
+  </div>
+  ${ro?"":'<button type="button" class="btn" style="justify-self:start">Proponer precio (margen 35 %)</button>'}
+  ${field("tax","Impuesto",s.tax,d,{sel:1,ro})}
+  <label style="display:flex;gap:10px;align-items:center;font-weight:600;padding:2px 4px" class="${"val" in d?"chkchg":""}"><input type="checkbox" ${s.val?"checked":""} style="width:20px;height:20px;accent-color:#004742"> Precio validado ${"val" in d?`<span class="was" style="margin-left:auto">Antes: <s>${show("val",d.val)}</s></span>`:""}</label>
+  ${s.val?"":'<p class="warnbox">Mientras no esté validado, se puede usar en borradores, pero bloquea la emisión.</p>'}
+  ${field("notes","Observaciones",s.notes,d,{area:1,ro})}
+  <details${anyProv?" open":""}><summary style="cursor:pointer;font-weight:600">Datos de proveedor${anyProv?' <span class="badge amber" style="margin-left:6px">Cambia</span>':""}</summary>
+   <div class="pair" style="margin-top:10px">${field("man","Fabricante",s.man,d,{ro})}${field("sup","Proveedor",s.sup,d,{ro})}${field("ref","Referencia",s.ref,d,{ro})}</div>
+  </details>
+ </fieldset>
+ ${ro?"":`<div style="display:flex;gap:10px"><button class="btn pri">Guardar</button></div>
+ <div style="display:flex;gap:10px;flex-wrap:wrap;border-top:1px solid var(--rule);padding-top:12px"><button class="btn warn">Desactivar</button><button class="btn">Eliminar</button>
+ <p class="mut" style="font-size:12px;width:100%">«Eliminar» lo borra si ningún borrador ni presupuesto lo usa; si alguno lo usa, lo desactiva.</p></div>`}
+ </div></aside>`;
+}
+
+/* ---------- Columna del historial, según la propuesta ---------- */
+const pick = i => `onclick="choose(${i})"${i===sel?' aria-current="true"':""}`;
+const imp = v => v.imp ? '<span class="imp">Importación</span>' : "";
+const H = {
+ A(){ return `<div class="vlist">${V.map((v,i)=>`<button ${pick(i)}><span class="d">${v.d.slice(0,10)}</span><span class="who">${v.d.slice(11)} · ${v.u}${imp(v)}${i===0?' · <b style="color:var(--green)">actual</b>':""}</span><span class="s">${summary(i)}</span></button>`).join("")}</div>`; },
+ B(){ return `<div style="overflow-x:auto"><table class="ctab"><thead><tr><th>Fecha</th><th>Quién</th><th>Qué cambió</th></tr></thead><tbody>
+  ${V.map((v,i)=>{ const d=diff(i), ks=Object.keys(d);
+   const chg = !v.s ? `<span class="mut">${v.txt}</span>` : !V[i+1] ? "Alta" : !V[i+1].s ? '<span class="mut">Primera foto completa</span>' :
+    ks.map(k=>`<div class="arrow">${LABEL[k]}: <s>${esc(show(k,d[k]))}</s> → <b>${esc(show(k,v.s[k]))}</b></div>`).join("");
+   return `<tr ${pick(i)}><td style="white-space:nowrap"><b>${v.d.slice(0,10)}</b><div class="who">${v.d.slice(11)}${i===0?" · actual":""}</div></td><td>${v.u}${imp(v)}</td><td class="chgs">${chg}</td></tr>`;}).join("")}
+  </tbody></table></div>`; },
+ C(){ return `<div class="wirewrap"><button class="nav" data-dir="-1" aria-label="Versiones más recientes">‹</button><div class="wireline">${V.map((v,i)=>`<button ${pick(i)} class="${v.s?"":"leg"}"><span class="t"><span class="d" style="display:block">${v.d.slice(0,10)}${i===0?" · actual":""}</span><span class="who" style="display:block">${v.d.slice(11)} · ${v.u}${imp(v)}</span><span class="s">${summary(i)}</span></span></button>`).join("")}</div><button class="nav" data-dir="1" aria-label="Versiones más antiguas">›</button></div>
+  <p class="who" style="margin-top:8px">Círculo discontinuo: cambio antiguo, solo con resumen.</p>`; },
+ D(){ const v=V[sel], d=diff(sel), ks=Object.keys(d);
+  const items = !v.s ? `<li style="border-color:var(--rule);background:var(--band);color:var(--mut)">${v.txt} (solo resumen)</li>` : !V[sel+1] ? "<li>Alta del concepto</li>" : !V[sel+1].s ? '<li style="border-color:var(--rule);background:var(--band);color:var(--mut)">Primera foto completa</li>' :
+   ks.map(k=>`<li>${LABEL[k]}: <s>${esc(show(k,d[k]))}</s> → ${esc(show(k,v.s[k]))}</li>`).join("");
+  return `<div class="stepper"><button class="btn" onclick="choose(${Math.min(sel+1,V.length-1)})" ${sel===V.length-1?"disabled":""} aria-label="Más antigua">‹ Antes</button>
+   <div class="mid"><b>${v.d.slice(0,10)}</b><span class="who">${v.d.slice(11)} · ${v.u}${imp(v)}</span><div class="dots">${V.map((_,i)=>`<i class="${i===sel?"on":""}"></i>`).reverse().join("")}</div></div>
+   <button class="btn" onclick="choose(${Math.max(sel-1,0)})" ${sel===0?"disabled":""} aria-label="Más reciente">Después ›</button></div>
+   <h3 style="margin-top:16px">${sel===0?"Versión actual":`Versión ${V.length-sel} de ${V.length}`}: qué cambió</h3><ul class="whatchg">${items}</ul>`; },
+};
+const TITLE = {A:"Lista de versiones",B:"Tabla de cambios",C:"Línea unifilar",D:"Paso a paso"};
+function hcol(){
+ return `<section class="hcol sheet" aria-label="Historial del concepto"><div class="hhead"><div><h2>Historial · DEMO-BANDEJA</h2><p>${V.length} versiones. Elige una para verla en el panel.</p></div><button class="x" onclick="toggle(false)" aria-label="Cerrar el historial">×</button></div>${H[prop()]()}</section>`;
+}
+
+function render(){
+ const keep = document.querySelector(".wireline")?.scrollLeft ?? 0;
+ const phone = PHONE.matches;
+ const body = !panelOpen ? list() : phone ? list() + `<div class="phonesheet">${open?hcol():""}${panel()}</div>` : `${open?hcol():""}${list()}${panel()}`;
+ document.getElementById("main").innerHTML = `
+ <div class="head"><h1>Catálogo</h1><div class="actions"><a class="btn" href="#">Importar Excel</a><a class="btn" href="#">Exportar</a><a class="btn pri" href="#">Nuevo concepto</a></div></div>
+ <form class="filters" onsubmit="return false"><label class="field grow">Buscar<input placeholder="Código o descripción" value="DEMO"${open?" disabled":""}></label><label class="field">Categoría<select${open?" disabled":""}><option>Todas</option></select></label><label class="field">Estado<select${open?" disabled":""}><option>Activos</option></select></label></form>
+ <div class="${panelOpen&&!phone?"split":""}${open&&panelOpen&&!phone?" hist":""}">${body}</div>`;
+ // Flechas de la línea: solo activas si queda algo que ver hacia ese lado.
+ const w = document.querySelector(".wireline"); if(!w) return;
+ w.scrollLeft = keep;
+ const navs = document.querySelectorAll(".wirewrap .nav");
+ const upd = () => { navs[0].disabled = w.scrollLeft <= 1; navs[1].disabled = w.scrollLeft + w.clientWidth >= w.scrollWidth - 1; };
+ navs.forEach(b => b.onclick = () => w.scrollBy({ left: Number(b.dataset.dir) * w.clientWidth * .8, behavior: "instant" }));
+ w.onscroll = upd; upd();
+}
+function openPanel(){ panelOpen=true; render(); }
+function closePanel(){ panelOpen=false; open=false; sel=0; render(); }
+PHONE.onchange = render;
+function choose(i){ sel=i; render(); }
+function toggle(o){ open=o; sel=0; render(); }
+render();
+</script>
+</body>
+</html>

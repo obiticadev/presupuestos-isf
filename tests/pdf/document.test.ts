@@ -49,7 +49,7 @@ describe("buildDocument", () => {
     expect(d.conditions.validity).toBe("30 días");
     expect(d.reference).toBe("PR-2026000001-R00");
     expect(d.recipient.attention).toBe("A la atención de Ana López");
-    expect(d.recipient.address).toEqual(["Ctra. de Toledo, km 4", "28300 Aranjuez (Madrid)"]);
+    expect(d.recipient.address).toEqual(["Calle Mayor 1", "28001 Madrid"]);
   });
 
   it("formats quantities with and without unit", () => {
@@ -80,7 +80,121 @@ describe("buildDocument", () => {
     expect(buildDocument(s, { draft: false }).totals.taxes.map((t) => t.label)).toEqual(["IVA 21 %", "IVA 10 % prueba", "IGIC 7 %"]);
   });
 
+  it("comments become notes right after their element", () => {
+    const s = src();
+    const part = s.quote.sections[0];
+    part.comment = "De la partida";
+    const c1 = part.children[0];
+    c1.comment = "De la subpartida";
+    c1.kits = [{ id: "k1", comment: "Del conjunto" }];
+    c1.lines = [
+      { description: "Bomba", quantity: "2", unitName: "ud", visible: true, kitInstanceId: "k1" },
+      { description: "Manguera", quantity: "40", unitName: "m", visible: true, kitInstanceId: "k1", comment: "Medida en obra" },
+      { description: "Cuadro", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null, comment: "Con variador" },
+    ];
+    const rows = buildDocument(s, { draft: false }).rows.map((r) => (r.kind === "note" ? `note:${r.text}` : r.kind === "line" ? r.text : r.title));
+    expect(rows).toEqual([
+      "Grupo de bombeo", "Equipos", "Bomba", "Manguera", "note:Medida en obra", "note:Del conjunto",
+      "Cuadro", "note:Con variador", "note:De la subpartida", "Montaje", "note:De la partida",
+    ]);
+  });
+
+  it("each note says whose comment it is: line, kit, subpartida or partida", () => {
+    const s = src();
+    const part = s.quote.sections[0];
+    part.comment = "P";
+    part.children[0].comment = "S";
+    part.children[0].kits = [{ id: "k1", comment: "K" }];
+    part.children[0].lines = [
+      { description: "Bomba", quantity: "2", unitName: "ud", visible: true, kitInstanceId: "k1" },
+      { description: "Cuadro", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null, comment: "L" },
+    ];
+    const notes = buildDocument(s, { draft: false }).rows.filter((r) => r.kind === "note");
+    expect(notes).toEqual([
+      { kind: "note", of: "kit", text: "K", kit: true }, { kind: "note", of: "line", text: "L" },
+      { kind: "note", of: "sub", text: "S" }, { kind: "note", of: "part", text: "P" },
+    ]);
+  });
+
+  it("las filas de un conjunto con nota van marcadas; las de uno sin nota, no", () => {
+    const s = src();
+    const c1 = s.quote.sections[0].children[0];
+    c1.kits = [{ id: "k1", comment: "Pruebas en vacío" }, { id: "k2", comment: " " }];
+    c1.lines = [
+      { description: "Armario", quantity: "1", unitName: "ud", visible: true, kitInstanceId: "k1" },
+      { description: "Cableado", quantity: "1", unitName: "ud", visible: true, kitInstanceId: "k1", comment: "Montado en fábrica" },
+      { description: "Bomba", quantity: "1", unitName: "ud", visible: true, kitInstanceId: "k2", comment: "Sin nota de conjunto" },
+      { description: "Suelta", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null },
+    ];
+    const marked = buildDocument(s, { draft: false }).rows.filter((r) => "kit" in r && r.kit);
+    expect(marked).toEqual([
+      { kind: "line", text: "Armario", quantity: "1 ud", kit: true },
+      { kind: "line", text: "Cableado", quantity: "1 ud", kit: true },
+      { kind: "note", of: "line", text: "Montado en fábrica", kit: true },
+      { kind: "note", of: "kit", text: "Pruebas en vacío", kit: true },
+    ]);
+  });
+
+  it("a hidden line hides its comment, an empty comment adds nothing, and a kit with every line hidden hides its own", () => {
+    const s = src();
+    const c1 = s.quote.sections[0].children[0];
+    c1.kits = [{ id: "k1", comment: "Del conjunto" }];
+    c1.lines = [
+      { description: "Bomba", quantity: "2", unitName: "ud", visible: false, kitInstanceId: "k1", comment: "Oculto" },
+      { description: "Cuadro", quantity: "1", unitName: "ud", visible: true, kitInstanceId: null, comment: "" },
+    ];
+    expect(buildDocument(s, { draft: false }).rows.filter((r) => r.kind === "note")).toEqual([]);
+  });
+
+  it("an old snapshot without comments gives the same rows as before", () => {
+    expect(buildDocument(src(), { draft: false }).rows.some((r) => r.kind === "note")).toBe(false);
+  });
+
+  it("el destinatario es razón social, dirección fiscal línea a línea y contacto", () => {
+    const s = src();
+    s.quote.client.fiscalAddress = "Calle de Ejemplo, 1.\r\n\n  Dirección ficticia.  \n";
+    const d = buildDocument(s, { draft: false });
+    expect(d.recipient).toEqual({ name: "Acme S.L.", address: ["Calle de Ejemplo, 1.", "Dirección ficticia."], attention: "A la atención de Ana López" });
+  });
+
   it("toPdfSource round-trips through JSON", () => {
     expect(toPdfSource({ d: new Date("2026-01-01T00:00:00Z") }, { q: 2 })).toEqual({ company: { d: "2026-01-01T00:00:00.000Z" }, quote: { q: 2 } });
+  });
+});
+
+describe("buildDocument: instalación", () => {
+  it("el destinatario es el cliente y su dirección fiscal, no la instalación", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "Ctra. de Toledo, km 4", installation: "28300 Aranjuez", country: "España" };
+    const d = buildDocument(s, { draft: false });
+    expect(d.recipient).toEqual({ name: "Acme S.L.", address: ["Calle Mayor 1", "28001 Madrid"], attention: "A la atención de Ana López" });
+  });
+
+  it("la carta sigue el asunto con «en instalación, país»", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "", installation: "EDAR Sur", country: "España" };
+    expect(buildDocument(s, { draft: false }).letter.intro)
+      .toBe("Agradeciendo la confianza, presentamos oferta en referencia a ampliación del grupo de bombeo en EDAR Sur, España.");
+  });
+
+  it("sin país, o sin instalación, no quedan comas sueltas; sin ninguno de los dos no hay «en»", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "", installation: "EDAR Sur", country: "" };
+    expect(buildDocument(s, { draft: false }).letter.intro).toMatch(/bombeo en EDAR Sur\.$/);
+    s.quote.location = { name: "Planta", address: "", installation: "", country: "" };
+    expect(buildDocument(s, { draft: false }).letter.intro).toMatch(/bombeo\.$/);
+  });
+
+  it("un snapshot antiguo deja la carta sin «en»", () => {
+    const d = buildDocument(src(), { draft: false });
+    expect(d.letter.intro).toBe("Agradeciendo la confianza, presentamos oferta en referencia a ampliación del grupo de bombeo.");
+  });
+
+  it("un snapshot antiguo con city y province se regenera con la dirección fiscal y sin «en»", () => {
+    const s = src();
+    s.quote.location = { name: "Planta", address: "Ctra. de Toledo, km 4", city: "28300 Aranjuez", province: "Madrid" };
+    const d = buildDocument(s, { draft: false });
+    expect(d.recipient.address).toEqual(["Calle Mayor 1", "28001 Madrid"]);
+    expect(d.letter.intro).toMatch(/bombeo\.$/);
   });
 });

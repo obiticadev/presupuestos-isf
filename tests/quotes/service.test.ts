@@ -1,3 +1,4 @@
+import { addKitInstance } from "@/modules/quotes/kit-instances";
 import { prisma } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { getConcept, removeConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
@@ -7,7 +8,7 @@ import {
   addCatalogLine, addCustomLine, addSection, createDraft, deleteDraft, getQuote, listRequiredConcepts,
   moveSection, removeLine, removeSection, setWaiver, updateHeader, updateLine, updateSection,
 } from "@/modules/quotes/service";
-import { conceptFields, makeClient, makeDraft } from "../helpers/quotes";
+import { conceptFields, makeClient, makeDraft, quoteType } from "../helpers/quotes";
 import { makeUser } from "../helpers/users";
 
 test("un borrador nuevo copia las condiciones del cliente y trae la partida 1 con la 1.1", async () => {
@@ -112,7 +113,7 @@ test("editar y quitar líneas; ocultar no cambia el total", async () => {
 test("eliminar un concepto usado en un presupuesto lo desactiva", async () => {
   const { actor, admin, sub } = await makeDraft();
   await addCatalogLine(actor, sub.id, { conceptId: "concept-man-12x075", quantity: "1" });
-  expect(await removeConcept(admin, "concept-man-12x075")).toBe("deactivated");
+  expect((await removeConcept(admin, "concept-man-12x075")).outcome).toBe("deactivated");
 });
 
 test("eliminar un cliente con presupuestos lo desactiva, igual que su ubicación usada", async () => {
@@ -175,4 +176,52 @@ test("un cliente con presupuesto puede cambiar de datos sin afectar al presupues
   const { actor, client, quote } = await makeDraft({ clientOver: { paymentTerms: "Contado" } });
   await updateClient(actor, client.id, { legalName: client.legalName, taxId: client.taxId, paymentTerms: "90 días" });
   expect((await getQuote(quote.id)).paymentTerms).toBe("Contado");
+});
+
+test("un título o una descripción pegados con saltos de línea se guardan en una sola línea", async () => {
+  const { actor, sub, section } = await makeDraft();
+  const line = await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-prog", quantity: "1" });
+  await updateLine(actor, line.id, { description: "Hora de\n  programador\r\nen planta" });
+  await updateSection(actor, section.id, { title: "BOMBEO\nDE LÍNEA" });
+  expect((await prisma.quoteLine.findUniqueOrThrow({ where: { id: line.id } })).description).toBe("Hora de programador en planta");
+  expect((await prisma.quoteSection.findUniqueOrThrow({ where: { id: section.id } })).title).toBe("BOMBEO DE LÍNEA");
+});
+
+test("en la instantánea y el editor, las líneas sueltas van antes que las de los conjuntos", async () => {
+  const { actor, quote, sub } = await makeDraft();
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "1", params: { distancia: "5" }, choices: { main: "concept-bom-mayor75", c1: "concept-man-4x25" } });
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-prog", quantity: "1" });
+  const lines = (await getQuote(quote.id)).sections[0].children[0].lines;
+  expect(lines.map((l) => l.kitSlot ?? l.conceptId)).toEqual(["concept-ser-prog", "main", "c1"]);
+});
+
+test("cualquier cambio en el borrador deja como responsable a quien lo hace", async () => {
+  const { actor, quote, sub } = await makeDraft();
+  const other = await makeUser("presupuestador");
+  await addCustomLine(other, sub.id, { description: "Soporte", unitName: "ud", quantity: "1", unitPrice: "10", taxId: "iva-21" });
+  expect((await getQuote(quote.id)).ownerId).toBe(other.id);
+  await updateSection(actor, sub.id, { title: "Equipos" });
+  expect((await getQuote(quote.id)).ownerId).toBe(actor.id);
+});
+
+test("el tipo solo se elige en el primer borrador y ha de estar activo", async () => {
+  const t1 = await quoteType(1);
+  const t2 = await quoteType(2);
+  const { actor, quote } = await makeDraft();
+  await prisma.quoteType.update({ where: { id: t2.id }, data: { active: false } });
+  await expect(updateHeader(actor, quote.id, { typeId: t2.id })).rejects.toMatchObject({ issues: { typeId: "Elige un tipo activo" } });
+  await updateHeader(actor, quote.id, { typeId: t1.id });
+  expect((await getQuote(quote.id)).typeId).toBe(t1.id);
+  await prisma.quote.update({ where: { id: quote.id }, data: { seq: 3, seqYear: 2026, typeCode: 1, revision: 1 } });
+  await prisma.quoteType.update({ where: { id: t2.id }, data: { active: true } });
+  await expect(updateHeader(actor, quote.id, { typeId: t2.id })).rejects.toMatchObject({ issues: { typeId: "El tipo solo se elige en el primer borrador" } });
+});
+
+test("con un solo tipo activo, el borrador nuevo lo trae elegido; con dos, no", async () => {
+  const t1 = await quoteType(1);
+  const a = await makeDraft();
+  expect(a.quote.typeId).toBe(t1.id);
+  await quoteType(2);
+  const b = await makeDraft();
+  expect(b.quote.typeId).toBeNull();
 });

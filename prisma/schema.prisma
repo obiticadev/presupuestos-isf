@@ -8,23 +8,27 @@ datasource db {
 }
 
 model User {
-  id               String            @id
+  id               String             @id
   name             String
   email            String
-  emailVerified    Boolean           @default(false)
+  emailVerified    Boolean            @default(false)
   image            String?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
   role             String?
-  banned           Boolean?          @default(false)
+  banned           Boolean?           @default(false)
   banReason        String?
   banExpires       DateTime?
+  /// Firma dibujada en Mi cuenta (PNG); sin ella no se emite.
+  signature        Bytes?
   sessions         Session[]
   accounts         Account[]
   auditLogs        AuditLog[]
-  quotesOwned      Quote[]           @relation("QuoteOwner")
-  quotesCreated    Quote[]           @relation("QuoteCreator")
+  quotesOwned      Quote[]            @relation("QuoteOwner")
+  quotesCreated    Quote[]            @relation("QuoteCreator")
   priceAdjustments PriceAdjustment[]
+  notesAuthored    QuoteNote[]
+  noteVersions     QuoteNoteVersion[]
 
   @@unique([email])
   @@map("user")
@@ -83,7 +87,9 @@ model Verification {
 model AuditLog {
   id        String   @id @default(cuid())
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: Restrict)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Copied when the user is deleted.
+  userName  String?
   entity    String
   entityId  String
   action    String
@@ -114,8 +120,8 @@ model CompanySettings {
   offerValidityDays   Int      @default(30)
   defaultMarginPct    Decimal  @default(35) @db.Decimal(5, 2)
   travelOriginText    String   @default("Alcalá de Henares")
-  /// Numeración (spec 5.6): {AAAA} año, {N…} número con ceros a la izquierda, {RR} revisión.
-  numberPattern       String   @default("PR-{AAAA}{NNNNNN}-R{RR}")
+  /// Numeración (spec 5.6): {AAAA} año, {TTT} tipo, {N…} número con ceros a la izquierda, {RR} revisión.
+  numberPattern       String   @default("PR-{AAAA}{TTT}{NNN}-R{RR}")
   numberYearlyReset   Boolean  @default(false)
   numberStart         Int      @default(1)
   updatedAt           DateTime @updatedAt
@@ -214,15 +220,15 @@ model ClientContact {
 }
 
 model ClientLocation {
-  id       String  @id @default(cuid())
-  clientId String
-  client   Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  name     String
-  address  String  @default("")
-  city     String  @default("")
-  province String  @default("")
-  active   Boolean @default(true)
-  quotes   Quote[]
+  id           String  @id @default(cuid())
+  clientId     String
+  client       Client  @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  name         String
+  address      String  @default("")
+  installation String  @default("")
+  country      String  @default("")
+  active       Boolean @default(true)
+  quotes       Quote[]
 
   @@index([clientId])
 }
@@ -260,9 +266,18 @@ model Quote {
   id             String          @id @default(cuid())
   status         QuoteStatus     @default(DRAFT)
   seqYear        Int?
+  /// Código del tipo con el que se numeró (0 en los antiguos); se copia a revisiones y ampliaciones.
+  typeCode       Int             @default(0)
   seq            Int?
+  /// 0 = principal; 1, 2… = ampliación A01, A02…
+  extension      Int             @default(0)
   revision       Int             @default(0)
+  /// Patrón con el que se numeró: revisiones y ampliaciones se formatean con él aunque cambie en Configuración.
+  numberPattern  String?
   reference      String?         @unique
+  /// Tipo elegido en el primer borrador de un número; nulo en los antiguos.
+  typeId         String?
+  type           QuoteType?      @relation(fields: [typeId], references: [id], onDelete: Restrict)
   clientId       String
   client         Client          @relation(fields: [clientId], references: [id], onDelete: Restrict)
   locationId     String?
@@ -278,7 +293,6 @@ model Quote {
   paymentTerms   String          @default("") @db.Text
   exclusions     String          @default("") @db.Text
   validityDays   Int
-  travelNote     String          @default("") @db.Text
   /// Conceptos obligatorios dejados a cero a propósito: { conceptId: motivo }.
   waivers        Json            @default("{}")
   /// Revisión de la que nace este borrador o emitido.
@@ -295,12 +309,24 @@ model Quote {
   updatedAt      DateTime        @updatedAt
   sections       QuoteSection[]
   issued         IssuedDocument?
+  /// Notas internas: nunca van al PDF ni a la instantánea emitida.
+  notes          QuoteNote[]
 
-  @@unique([seqYear, seq, revision])
+  @@unique([seqYear, typeCode, seq, extension, revision])
   @@index([status])
   @@index([date])
   @@index([clientId])
   @@index([ownerId])
+  @@index([typeId])
+}
+
+/// Tipo de presupuesto: su código (1-999) va en la referencia. Usado, no se borra ni cambia de código.
+model QuoteType {
+  id     String  @id @default(cuid())
+  name   String
+  code   Int     @unique
+  active Boolean @default(true)
+  quotes Quote[]
 }
 
 /// Partida (parentId null) o subpartida. Las líneas cuelgan siempre de una subpartida.
@@ -318,6 +344,8 @@ model QuoteSection {
   globalPrice Decimal?       @db.Decimal(14, 4)
   taxName     String?
   taxRatePct  Decimal?       @db.Decimal(5, 2)
+  /// Comentario en cursiva al pie de la partida o subpartida; "" = sin comentario.
+  comment     String         @default("") @db.Text
   lines       QuoteLine[]
   kits        KitInstance[]
 
@@ -345,6 +373,8 @@ model QuoteLine {
   kitInstanceId String?
   kitInstance   KitInstance?      @relation(fields: [kitInstanceId], references: [id], onDelete: Cascade)
   kitSlot       String?
+  /// Comentario en cursiva bajo la línea; "" = sin comentario. Se conserva al recalcular su conjunto.
+  comment       String            @default("") @db.Text
   adjustments   PriceAdjustment[]
 
   @@index([sectionId])
@@ -367,6 +397,8 @@ model KitInstance {
   /// Lo que falta para valorarlo (etiquetas de expandKit); vacío = completo.
   missing    Json         @default("[]")
   position   Int
+  /// Comentario en cursiva del conjunto entero; "" = sin comentario.
+  comment    String       @default("") @db.Text
   lines      QuoteLine[]
 
   @@index([sectionId])
@@ -380,8 +412,10 @@ model PriceAdjustment {
   originalPrice Decimal   @db.Decimal(14, 4)
   newPrice      Decimal   @db.Decimal(14, 4)
   reason        String
-  userId        String
-  user          User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Copied when the user is deleted.
+  userName      String?
   createdAt     DateTime  @default(now())
 
   @@index([lineId])
@@ -409,4 +443,40 @@ model IssuedDocument {
   pdfPath         String?
   sha256          String?
   createdAt       DateTime @default(now())
+}
+
+/// Nota interna de un presupuesto. Solo se modifica mientras su presupuesto es un borrador.
+model QuoteNote {
+  id         String             @id @default(cuid())
+  quoteId    String
+  quote      Quote              @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  /// Quien la escribió o la editó por última vez.
+  authorId   String?
+  author     User?              @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  /// Copied when the user is deleted.
+  authorName String?
+  text       String             @db.Text
+  edited     Boolean            @default(false)
+  createdAt  DateTime           @default(now())
+  /// Fecha que se muestra: la de la última edición.
+  updatedAt  DateTime           @default(now())
+  versions   QuoteNoteVersion[]
+
+  @@index([quoteId])
+}
+
+/// Textos anteriores de una nota; la versión actual es la propia nota.
+model QuoteNoteVersion {
+  id         String    @id @default(cuid())
+  noteId     String
+  note       QuoteNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  /// Copied when the user is deleted.
+  authorName String?
+  text       String    @db.Text
+  /// La fecha que tenía esa versión.
+  createdAt  DateTime
+
+  @@index([noteId])
 }

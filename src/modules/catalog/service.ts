@@ -5,8 +5,9 @@ import { NotFoundError, ValidationError } from "@/lib/errors";
 import { parseOrThrow } from "@/lib/validation";
 import { Prisma, type Concept } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
-import { assertAdmin } from "@/modules/auth/permissions";
+import { kitsUsingConcepts, usedConceptIds } from "./usage";
 import type { CurrentUser } from "@/modules/auth/session";
+import { conceptSnapshot, describeChanges, diffSnapshots, historyData } from "./history";
 import { conceptInput, type ConceptInput } from "./schema";
 
 export { suggestSalePrice } from "@/lib/decimal";
@@ -86,14 +87,6 @@ async function checkRefs(tx: Prisma.TransactionClient, input: Parsed, current?: 
 
 const price = (v: Prisma.Decimal | null) => (v ? formatDecimalEs(v, { max: 4 }) : "sin precio");
 
-export function changeSummary(before: Concept, after: Concept): string {
-  const changes: string[] = [];
-  if (String(before.salePrice) !== String(after.salePrice)) changes.push(`precio ${price(before.salePrice)} → ${price(after.salePrice)}`);
-  if (String(before.cost) !== String(after.cost)) changes.push(`coste ${price(before.cost)} → ${price(after.cost)}`);
-  if (before.validated !== after.validated) changes.push(after.validated ? "validado" : "sin validar");
-  return `${after.code}: ${changes.length ? changes.join(", ") : "datos actualizados"}`;
-}
-
 /** Maps the unique-code violation to a field error; two simultaneous inserts make a prior lookup unreliable. */
 async function uniqueCode<T>(fn: () => Promise<T>): Promise<T> {
   try {
@@ -107,15 +100,16 @@ async function uniqueCode<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export async function createConcept(actor: CurrentUser, raw: ConceptInput): Promise<Concept> {
-  assertAdmin(actor);
   const input = parseOrThrow(conceptInput, raw);
   return uniqueCode(() =>
     prisma.$transaction(async (tx) => {
       await checkRefs(tx, input);
-      const concept = await tx.concept.create({ data: input });
+      const created = await tx.concept.create({ data: input });
+      const concept = await tx.concept.findUniqueOrThrow({ where: { id: created.id }, include: INCLUDE });
       await logAction(tx, {
         userId: actor.id, entity: "concept", entityId: concept.id, action: "create",
         summary: `Alta de ${concept.code}: ${concept.description} (${price(concept.salePrice)})`,
+        data: historyData(concept, "manual"),
       });
       return concept;
     }),
@@ -123,45 +117,54 @@ export async function createConcept(actor: CurrentUser, raw: ConceptInput): Prom
 }
 
 export async function updateConcept(actor: CurrentUser, id: string, raw: ConceptInput): Promise<Concept> {
-  assertAdmin(actor);
   const input = parseOrThrow(conceptInput, raw);
   return uniqueCode(() =>
     prisma.$transaction(async (tx) => {
-      const before = await tx.concept.findUnique({ where: { id } });
+      const before = await tx.concept.findUnique({ where: { id }, include: INCLUDE });
       if (!before) throw new NotFoundError("El concepto no existe");
       await checkRefs(tx, input, before);
-      const after = await tx.concept.update({ where: { id }, data: input });
-      await logAction(tx, { userId: actor.id, entity: "concept", entityId: id, action: "update", summary: changeSummary(before, after) });
+      await tx.concept.update({ where: { id }, data: input });
+      const after = await tx.concept.findUniqueOrThrow({ where: { id }, include: INCLUDE });
+      const changes = diffSnapshots(conceptSnapshot(after), conceptSnapshot(before));
+      if (!changes.length) return before; // saving without changes is not a version
+      await logAction(tx, {
+        userId: actor.id, entity: "concept", entityId: id, action: "update",
+        summary: `${after.code}: ${describeChanges(changes)}`, data: historyData(after, "manual"),
+      });
       return after;
     }),
   );
 }
 
-export async function setConceptActive(actor: CurrentUser, id: string, active: boolean): Promise<void> {
-  assertAdmin(actor);
-  await prisma.$transaction(async (tx) => {
-    const concept = await tx.concept.findUnique({ where: { id } });
-    if (!concept) throw new NotFoundError("El concepto no existe");
+/** Names of the active kits that stop being complete because of the concept. */
+export async function setConceptActive(actor: CurrentUser, id: string, active: boolean): Promise<{ incompleteKits: string[] }> {
+  return prisma.$transaction(async (tx) => {
+    if (!(await tx.concept.findUnique({ where: { id } }))) throw new NotFoundError("El concepto no existe");
     await tx.concept.update({ where: { id }, data: { active } });
+    const concept = await tx.concept.findUniqueOrThrow({ where: { id }, include: INCLUDE });
     await logAction(tx, {
       userId: actor.id, entity: "concept", entityId: id, action: active ? "reactivate" : "deactivate",
-      summary: `${concept.code} ${active ? "activado" : "desactivado"}`,
+      summary: `${concept.code} ${active ? "activado" : "desactivado"}`, data: historyData(concept, "manual"),
     });
+    return { incompleteKits: active ? [] : (await kitsUsingConcepts(tx, [id])).map((k) => k.name) };
   });
 }
 
-/** «Eliminar»: deletes an unused concept; one referenced by quotes (plan 3) is deactivated instead. */
-export async function removeConcept(actor: CurrentUser, id: string): Promise<"deleted" | "deactivated"> {
-  assertAdmin(actor);
+/** «Eliminar»: deletes an unused concept; one referenced by quotes, required lists or kits is deactivated instead. */
+export async function removeConcept(actor: CurrentUser, id: string): Promise<{ outcome: "deleted" | "deactivated"; incompleteKits: string[] }> {
   const concept = await getConcept(id);
-  return deleteOrDeactivate(
-    () => prisma.$transaction(async (tx) => {
-      await tx.concept.delete({ where: { id } });
-      await logAction(tx, { userId: actor.id, entity: "concept", entityId: id, action: "delete", summary: `Baja de ${concept.code}: ${concept.description}` });
-    }),
-    () => prisma.$transaction(async (tx) => {
-      await tx.concept.update({ where: { id }, data: { active: false } });
-      await logAction(tx, { userId: actor.id, entity: "concept", entityId: id, action: "deactivate", summary: `${concept.code} desactivado porque está en uso` });
-    }),
-  );
+  const deactivate = () => prisma.$transaction(async (tx) => {
+    await tx.concept.update({ where: { id }, data: { active: false } });
+    await logAction(tx, { userId: actor.id, entity: "concept", entityId: id, action: "deactivate", summary: `${concept.code} desactivado porque está en uso`, data: historyData({ ...concept, active: false }, "manual") });
+  });
+  const outcome = (await usedConceptIds(prisma)).has(id)
+    ? (await deactivate(), "deactivated" as const)
+    : await deleteOrDeactivate(
+      () => prisma.$transaction(async (tx) => {
+        await tx.concept.delete({ where: { id } });
+        await logAction(tx, { userId: actor.id, entity: "concept", entityId: id, action: "delete", summary: `Baja de ${concept.code}: ${concept.description}`, data: historyData(concept, "manual") });
+      }),
+      deactivate,
+    );
+  return { outcome, incompleteKits: outcome === "deactivated" ? (await kitsUsingConcepts(prisma, [id])).map((k) => k.name) : [] };
 }

@@ -5,7 +5,10 @@ import { redirect } from "next/navigation";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
 import { addKitInstance, removeKitInstance, updateKitInstance } from "./kit-instances";
+import { addNote, deleteNote, editNote } from "./notes";
+import { deleteAllQuotes } from "./reset";
 import * as quotes from "./service";
+import { deleteQuoteType, saveQuoteType, setQuoteTypeActive } from "./types";
 
 // Thin wrappers: read the form, call the service (which checks the draft and logs), refresh the pages that show quotes.
 
@@ -44,8 +47,9 @@ export async function deleteDraftAction(_prev: ActionResult | null, form: FormDa
   redirect("/");
 }
 
+// Whoever edits the draft becomes its responsible; issuing records the issuer.
 export const updateHeaderAction: Action = action((actor, f) =>
-  quotes.updateHeader(actor, str(f, "id"), present(f, ["clientId", "locationId", "contactId", "ownerId", "date", "subject", "paymentTerms", "exclusions", "validityDays", "travelNote"])));
+  quotes.updateHeader(actor, str(f, "id"), { ...present(f, ["typeId", "clientId", "locationId", "contactId", "date", "subject", "paymentTerms", "exclusions", "validityDays"]), ownerId: actor.id }));
 
 export const addSectionAction: Action = action((actor, f) =>
   quotes.addSection(actor, str(f, "quoteId"), { parentId: str(f, "parentId") || undefined, title: str(f, "title") }));
@@ -70,6 +74,9 @@ export const moveLineAction: Action = action((actor, f) => quotes.moveLine(actor
 export const removeLineAction: Action = action((actor, f) => quotes.removeLine(actor, str(f, "id")));
 export const adjustPriceAction: Action = action((actor, f) =>
   quotes.adjustPrice(actor, str(f, "id"), { newPrice: str(f, "newPrice"), reason: str(f, "reason") }));
+
+export const setCommentAction: Action = action((actor, f) =>
+  quotes.setComment(actor, { kind: str(f, "kind") as "line" | "kit" | "section", id: str(f, "id"), comment: str(f, "comment") }));
 
 /** Kit data arrive as param.<key> and choice.<slot>. */
 const kitFields = (f: FormData) => {
@@ -98,8 +105,18 @@ export const removeRequiredConceptAction: Action = action((actor, f) => quotes.r
 export async function createRevisionAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const actor = await requireUser();
   const { createRevision } = await import("./lifecycle");
+  let rev = { id: "", refreshed: 0 };
+  const result = await toActionResult(async () => { rev = await createRevision(actor, str(form, "id")); });
+  if (!result.ok) return result;
+  revalidatePath("/", "layout");
+  redirect(`/presupuestos/${rev.id}${rev.refreshed ? `?precios=${rev.refreshed}` : ""}`);
+}
+
+export async function createExtensionAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const { createExtension } = await import("./lifecycle");
   let id = "";
-  const result = await toActionResult(async () => { id = (await createRevision(actor, str(form, "id"))).id; });
+  const result = await toActionResult(async () => { id = (await createExtension(actor, str(form, "id"))).id; });
   if (!result.ok) return result;
   revalidatePath("/", "layout");
   redirect(`/presupuestos/${id}`);
@@ -114,3 +131,15 @@ export async function duplicateAction(_prev: ActionResult | null, form: FormData
   revalidatePath("/", "layout");
   redirect(`/presupuestos/${id}`);
 }
+
+// Internal notes: they do not change the quote's responsible.
+export const addNoteAction: Action = action((actor, f) => addNote(actor, str(f, "quoteId"), { text: str(f, "text") }));
+export const editNoteAction: Action = action((actor, f) => editNote(actor, str(f, "id"), { text: str(f, "text") }));
+export const deleteNoteAction: Action = action((actor, f) => deleteNote(actor, str(f, "id")));
+
+// Danger zone (Configuración): deletes every quote; the service checks the role and the typed word.
+export const deleteAllQuotesAction: Action = action((actor, f) => deleteAllQuotes(actor, str(f, "confirm")));
+
+export const saveQuoteTypeAction: Action = action((actor, f) => saveQuoteType(actor, { id: str(f, "id") || undefined, name: str(f, "name"), code: str(f, "code") }));
+export const setQuoteTypeActiveAction: Action = action((actor, f) => setQuoteTypeActive(actor, str(f, "id"), str(f, "active") === "1"));
+export const deleteQuoteTypeAction: Action = action((actor, f) => deleteQuoteType(actor, str(f, "id")));

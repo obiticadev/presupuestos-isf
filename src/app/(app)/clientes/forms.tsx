@@ -14,7 +14,7 @@ export type ClientValues = {
   paymentTerms: string; exclusions: string; offerValidityDays: string; active: boolean;
 };
 export type ContactValues = { id: string; name: string; role: string; email: string; phone: string; active: boolean };
-export type LocationValues = { id: string; name: string; address: string; city: string; province: string; active: boolean };
+export type LocationValues = { id: string; name: string; address: string; installation: string; country: string; active: boolean };
 
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
 const Err = ({ msg }: { msg?: string }) => (msg ? <span className="msg" role="alert">{msg}</span> : null);
@@ -98,8 +98,8 @@ const ROW = {
     fields: [["name", "Nombre"], ["role", "Cargo"], ["email", "Email"], ["phone", "Teléfono"]],
   },
   location: {
-    save: saveLocationAction, remove: removeLocationAction, title: "ubicación",
-    fields: [["name", "Nombre"], ["address", "Dirección"], ["city", "Localidad"], ["province", "Provincia"]],
+    save: saveLocationAction, remove: removeLocationAction, title: "instalación",
+    fields: [["name", "Nombre"], ["address", "Dirección"], ["installation", "Instalación"], ["country", "País"]],
   },
 } as const;
 
@@ -116,7 +116,7 @@ function EditableRow({ kind, clientId, row }: { kind: RowKind; clientId: string;
         <input key={name} name={name} aria-label={label} placeholder={label} defaultValue={row ? String(row[name] ?? "") : ""}
           required={name === "name"} type={name === "email" ? "email" : "text"} />
       ))}
-      <span style={{ display: "flex", gap: 6 }}>
+      <span className="rowacts">
         <button className={row ? "btn" : "btn pri"} disabled={saving} style={{ minHeight: 36, padding: "4px 10px" }}>{row ? "Guardar" : "Añadir"}</button>
         {row && <button className="btn" name="op" value="remove" disabled={removing} style={{ minHeight: 36, padding: "4px 10px" }}>Eliminar</button>}
       </span>
@@ -126,7 +126,7 @@ function EditableRow({ kind, clientId, row }: { kind: RowKind; clientId: string;
   );
 }
 
-/** Contacts or work locations: each row edits in place; the last row adds a new one. */
+/** Contacts or installations (work locations): each row edits in place; the last row adds a new one. */
 export function EditableRows({ kind, clientId, rows }: { kind: RowKind; clientId: string; rows: (ContactValues | LocationValues)[] }) {
   const cfg = ROW[kind];
   return (
@@ -135,7 +135,7 @@ export function EditableRows({ kind, clientId, rows }: { kind: RowKind; clientId
       {rows.map((r) => <EditableRow key={JSON.stringify(r)} kind={kind} clientId={clientId} row={r} />)}
       {/* Keyed by the row count so the empty "add" row clears itself after a successful add. */}
       <EditableRow key={`new-${rows.length}`} kind={kind} clientId={clientId} />
-      {rows.length === 0 && <p className="mut" style={{ fontSize: 12, marginTop: 6 }}>Sin {cfg.title === "contacto" ? "contactos" : "ubicaciones"} todavía.</p>}
+      {rows.length === 0 && <p className="mut" style={{ fontSize: 12, marginTop: 6 }}>Sin {cfg.title === "contacto" ? "contactos" : "instalaciones"} todavía.</p>}
     </div>
   );
 }

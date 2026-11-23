@@ -90,6 +90,29 @@ test("un ajuste en una línea suelta funciona; en una línea descriptiva no", as
   await expect(adjustPrice(actor, d.id, { newPrice: "1", reason: "x" })).rejects.toThrow(ValidationError);
 });
 
+test("en una subpartida de precio global se inserta un conjunto: obliga a completarlo y sus líneas no suman", async () => {
+  const { actor, quote, sub } = await makeDraft();
+  await updateSection(actor, sub.id, { mode: "GLOBAL", globalQty: "1", globalPrice: "1000" });
+  const k = await addKitInstance(actor, sub.id, { ...bombas, choices: { main: "concept-bom-mayor75" } });
+  let q = await getQuote(quote.id);
+  expect([q.base.toFixed(2), q.sections[0].children[0].kits[0].missing]).toEqual(["1000.00", ["Falta elegir Manguera"]]);
+  await updateKitInstance(actor, k.id, bombas);
+  q = await getQuote(quote.id);
+  expect([q.base.toFixed(2), q.sections[0].children[0].lines.length, q.sections[0].children[0].kits[0].missing]).toEqual(["1000.00", 2, []]);
+});
+
+test("en global el conjunto admite piezas sin precio de venta; por suma, no", async () => {
+  const { actor, admin, quote, sub } = await makeDraft();
+  const c = await getConcept("concept-man-4x25");
+  await updateConcept(admin, c.id, { ...conceptFields(c), salePrice: "" });
+  const k = await addKitInstance(actor, sub.id, bombas);
+  expect((await getQuote(quote.id)).sections[0].children[0].kits[0].missing).toEqual(["Manguera ya no está disponible"]);
+  await updateSection(actor, sub.id, { mode: "GLOBAL", globalQty: "1", globalPrice: "1000" });
+  await updateKitInstance(actor, k.id, bombas);
+  const q = await getQuote(quote.id);
+  expect([q.sections[0].children[0].kits[0].missing, q.sections[0].children[0].lines.length]).toEqual([[], 2]);
+});
+
 test("las líneas de un conjunto solo cambian su visibilidad a mano", async () => {
   const { actor, quote, sub } = await makeDraft();
   await addKitInstance(actor, sub.id, bombas);

@@ -4,7 +4,6 @@ import { NotFoundError, ValidationError } from "@/lib/errors";
 import { parseOrThrow } from "@/lib/validation";
 import { Prisma, type KitTemplate } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
-import { assertAdmin } from "@/modules/auth/permissions";
 import type { CurrentUser } from "@/modules/auth/session";
 import { kitDefinition, refCategoryId, refConceptId, type KitDefinition } from "./definition";
 
@@ -32,8 +31,8 @@ export async function getKit(id: string): Promise<Kit> {
   return toKit(row);
 }
 
-/** Every concept and category the definition names must exist and be active. */
-async function checkRefs(tx: Prisma.TransactionClient, def: KitDefinition): Promise<void> {
+/** What is wrong with the concepts and categories a definition names: each must exist and be active. Keyed by field path. */
+async function refIssues(tx: Prisma.TransactionClient | typeof prisma, def: KitDefinition): Promise<Record<string, string>> {
   const refs = [{ path: "definition.main", ref: def.main }, ...def.components.map((c, i) => ({ path: `definition.components.${i}.ref`, ref: c.ref }))];
   const issues: Record<string, string> = {};
   for (const { path, ref } of refs) {
@@ -41,21 +40,28 @@ async function checkRefs(tx: Prisma.TransactionClient, def: KitDefinition): Prom
     const categoryId = refCategoryId(ref);
     if (conceptId) {
       const c = await tx.concept.findUnique({ where: { id: conceptId } });
-      if (!c?.active) issues[path] = "El concepto no existe o está desactivado";
+      if (!c) issues[path] = "Falta un concepto que ya no existe";
+      else if (!c.active) issues[path] = `${c.code} está desactivado: cámbialo por otro`;
     } else if (categoryId) {
       const c = await tx.category.findUnique({ where: { id: categoryId } });
-      if (!c?.active) issues[path] = "La categoría no existe o está desactivada";
+      if (!c) issues[path] = "Falta una categoría que ya no existe";
+      else if (!c.active) issues[path] = `La categoría ${c.name} está desactivada`;
     }
   }
-  if (Object.keys(issues).length) throw new ValidationError(issues);
+  return issues;
+}
+
+/** The warnings of a stored kit (a concept or category it names was deactivated or deleted); empty = complete. */
+export async function kitIssues(tx: Prisma.TransactionClient | typeof prisma, kit: Kit): Promise<string[]> {
+  return Object.values(await refIssues(tx, kit.definition));
 }
 
 export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
-  assertAdmin(actor);
   const input = parseOrThrow(kitInput, raw);
   try {
     return await prisma.$transaction(async (tx) => {
-      await checkRefs(tx, input.definition);
+      const issues = await refIssues(tx, input.definition);
+      if (Object.keys(issues).length) throw new ValidationError(issues);
       const data = { name: input.name, description: input.description, definition: input.definition as Prisma.InputJsonValue };
       const before = input.id ? await tx.kitTemplate.findUnique({ where: { id: input.id } }) : null;
       if (input.id && !before) throw new NotFoundError("Conjunto no encontrado");
@@ -73,7 +79,6 @@ export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
 }
 
 export async function setKitActive(actor: CurrentUser, id: string, active: boolean): Promise<void> {
-  assertAdmin(actor);
   await prisma.$transaction(async (tx) => {
     const row = await tx.kitTemplate.findUnique({ where: { id } });
     if (!row) throw new NotFoundError("Conjunto no encontrado");

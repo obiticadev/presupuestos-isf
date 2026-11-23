@@ -29,7 +29,7 @@ export const pdfSource = (): PdfSource => ({
     reference: "PR-2026000002-R00", date: "2026-11-09T00:00:00.000Z", subject: "ampliación del grupo de bombeo",
     paymentTerms: "Transferencia a 60 días.", exclusions: "Obra civil, ayudas de albañilería y legalizaciones.", validityDays: 30,
     client: { legalName: "Conservas Ribera, S.A.", fiscalAddress: "Calle Mayor 1\n28001 Madrid" },
-    location: { name: "Planta de envasado", address: "Ctra. de Toledo, km 4", city: "28300 Aranjuez", province: "Madrid" },
+    location: { name: "Planta de envasado", address: "Ctra. de Toledo, km 4", installation: "28300 Aranjuez", country: "Madrid" },
     contact: { name: "Ana López" },
     sections: [{
       id: "s1", title: "Grupo de bombeo",

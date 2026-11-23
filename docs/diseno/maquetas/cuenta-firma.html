@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi cuenta, firma y sello</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<!-- Los estilos reales de la app: lo que se ve aquí es lo que dará la app. -->
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+.note{background:var(--amber-bg);border-left:4px solid var(--amber-line);padding:10px 12px;font-size:13px;margin:0 0 16px;max-width:900px}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:34px 0 8px;border-top:1.5px solid var(--ink);padding-top:10px}
+/* ---------- Mi cuenta: dos columnas ---------- */
+.acc{display:grid;gap:24px;max-width:1100px;grid-template-columns:minmax(0,360px) minmax(0,1fr)}
+@media (max-width:900px){.acc{grid-template-columns:1fr}}
+.stack{display:grid;gap:12px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.ok{color:var(--ok);font-weight:600;font-size:13px}
+/* Recuadro pequeño: un clic abre la ventana grande */
+.sigthumb{all:unset;box-sizing:border-box;cursor:pointer;display:grid;place-items:center;height:150px;border:1.5px dashed var(--mut);background:#fff;position:relative}
+.sigthumb:hover{border-color:var(--ink);background:#f9faf8}
+.sigthumb:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.sigthumb .empty{font-size:13px;color:var(--mut)}
+.sigthumb .stamp-a{transform:scale(.9)}
+.sigthumb .edit{position:absolute;right:8px;top:6px;font-size:12px;font-weight:600;color:var(--mut)}
+/* ---------- Ventana flotante para firmar ---------- */
+dialog.sign{margin:auto;border:1.5px solid var(--ink);padding:0;width:min(960px,calc(100vw - 32px));max-height:calc(100vh - 32px);background:var(--sheet);color:var(--ink)}
+dialog.sign::backdrop{background:#0f1f1dcc}
+.sign .bar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1.5px solid var(--ink)}
+.sign .bar h2{margin:0;flex:1}
+.x{font:600 18px var(--font-archivo),sans-serif;width:40px;height:40px;border:1.5px solid var(--ink);background:var(--sheet);cursor:pointer;display:grid;place-items:center;flex:none}
+.x:hover{background:var(--band)}
+.sign .area{padding:16px;position:relative}
+.pad{display:block;width:100%;height:min(420px,calc(100vh - 160px));background:#fff;border:1.5px dashed var(--rule);touch-action:none;cursor:crosshair}
+.sign .base{position:absolute;left:56px;right:56px;bottom:70px;border-top:1px solid var(--rule);font-size:12px;color:var(--mut);padding-top:4px;pointer-events:none}
+@media (max-width:600px){dialog.sign{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh}.pad{height:calc(100dvh - 120px)}}
+/* ---------- Firma sobre el sello (la firma puede rebasar el sello) ---------- */
+.stamp-a{display:block;position:relative;width:200px;height:80px;margin:22px auto 26px}
+.stamp-a .sello{width:100%;height:100%;display:block}
+.stamp-a .firma{position:absolute;left:50%;top:50%;width:135%;height:150%;object-fit:contain;transform:translate(-46%,-56%) rotate(-3deg)}
+.sigacts{display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap}
+/* ---------- Hoja A4 del PDF: copia de src/pdf/templates/v1/styles.ts, acotada a .a4 ---------- */
+.a4{--ink:#0f1f1d;--green:#004742;--rule:#c9d1cb;--mut:#56645f;--band:#eef1ee;width:210mm;height:297mm;padding:12mm 18mm 10mm;background:#fff;box-shadow:0 1px 6px #0003;display:flex;flex-direction:column;font-size:10pt;line-height:1.4;color:var(--ink);font-variant-numeric:tabular-nums;overflow:hidden}
+.a4 *{margin:0;padding:0}
+.a4 .hdr{height:13mm;display:flex;align-items:center;justify-content:space-between;gap:12mm;border-bottom:1.5pt solid #004742;margin-bottom:8mm}
+.a4 .hdr b{font-size:16pt;color:#004742}
+.a4 .hdr span{flex:1;text-align:center;font-size:7pt;font-weight:700;letter-spacing:.12em;color:#004742}
+.a4 .hdr div{text-align:right;font-size:9pt;font-weight:700;line-height:1.3}
+.a4 .hdr small{display:block;font-size:7pt;font-weight:400;letter-spacing:.1em;color:#56645f}
+.a4 .ftr{font-size:7pt;color:var(--mut);text-align:center;padding-top:4mm}
+.a4 .sheet{flex:1;display:flex;flex-direction:column;border:0;padding:0;background:none}
+.a4 .titlebar{padding-bottom:2.5mm;border-bottom:.75pt solid var(--rule)}
+.a4 h1{font-size:14pt;font-weight:800;font-stretch:88%;line-height:1.2}
+.a4 .client{color:var(--mut);font-size:9pt}
+.a4 table{width:100%;border-collapse:collapse;margin-top:3mm;background:none}
+.a4 thead th{font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;text-align:left;border-bottom:1.5pt solid var(--ink);padding:1.4mm 1.5mm;font-weight:700;color:var(--ink)}
+.a4 td{padding:.7mm 1.5mm;line-height:1.2;border-bottom:.5pt solid var(--rule);vertical-align:top;font-size:10pt}
+.a4 tr:hover td{background:none}
+.a4 .n{text-align:right;white-space:nowrap}
+.a4 .p{width:14mm;font-weight:700}
+.a4 .qty,.a4 .tot{width:30mm}
+.a4 tr.part td{background:var(--band);font-weight:800;text-transform:uppercase;font-size:9.5pt;padding-top:1.1mm;padding-bottom:1.1mm}
+.a4 tr.sub td{font-weight:700}
+.a4 tr.line td:nth-child(2){padding-left:6mm}
+.a4 .close{display:grid;grid-template-columns:1fr 78mm;gap:8mm;margin-top:auto;padding-top:4mm}
+.a4 .close .left,.a4 .close .right{display:flex;flex-direction:column;gap:3mm}
+.a4 .cond{display:grid;grid-template-columns:36mm 1fr;column-gap:3mm;row-gap:1.4mm}
+.a4 .cond h2{font-size:8pt;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding-top:.5mm}
+.a4 .cond p{line-height:1.3}
+.a4 .close .place{margin-top:auto;color:var(--mut)}
+.a4 .totals div{display:flex;justify-content:space-between;padding:1mm 0;border-bottom:.5pt solid var(--rule)}
+.a4 .totals .big{font-size:12pt;font-weight:800;border-bottom:none;border-top:1.5pt solid var(--ink);margin-top:1mm;padding-top:2mm}
+.a4 .stamp{height:22mm;border:.75pt solid var(--rule);padding:1.2mm 2mm}
+.a4 .stamp small{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700}
+/* Nuevo: sello con la firma encima; la firma rebasa el sello. Alto del sello = ancho × 344/860. */
+.a4 .stamp-a{width:var(--sw);height:calc(var(--sw) * .4);margin:5mm auto 4mm}
+.a4 .fdo{font-size:7.5pt;color:var(--mut);text-align:center}
+.a4.crop{height:auto;padding:0 18mm 8mm;overflow:visible}
+.a4.crop .close{margin-top:0}
+@media (max-width:1100px){.a4{zoom:.75}}
+@media (max-width:700px){.a4{zoom:.45}}
+.issue{max-width:420px}
+.issue li{margin:4px 0 4px 18px}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <nav class="rail" aria-label="Principal">
+    <div class="brand">ISF<small>PRESUPUESTOS</small></div>
+    <div class="links">
+      <a href="#">Presupuestos</a><a href="#">Clientes</a><a href="#">Catálogo</a><a href="#">Conjuntos</a>
+      <a href="#" class="on" aria-current="page">Mi cuenta</a>
+      <div class="me">
+        Lucía Pardo<br><span style="color:#a9c6bf">Presupuestador</span>
+        <form><button type="button">Cerrar sesión</button></form>
+        <small class="ver">Versión 1.4.0</small>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <p class="note">Maqueta con lo elegido: dos columnas, «Mi cuenta» en el menú, solo dibujar y la firma encima del sello. Pulsa el recuadro de la firma para abrir la ventana grande (también para cambiarla). «Confirmar» recorta los márgenes y la pasa al recuadro y al pie del PDF. El aviso «Falta tu firma» sale en el borrador, al emitir, no aquí.</p>
+
+    <div class="crumb">Mi cuenta</div>
+    <div class="head"><h1>Mi cuenta</h1></div>
+    <p class="mut" style="margin:6px 0 20px">lucia.pardo@isf.es · Presupuestador</p>
+
+    <div class="acc">
+      <form class="sheet stack" onsubmit="return false">
+        <h2 style="margin:0">Contraseña</h2>
+        <label class="field">Contraseña actual<input type="password" autocomplete="current-password"></label>
+        <label class="field">Contraseña nueva<input type="password" autocomplete="new-password"></label>
+        <label class="field">Repite la nueva<input type="password" autocomplete="new-password"></label>
+        <p class="mut" style="font-size:13px">Al cambiarla se cierran tus sesiones en otros equipos.</p>
+        <div class="row"><button class="btn pri">Cambiar contraseña</button></div>
+      </form>
+
+      <div class="sheet stack">
+        <h2 style="margin:0">Firma</h2>
+        <p class="mut" style="font-size:13px">Sale sobre el sello en los presupuestos que emitas. Sin firma no se puede emitir.</p>
+        <button type="button" class="sigthumb" id="thumb" aria-haspopup="dialog">
+          <span class="empty" id="empty">Sin firma. Pulsa para firmar.</span>
+          <span class="stampslot" hidden></span>
+        </button>
+        <div class="sigacts" id="sigacts" hidden>
+          <details class="confirm">
+            <summary class="btn">Eliminar firma</summary>
+            <div class="confirmbox">
+              <span>Sin firma no podrás emitir presupuestos. Los ya emitidos conservan la suya.</span>
+              <button type="button" class="btn warn" id="del">Sí, eliminar firma</button>
+            </div>
+          </details>
+          <span class="ok" id="ok" hidden>Firma guardada</span>
+        </div>
+      </div>
+    </div>
+
+    <dialog class="sign" id="dlg" aria-labelledby="dlgt">
+      <div class="bar">
+        <h2 id="dlgt">Firma</h2>
+        <button type="button" class="btn" id="clear">Borrar</button>
+        <button type="button" class="btn pri" id="confirm" disabled>Confirmar</button>
+        <button type="button" class="x" id="cancel" aria-label="Cancelar">✕</button>
+      </div>
+      <div class="area"><canvas class="pad" id="pad"></canvas><span class="base">Firma aquí, con ratón, dedo o lápiz</span></div>
+    </dialog>
+
+    <div class="lbl">Así saldrá en el PDF · pie de la última hoja, a tamaño real</div>
+    <div class="a4 crop">
+      <div class="sheet">
+        <div class="close">
+          <div class="left">
+            <div class="cond"><h2>Forma de pago</h2><p>30 días fecha factura.</p><h2>Validez</h2><p>30 días.</p><h2>Exclusiones</h2><p>Obra civil y legalizaciones.</p></div>
+            <div class="place">Alcalá de Henares, 18 de noviembre de 2026</div>
+          </div>
+          <div class="right">
+            <div class="totals">
+              <div><span>Importe del presupuesto</span><span>12.480,00 €</span></div>
+              <div><span>IVA 21 %</span><span>2.620,80 €</span></div>
+              <div class="big"><span>Total presupuesto</span><span>15.100,80 €</span></div>
+            </div>
+            <div class="pdfstamp"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.2.0/dist/signature_pad.umd.min.js"></script>
+<script>
+const SELLO = "../../../src/pdf/assets/sello-isf.svg";
+const INK = "#1b2a6b";
+// Firma de ejemplo para el PDF hasta que se dibuje una.
+let firma = "data:image/svg+xml," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 80"><path d="M10 60 C30 10 45 10 40 50 S70 70 80 30 S100 20 105 55 C110 75 130 20 150 40 S190 60 210 25" fill="none" stroke="#1b2a6b" stroke-width="3" stroke-linecap="round"/></svg>');
+let saved = false;
+
+const SAMPLE = firma;
+function render(){
+  const html = `<span class="stamp-a"><img class="sello" src="${SELLO}" alt="Sello de ISF"><img class="firma" src="${firma}" alt="Firma"></span>`;
+  document.querySelectorAll(".stampslot").forEach(el => el.innerHTML = html);
+  document.querySelector("#thumb .stampslot").hidden = !saved;
+  document.getElementById("empty").hidden = saved;
+  document.getElementById("sigacts").hidden = !saved;
+  const slot = document.querySelector(".pdfstamp");
+  slot.style.setProperty("--sw", "62mm");
+  // Sin firma, el pie muestra el recuadro vacío de hoy.
+  slot.innerHTML = saved ? html + '<div class="fdo">Fdo.: Lucía Pardo</div>' : '<div class="stamp"><small>Firma y sello</small></div>';
+}
+document.getElementById("del").onclick = e => {
+  e.target.closest("details").open = false;
+  saved = false; firma = SAMPLE; document.getElementById("ok").hidden = true; render();
+};
+
+// ---------- Lienzo: signature_pad (la misma librería que usa Stirling PDF) ----------
+// Curvas de Bézier entre puntos y grosor según la velocidad: trazo de tinta suave.
+const dlg = document.getElementById("dlg"), c = document.getElementById("pad"), ctx = c.getContext("2d");
+const pad = new SignaturePad(c, { penColor: INK, minWidth: 0.9, maxWidth: 3.4, velocityFilterWeight: 0.7, throttle: 0 });
+let drawn = false;
+function fit(){
+  const r = c.getBoundingClientRect(), k = Math.max(devicePixelRatio || 1, 2);
+  c.width = r.width * k; c.height = r.height * k; ctx.setTransform(k, 0, 0, k, 0, 0);
+  pad.clear(); drawn = false; document.getElementById("confirm").disabled = true;
+}
+pad.addEventListener("endStroke", () => { drawn = true; document.getElementById("confirm").disabled = false; });
+
+// Recorta los márgenes vacíos y exporta PNG transparente.
+function trimmed(){
+  const { width: W, height: H } = c, data = ctx.getImageData(0, 0, W, H).data;
+  let x0 = W, y0 = H, x1 = -1, y1 = -1;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (data[(y * W + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  const o = document.createElement("canvas"); o.width = x1 - x0 + 9; o.height = y1 - y0 + 9;
+  o.getContext("2d").drawImage(c, x0 - 4, y0 - 4, o.width, o.height, 0, 0, o.width, o.height);
+  return o.toDataURL("image/png");
+}
+
+document.getElementById("thumb").onclick = () => { dlg.showModal(); fit(); };
+document.getElementById("clear").onclick = fit;
+document.getElementById("cancel").onclick = () => dlg.close();
+document.getElementById("confirm").onclick = () => {
+  if (!drawn) return;
+  firma = trimmed(); saved = true; dlg.close(); document.getElementById("ok").hidden = false; render();
+};
+render();
+</script>
+</body>
+</html>

@@ -2,7 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
+import type { ImportState } from "@/components/import-form";
+import { importFile } from "@/lib/import-file";
 import { requireUser } from "@/modules/auth/session";
+import { importClients } from "./import";
 import * as clients from "./service";
 
 export type ClientActionResult = ActionResult & { id?: string; outcome?: "deleted" | "deactivated" };
@@ -61,7 +64,7 @@ export async function saveLocationAction(_prev: ActionResult | null, form: FormD
   const actor = await requireUser();
   const clientId = s(form, "clientId");
   return run(clientId, () => clients.saveLocation(actor, clientId, {
-    id: s(form, "id") || undefined, name: s(form, "name"), address: s(form, "address"), city: s(form, "city"), province: s(form, "province"),
+    id: s(form, "id") || undefined, name: s(form, "name"), address: s(form, "address"), installation: s(form, "installation"), country: s(form, "country"),
   }));
 }
 
@@ -73,4 +76,10 @@ export async function removeContactAction(_prev: ActionResult | null, form: Form
 export async function removeLocationAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const actor = await requireUser();
   return run(s(form, "clientId"), () => clients.removeLocation(actor, s(form, "id")));
+}
+
+/** «Revisar» and «Confirmar importación» of the clients workbook (open to everyone). */
+export async function importClientsAction(_prev: ImportState, form: FormData): Promise<ImportState> {
+  const actor = await requireUser();
+  return importFile(form, "/clientes", (bytes, opts) => importClients(actor, bytes, opts));
 }

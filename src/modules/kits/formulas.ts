@@ -19,8 +19,9 @@ const num = (s: string | undefined) => {
 /**
  * Main line (slot "main", quantity N) plus one line per component: FIXED k, PER_QTY k × N, PER_QTY_AND_PARAM k × N × data.
  * Anything missing leaves the whole kit unvalued (lines = []): a pump is never priced without its hose.
+ * `descriptive` (a global-price subsection): the lines carry no price, so a concept without sale price is valid.
  */
-export function expandKit(def: KitDefinition, input: KitInput, concepts: Map<string, ConceptForKit>): KitExpansion {
+export function expandKit(def: KitDefinition, input: KitInput, concepts: Map<string, ConceptForKit>, descriptive = false): KitExpansion {
   const missing: string[] = [];
   const n = num(input.quantity);
   if (!n || !n.gt(0)) missing.push("La cantidad debe ser mayor que cero");
@@ -45,7 +46,7 @@ export function expandKit(def: KitDefinition, input: KitInput, concepts: Map<str
       return null;
     }
     const c = concepts.get(id);
-    if (!c || !c.active || c.salePrice === null) {
+    if (!c || !c.active || (c.salePrice === null && !descriptive)) {
       missing.push(`${label} ya no está disponible`);
       return null;
     }

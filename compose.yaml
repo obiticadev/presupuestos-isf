@@ -37,6 +37,9 @@ services:
       <<: *database-url
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?Define BETTER_AUTH_SECRET en .env}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?Define BETTER_AUTH_URL en .env}
+      BETTER_AUTH_COOKIE_PREFIX: ${BETTER_AUTH_COOKIE_PREFIX:-better-auth}
+      # «beta» añade la etiqueta a la versión (entorno de pruebas); producción lo deja vacío.
+      APP_CHANNEL: ${APP_CHANNEL:-}
       DATA_DIR: /data
     volumes:
       - appdata:/data

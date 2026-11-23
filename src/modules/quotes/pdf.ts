@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import { buildDocument, toPdfSource, type PdfSource } from "@/pdf/document";
 import { renderDocument } from "@/pdf/templates";
+import { getSignature } from "@/modules/account/service";
 import { logAction } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { dataDir, getSettings, readLogo } from "@/modules/settings/service";
@@ -60,10 +61,11 @@ export async function readIssuedPdf(actor: CurrentUser, quoteId: string): Promis
   return bytes;
 }
 
-/** Preview of a draft with the current company data and template, watermarked; nothing is stored. */
-export async function draftPdf(quoteId: string): Promise<Uint8Array> {
-  const [settings, quote] = await Promise.all([getSettings(), getQuote(quoteId)]);
-  return renderDocument(TEMPLATE_VERSION, buildDocument(toPdfSource(settings, quote), { draft: true }), await readLogo(settings.logoPath));
+/** Preview of a draft with the current company data and template, watermarked; nothing is stored. Signed by the viewer, who would issue it. */
+export async function draftPdf(quoteId: string, viewer: CurrentUser): Promise<Uint8Array> {
+  const [settings, quote, signature] = await Promise.all([getSettings(), getQuote(quoteId), getSignature(viewer.id)]);
+  const signer = signature && { name: viewer.name, signature: Buffer.from(signature).toString("base64") };
+  return renderDocument(TEMPLATE_VERSION, buildDocument({ ...toPdfSource(settings, quote), signer }, { draft: true }), await readLogo(settings.logoPath));
 }
 
 export async function pdfResponse(user: CurrentUser | null, quoteId: string): Promise<Response> {
@@ -71,7 +73,7 @@ export async function pdfResponse(user: CurrentUser | null, quoteId: string): Pr
   const q = await prisma.quote.findUnique({ where: { id: quoteId }, select: { status: true, reference: true, client: { select: { legalName: true } } } });
   if (!q) return new Response("El presupuesto no existe", { status: 404 });
   try {
-    const bytes = q.status === "DRAFT" ? await draftPdf(quoteId) : await readIssuedPdf(user, quoteId);
+    const bytes = q.status === "DRAFT" ? await draftPdf(quoteId, user) : await readIssuedPdf(user, quoteId);
     return new Response(new Uint8Array(bytes), {
       headers: {
         "content-type": "application/pdf",

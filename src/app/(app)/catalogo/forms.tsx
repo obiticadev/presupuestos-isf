@@ -6,7 +6,7 @@ import type { ActionResult } from "@/lib/action-result";
 import { suggestSalePrice } from "@/lib/decimal";
 import {
   removeConceptAction, saveConceptAction, setConceptActiveAction,
-  type RemoveResult, type SaveConceptResult,
+  type RemoveResult, type SaveConceptResult, type ToggleResult,
 } from "@/modules/catalog/actions";
 
 export type ConceptValues = {
@@ -112,7 +112,7 @@ export function ConceptForm({ concept, categories, units, taxes, marginPct, list
 // After a delete the page re-renders without the concept and says so; this panel just disappears.
 function ConceptDangerZone({ concept }: { concept: ConceptValues }) {
   const [removed, remove, removing] = useActionState<RemoveResult | null, FormData>(removeConceptAction, null);
-  const [toggled, toggle, toggling] = useActionState<ActionResult | null, FormData>(setConceptActiveAction, null);
+  const [toggled, toggle, toggling] = useActionState<ToggleResult | null, FormData>(setConceptActiveAction, null);
 
   return (
     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", borderTop: "1px solid var(--rule)", paddingTop: 12 }}>
@@ -126,6 +126,7 @@ function ConceptDangerZone({ concept }: { concept: ConceptValues }) {
         <button className="btn" disabled={removing}>Eliminar</button>
       </form>
       {removed?.ok && removed.outcome === "deactivated" && <span className="mut" role="status">Concepto desactivado porque está en uso</span>}
+      {[removed, toggled].map((r) => r?.ok && r.incompleteKits?.length ? <p key={r.incompleteKits.join()} className="warnbox" role="status" style={{ width: "100%" }}>Desactivado. Quedan incompletos: {r.incompleteKits.join(", ")}</p> : null)}
       <Err msg={errorsOf(removed)._ ?? errorsOf(toggled)._} />
       <p className="mut" style={{ fontSize: 12, width: "100%" }}>
         «Eliminar» lo borra si ningún presupuesto lo usa; si alguno lo usa, lo desactiva.

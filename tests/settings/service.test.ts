@@ -53,6 +53,12 @@ test("un presupuestador no puede cambiar la configuración ni los impuestos", as
   await expect(saveLogo(p, { name: "l.png", type: "image/png", bytes: new Uint8Array(PNG) })).rejects.toThrow(ForbiddenError);
 });
 
+test("los datos registrales se guardan en una sola línea", async () => {
+  const admin = await makeUser("admin");
+  await updateSettings(admin, { registryText: "Reg. Mercantil \r\n Tomo 1\nFolio 2" });
+  expect((await getSettings()).registryText).toBe("Reg. Mercantil Tomo 1 Folio 2");
+});
+
 test("updateSettings guarda los textos y lo registra en el historial", async () => {
   const admin = await makeUser("admin");
   await updateSettings(admin, { legalName: "ISF, S.L.", offerValidityDays: "45", defaultMarginPct: "35,5" });
@@ -125,4 +131,11 @@ test("la configuración trae los textos de la carta por defecto", async () => {
   expect(s.letterPlace).toBe("Alcalá de Henares");
   expect(s.offerValidityDays).toBe(30);
   expect(s.defaultMarginPct.toFixed(2)).toBe("35.00");
+});
+
+test("el patrón debe llevar el tipo", async () => {
+  const admin = await makeUser("admin");
+  await expect(updateSettings(admin, { numberPattern: "PR-{AAAA}{NNNNNN}-R{RR}" })).rejects.toMatchObject({
+    issues: { numberPattern: "Debe llevar el número ({NNN}), el tipo ({TTT}) y la revisión ({RR})" },
+  });
 });

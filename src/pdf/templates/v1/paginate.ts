@@ -7,7 +7,7 @@ export function paginate(sheetHeightPx: number): void {
   const first = document.querySelector<HTMLElement>(".sheet");
   if (!first) return;
   const thead = first.querySelector("thead")!;
-  const close = first.querySelector(".close")!;
+  const close = first.querySelector<HTMLElement>(".close")!;
   const rows = [...first.querySelectorAll("tbody > tr")];
   close.remove();
 
@@ -15,7 +15,8 @@ export function paginate(sheetHeightPx: number): void {
   const is = (r: Element, kind: string) => r.classList.contains(kind);
   // A heading must not be split from what it introduces: a part from its sub or first line, a sub from its first line.
   // A sub without lines (hidden lines, a GLOBAL subsection) introduces nothing and may end a sheet.
-  const leads = (a: Element, b: Element) => (is(a, "part") && (is(b, "sub") || is(b, "line"))) || (is(a, "sub") && is(b, "line"));
+  // A note (comment) never opens a sheet: it goes with the row it comments.
+  const leads = (a: Element, b: Element) => (is(a, "part") && (is(b, "sub") || is(b, "line"))) || (is(a, "sub") && is(b, "line")) || is(b, "note");
   const newSheet = (after: HTMLElement) => {
     const s = document.createElement("section");
     s.className = "sheet";
@@ -25,6 +26,14 @@ export function paginate(sheetHeightPx: number): void {
     s.append(table);
     after.after(s);
     return s;
+  };
+
+  // A closing block taller than a sheet (very long conditions): the sheet grows and Chromium continues it on the next page.
+  const flow = (s: HTMLElement) => {
+    if (!over(s)) return;
+    s.style.height = "auto";
+    s.style.overflow = "visible";
+    close.style.breakInside = "auto";
   };
 
   first.style.height = `${sheetHeightPx}px`;
@@ -48,19 +57,31 @@ export function paginate(sheetHeightPx: number): void {
   // The closing block does not fit: it moves to a new sheet with the last sub (and its part if just before),
   // so the total is never alone. Rows are carried from the end only while they still fit with the closing block.
   const rs = [...tbody.children];
-  if (rs.length < 2) return; // shortcut: a sheet of a single row cannot give one away; not seen in practice
+  if (rs.length < 2) return flow(sheet);
   let from = rs.map((x) => x.classList.contains("sub")).lastIndexOf(true);
   while (from > 0 && leads(rs[from - 1], rs[from])) from--;
   if (from <= 0) {
     // The last sub fills this whole sheet (or started on an earlier one): carry its last lines, keeping heads with a line.
     from = 1;
     while (from < rs.length - 1 && leads(rs[from - 1], rs[from])) from++;
+    // The whole sheet is one heading chain: nothing can leave without its head, so the close stays and the sheet flows.
+    if (leads(rs[from - 1], rs[from])) return flow(sheet);
   }
   sheet = newSheet(sheet);
   const target = sheet.querySelector("tbody")!;
   sheet.append(close);
-  for (let i = rs.length - 1; i >= from; i--) {
-    target.prepend(rs[i]);
-    if (i < rs.length - 1 && over(sheet)) { tbody.append(rs[i]); break; }
+  // Carried in blocks (a row with the heads before it and its note), so no heading or note is left apart from its row.
+  for (let i = rs.length - 1; i >= from; ) {
+    let j = i;
+    while (j > from && leads(rs[j - 1], rs[j])) j--;
+    const block = rs.slice(j, i + 1);
+    const firstBlock = target.children.length === 0;
+    target.prepend(...block);
+    if (!firstBlock && over(sheet)) {
+      tbody.append(...block); // it fitted there before the closing block was added
+      break;
+    }
+    i = j - 1;
   }
+  flow(sheet);
 }

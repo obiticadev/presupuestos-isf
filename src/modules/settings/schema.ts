@@ -25,7 +25,7 @@ export const settingsInput = z
     address: text(300),
     phone: text(50),
     email: z.union([z.literal(""), z.email("Email no válido")]),
-    registryText: text(2000),
+    registryText: text(2000).transform((v) => v.replace(/\s*\r?\n\s*/g, " ")),
     letterGreeting: text(200),
     letterIntro: text(2000),
     letterClosing: text(4000),
@@ -36,7 +36,7 @@ export const settingsInput = z
       .transform(Number).refine((n) => n >= 1 && n <= 365, "Entre 1 y 365 días"),
     defaultMarginPct: percent(999),
     travelOriginText: text(200),
-    numberPattern: text(60).refine((v) => /\{N{1,8}\}/.test(v) && v.includes("{RR}"), "Debe llevar el número ({NNNNNN}) y la revisión ({RR})"),
+    numberPattern: text(60).refine((v) => /\{N{1,8}\}/.test(v) && v.includes("{TTT}") && v.includes("{RR}"), "Debe llevar el número ({NNN}), el tipo ({TTT}) y la revisión ({RR})"),
     numberYearlyReset: z.enum(["si", "no"], { message: "Elige sí o no" }).transform((v) => v === "si"),
     numberStart: z.string().trim().regex(/^\d{1,8}$/, "Escribe un número entero").transform(Number).refine((n) => n >= 1, "Desde 1"),
   })

@@ -5,8 +5,9 @@ import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
 import * as lists from "./lists";
 import * as catalog from "./service";
-import { MAX_IMPORT_BYTES } from "./excel";
-import { importConcepts, type ImportResult } from "./import";
+import { importFile } from "@/lib/import-file";
+import type { ImportState } from "@/components/import-form";
+import { importConcepts } from "./import";
 
 async function run(paths: string[], fn: () => Promise<unknown>): Promise<ActionResult> {
   const result = await toActionResult(fn);
@@ -37,6 +38,16 @@ export async function setUnitActiveAction(_prev: ActionResult | null, form: Form
   return run(LIST_PATHS, () => lists.setUnitActive(actor, String(form.get("id")), form.get("active") === "1"));
 }
 
+export async function deleteCategoryAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  return run(LIST_PATHS, () => lists.deleteCategory(actor, String(form.get("id"))));
+}
+
+export async function deleteUnitAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  return run(LIST_PATHS, () => lists.deleteUnit(actor, String(form.get("id"))));
+}
+
 const CATALOG = ["/catalogo"];
 
 /** Reads the concept form; checkboxes arrive only when ticked. */
@@ -62,39 +73,25 @@ export async function saveConceptAction(_prev: SaveConceptResult | null, form: F
   return result.ok ? { ok: true, id: savedId } : result;
 }
 
-export async function setConceptActiveAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+export async function setConceptActiveAction(_prev: ToggleResult | null, form: FormData): Promise<ToggleResult> {
   const actor = await requireUser();
-  return run(CATALOG, () => catalog.setConceptActive(actor, String(form.get("id")), form.get("active") === "1"));
+  let incompleteKits: string[] = [];
+  const result = await run(CATALOG, async () => { incompleteKits = (await catalog.setConceptActive(actor, String(form.get("id")), form.get("active") === "1")).incompleteKits; });
+  return result.ok ? { ok: true, incompleteKits } : result;
 }
 
-export type RemoveResult = ActionResult & { outcome?: "deleted" | "deactivated" };
+export type ToggleResult = ActionResult & { incompleteKits?: string[] };
+export type RemoveResult = ToggleResult & { outcome?: "deleted" | "deactivated" };
 
 export async function removeConceptAction(_prev: RemoveResult | null, form: FormData): Promise<RemoveResult> {
   const actor = await requireUser();
-  let outcome: "deleted" | "deactivated" = "deleted";
-  const result = await run(CATALOG, async () => { outcome = await catalog.removeConcept(actor, String(form.get("id"))); });
-  return result.ok ? { ok: true, outcome } : result;
+  let removal: Awaited<ReturnType<typeof catalog.removeConcept>> = { outcome: "deleted", incompleteKits: [] };
+  const result = await run(CATALOG, async () => { removal = await catalog.removeConcept(actor, String(form.get("id"))); });
+  return result.ok ? { ok: true, ...removal } : result;
 }
 
-export type ImportState = { ok: false; errors: Record<string, string> } | ({ ok: true } & ImportResult) | null;
-
-/** Preview and confirm both receive the file: the server keeps nothing between the two steps. */
-async function runImport(form: FormData, apply: boolean): Promise<ImportState> {
+/** «Revisar» and «Confirmar importación» of the catalog (open to everyone). */
+export async function importCatalogAction(_prev: ImportState, form: FormData): Promise<ImportState> {
   const actor = await requireUser();
-  const file = form.get("file");
-  if (!(file instanceof File) || file.size === 0) return { ok: false, errors: { file: "Elige un archivo .xlsx" } };
-  if (file.size > MAX_IMPORT_BYTES) return { ok: false, errors: { file: "El archivo no puede pasar de 2 MB" } };
-  let result: ImportResult | undefined;
-  const r = await toActionResult(async () => { result = await importConcepts(actor, new Uint8Array(await file.arrayBuffer()), { apply }); });
-  if (!r.ok) return r;
-  if (result!.applied) revalidatePath("/catalogo");
-  return { ok: true, ...result! };
-}
-
-export async function previewImportAction(_prev: ImportState, form: FormData): Promise<ImportState> {
-  return runImport(form, false);
-}
-
-export async function applyImportAction(_prev: ImportState, form: FormData): Promise<ImportState> {
-  return runImport(form, true);
+  return importFile(form, "/catalogo", (bytes, opts) => importConcepts(actor, bytes, opts));
 }

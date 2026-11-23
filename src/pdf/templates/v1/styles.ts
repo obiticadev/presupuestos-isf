@@ -31,6 +31,13 @@ tr{break-inside:avoid}
 tr.part td{background:var(--band);font-weight:800;text-transform:uppercase;font-size:9.5pt;padding-top:1.1mm;padding-bottom:1.1mm}
 tr.sub td{font-weight:700}
 tr.line td:nth-child(2){padding-left:6mm}
+tr.note td{font-style:italic;color:var(--mut);padding-top:0;white-space:pre-line}
+tr.note.line td:nth-child(2),tr.note.kit td:nth-child(2){padding-left:6mm}
+tr.note.part td{background:var(--band);padding-top:.7mm}
+tr:has(+ tr.note) td{border-bottom:none}
+/* A kit with a comment: its rows on a light green tint (not the partida's grey), closed by a dashed rule over the comment. */
+tr.k td:not(:first-child){background:#edf5f2}
+tr.note.kit td:not(:first-child){border-top:.5pt dashed var(--mut);padding-top:.7mm;padding-bottom:1mm}
 
 /* Cierre al pie de la última hoja: condiciones y fecha | totales y firma y sello. */
 .close{display:grid;grid-template-columns:1fr 78mm;gap:8mm;margin-top:auto;padding-top:4mm;break-inside:avoid;flex:none}
@@ -43,6 +50,11 @@ tr.line td:nth-child(2){padding-left:6mm}
 .totals .big{font-size:12pt;font-weight:800;border-bottom:none;border-top:1.5pt solid var(--ink);margin-top:1mm;padding-top:2mm}
 .stamp{height:22mm;border:.75pt solid var(--rule);padding:1.2mm 2mm}
 .stamp small{font-size:7pt;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700}
+/* Sello de 62 mm (860×344) con la firma encima: la firma lo rebasa, pero cabe en los 78 mm de la columna y no pisa los totales. */
+.signed{position:relative;width:62mm;height:24.8mm;margin:6mm auto 0}
+.signed .sello{display:block;width:100%;height:100%}
+.signed .firma{position:absolute;left:50%;top:50%;width:125%;height:130%;object-fit:contain;transform:translate(-50%,-55%) rotate(-3deg)}
+.fdo{font-size:7.5pt;color:var(--mut);text-align:center}
 
 /* Borrador: Chromium repite los elementos fijos en cada hoja impresa. 80 pt: los 96 de la maqueta (hoja de 210 mm) no caben en los 174 mm útiles. */
 .wm{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}

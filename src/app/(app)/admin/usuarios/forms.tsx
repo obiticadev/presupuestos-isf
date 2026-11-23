@@ -1,9 +1,10 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { ConfirmButton, SubmitOnBlur } from "@/components/action-form";
 import type { ActionResult } from "@/lib/action-result";
 import type { Role } from "@/modules/auth/session";
-import { createUserAction, resetPasswordAction, setActiveAction, setRoleAction } from "@/modules/users/actions";
+import { createUserAction, deleteUserAction, renameUserAction, resetPasswordAction, setActiveAction, setRoleAction } from "@/modules/users/actions";
 
 type Action = (prev: ActionResult | null, form: FormData) => Promise<ActionResult>;
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
@@ -51,11 +52,19 @@ export function NewUserForm() {
 function RowForm({ action, children }: { action: Action; children: (pending: boolean) => React.ReactNode }) {
   const [state, run, pending] = useActionState<ActionResult | null, FormData>(action, null);
   const e = errorsOf(state);
+  // «Guardado» is derived from the result and hidden 2,5 s later (as in ActionForm), so the effect never sets state synchronously.
+  const [expired, setExpired] = useState<ActionResult | null>(null);
+  const saved = state?.ok && expired !== state;
+  useEffect(() => {
+    if (!state?.ok) return;
+    const t = setTimeout(() => setExpired(state), 2500);
+    return () => clearTimeout(t);
+  }, [state]);
   return (
     <form action={run} style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
       {children(pending)}
-      <FieldError msg={e._ ?? e.password ?? e.role} />
-      {state?.ok && <span className="mut" role="status">Guardado</span>}
+      <FieldError msg={e._ ?? e.password ?? e.role ?? e.name} />
+      {saved && <span role="status" style={{ color: "var(--ok)", fontWeight: 600 }}>Guardado</span>}
     </form>
   );
 }
@@ -66,7 +75,7 @@ export function RoleForm({ userId, role }: { userId: string; role: Role }) {
       {(pending) => (
         <>
           <input type="hidden" name="userId" value={userId} />
-          <select name="role" defaultValue={role} aria-label="Rol" style={{ minHeight: 34, font: "inherit", border: "1.5px solid var(--ink)", padding: "4px 6px" }}>
+          <select name="role" defaultValue={role} aria-label="Rol" style={{ width: 150, minHeight: 34, font: "inherit", border: "1.5px solid var(--ink)", padding: "4px 6px" }}>
             <option value="presupuestador">Presupuestador</option>
             <option value="admin">Administrador</option>
           </select>
@@ -87,6 +96,34 @@ export function ActiveForm({ userId, active }: { userId: string; active: boolean
           <button className={active ? "btn warn" : "btn"} disabled={pending} style={{ minHeight: 34, padding: "4px 10px" }}>
             {active ? "Desactivar" : "Reactivar"}
           </button>
+        </>
+      )}
+    </RowForm>
+  );
+}
+
+/** Saved when the field loses focus; only offered while the user has nothing issued. */
+export function NameForm({ userId, name }: { userId: string; name: string }) {
+  return (
+    <RowForm action={renameUserAction}>
+      {() => (
+        <SubmitOnBlur>
+          <input type="hidden" name="userId" value={userId} />
+          <input name="name" defaultValue={name} required maxLength={100} aria-label="Nombre"
+            style={{ minHeight: 34, font: "inherit", fontWeight: 600, border: "1.5px solid var(--ink)", padding: "4px 8px", background: "var(--sheet)" }} />
+        </SubmitOnBlur>
+      )}
+    </RowForm>
+  );
+}
+
+export function DeleteForm({ userId, name, drafts }: { userId: string; name: string; drafts: number }) {
+  return (
+    <RowForm action={deleteUserAction}>
+      {() => (
+        <>
+          <input type="hidden" name="userId" value={userId} />
+          <ConfirmButton label="Eliminar" className="btn danger" confirm={`¿Eliminar a ${name}?${drafts === 1 ? " Su borrador pasará a ti" : drafts ? ` Sus ${drafts} borradores pasarán a ti` : ""}`} />
         </>
       )}
     </RowForm>

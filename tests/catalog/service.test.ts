@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { ForbiddenError, NotFoundError, ValidationError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import { setCategoryActive } from "@/modules/catalog/lists";
 import {
   createConcept, getConcept, listConcepts, removeConcept, setConceptActive, suggestSalePrice, updateConcept,
@@ -69,16 +69,16 @@ test("cambiar el precio deja el antes y el después en el historial", async () =
 
 test("eliminar un concepto sin uso lo borra", async () => {
   const admin = await makeUser("admin");
-  expect(await removeConcept(admin, "concept-man-12x075")).toBe("deleted");
+  expect((await removeConcept(admin, "concept-man-12x075")).outcome).toBe("deleted");
   await expect(getConcept("concept-man-12x075")).rejects.toThrow(NotFoundError);
   expect(await prisma.auditLog.count({ where: { entity: "concept", entityId: "concept-man-12x075", action: "delete" } })).toBe(1);
 });
 
-test("un presupuestador consulta pero no modifica", async () => {
+test("un presupuestador crea, modifica y elimina conceptos", async () => {
   const p = await makeUser("presupuestador");
-  expect((await listConcepts({})).total).toBe(6);
-  await expect(createConcept(p, { ...base, code: "P1" })).rejects.toThrow(ForbiddenError);
-  await expect(removeConcept(p, "concept-ser-prog")).rejects.toThrow(ForbiddenError);
+  const c = await createConcept(p, { ...base, code: "P1" });
+  expect((await updateConcept(p, c.id, { ...base, code: "P1", description: "Relé 2" })).description).toBe("Relé 2");
+  expect((await removeConcept(p, c.id)).outcome).toBe("deleted");
 });
 
 test.each([["14,20", "35", "19,17"], ["3,10", "35", "4,19"], ["abc", "35", null]])(

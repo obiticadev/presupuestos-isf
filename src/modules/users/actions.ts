@@ -37,6 +37,16 @@ export async function setActiveAction(_prev: ActionResult | null, form: FormData
   return run(() => (text(form, "active") === "1" ? users.reactivateUser(actor, userId) : users.deactivateUser(actor, userId)));
 }
 
+export async function renameUserAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  return run(() => users.renameUser(actor, text(form, "userId"), text(form, "name")));
+}
+
+export async function deleteUserAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  return run(() => users.deleteUser(actor, text(form, "userId")));
+}
+
 export async function resetPasswordAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
   const actor = await requireUser();
   return run(() => users.adminResetPassword(actor, text(form, "userId"), text(form, "password")));

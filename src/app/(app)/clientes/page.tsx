@@ -22,7 +22,11 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
     <>
       <div className="head">
         <h1>Clientes</h1>
-        <div className="actions"><Link className="btn pri" href="/clientes/nuevo">Nuevo cliente</Link></div>
+        <div className="actions">
+          <Link className="btn" href="/clientes/importar">Importar Excel</Link>
+          <a className="btn" href="/api/clientes/exportar">Exportar</a>
+          <Link className="btn pri" href="/clientes/nuevo">Nuevo cliente</Link>
+        </div>
       </div>
       <form className="filters" method="get">
         <label className="field grow">Buscar<input name="q" defaultValue={q} placeholder="Razón social, nombre comercial o CIF" /></label>
@@ -38,7 +42,7 @@ export default async function ClientesPage({ searchParams }: PageProps<"/cliente
       </form>
       <div style={{ overflowX: "auto" }}>
         <table>
-          <thead><tr><th>Razón social</th><th>Nombre comercial</th><th>CIF/NIF</th><th className="n">Ubicaciones</th><th></th></tr></thead>
+          <thead><tr><th>Razón social</th><th>Nombre comercial</th><th>CIF/NIF</th><th className="n">Instalaciones</th><th></th></tr></thead>
           <tbody>
             {items.map((c) => (
               <tr key={c.id} className={c.active ? undefined : "mut"}>

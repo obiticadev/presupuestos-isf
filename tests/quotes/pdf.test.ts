@@ -10,8 +10,11 @@ import { renderDocument } from "@/pdf/templates";
 import { getConcept, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
 import { ensureIssuedPdf, pdfFileName, pdfResponse, readIssuedPdf } from "@/modules/quotes/pdf";
+import { getQuote, setComment } from "@/modules/quotes/service";
 import { updateSettings } from "@/modules/settings/service";
 import { completeDraft, conceptFields, makeDraft } from "../helpers/quotes";
+import { makeUser, TEST_SIGNATURE } from "../helpers/users";
+import { deleteSignature } from "@/modules/account/service";
 
 // Counts renders so a test can tell a regeneration from a file served as it was.
 vi.mock("@/pdf/templates", async (orig) => {
@@ -44,7 +47,7 @@ beforeEach(async () => {
 test("el PDF del emitido se genera una vez, con su hash, y la segunda llamada no lo reescribe", async () => {
   const { actor, quote } = await issued();
   const r = await ensureIssuedPdf(actor, quote.id);
-  expect(r.path).toBe(`pdf/${year}/PR-${year}000001-R00.pdf`);
+  expect(r.path).toBe(`pdf/${year}/PR-${year}001001-R00.pdf`);
   const file = await readFile(abs(r.path));
   const doc = await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: quote.id } });
   expect([doc.pdfPath, doc.sha256]).toEqual([r.path, sha(file)]);
@@ -94,7 +97,7 @@ test("regenerado tras cambiar el catálogo y la empresa, el PDF conserva los dat
 test("descargar registra la descarga en el historial", async () => {
   const { actor, quote } = await issued();
   await readIssuedPdf(actor, quote.id);
-  expect(await pdfLog(quote.id, "download")).toEqual([{ summary: `Descarga de PR-${year}000001-R00`, userId: actor.id }]);
+  expect(await pdfLog(quote.id, "download")).toEqual([{ summary: `Descarga de PR-${year}001001-R00`, userId: actor.id }]);
 });
 
 test("un archivo alterado se regenera al descargar", async () => {
@@ -124,7 +127,7 @@ test("pdfResponse del emitido: su nombre, inline y sin caché", async () => {
   const { actor, quote } = await issued();
   const res = await pdfResponse(actor, quote.id);
   expect(res.status).toBe(200);
-  expect(res.headers.get("content-disposition")).toBe(`inline; filename="PR-${year}000001-R00.pdf"`);
+  expect(res.headers.get("content-disposition")).toBe(`inline; filename="PR-${year}001001-R00.pdf"`);
   expect(res.headers.get("cache-control")).toBe("private, no-store");
 });
 
@@ -135,6 +138,22 @@ test("pdfResponse del borrador: vista previa con BORRADOR y sin guardar nada", a
   expect(await text(new Uint8Array(await res.arrayBuffer()))).toContain(norm("BORRADOR"));
   await expect(readdir(abs("pdf"))).rejects.toThrow();
   expect(await prisma.issuedDocument.count()).toBe(0);
+});
+
+test("los comentarios del borrador salen en la vista previa y en el PDF emitido", async () => {
+  const { actor, quote } = await completeDraft();
+  const q = await getQuote(quote.id);
+  const sub = q.sections[0].children[0];
+  await setComment(actor, { kind: "line", id: sub.lines[0].id, comment: "Kilómetros desde Alcalá" });
+  await setComment(actor, { kind: "section", id: sub.id, comment: "Programación en planta" });
+  await setComment(actor, { kind: "section", id: q.sections[0].id, comment: "Trabajos en fin de semana" });
+  const preview = await text(new Uint8Array(await (await pdfResponse(actor, quote.id)).arrayBuffer()));
+  await issueQuote(actor, quote.id);
+  const issuedPdf = await text(await readFile(abs((await ensureIssuedPdf(actor, quote.id)).path)));
+  for (const c of ["Kilómetros desde Alcalá", "Programación en planta", "Trabajos en fin de semana"]) {
+    expect(preview).toContain(norm(c));
+    expect(issuedPdf).toContain(norm(c));
+  }
 });
 
 test("pdfResponse devuelve 500 si falla la generación", async () => {
@@ -149,4 +168,37 @@ test("pdfResponse devuelve 500 si falla la generación", async () => {
 test("pdfFileName", async () => {
   expect(pdfFileName({ reference: "PR-2026000002-R00", client: { legalName: "x" } })).toBe("PR-2026000002-R00.pdf");
   expect(pdfFileName({ reference: null, client: { legalName: "Conservas Ribera, S.A." } })).toBe("BORRADOR-Conservas-Ribera-S-A.pdf");
+});
+
+const lastDoc = () => vi.mocked(renderDocument).mock.calls.at(-1)![1];
+
+test("cambiar la firma después de emitir no cambia el PDF: se regenera con la de la instantánea", async () => {
+  const { actor, quote } = await issued();
+  const first = await ensureIssuedPdf(actor, quote.id);
+  const original = Buffer.from(TEST_SIGNATURE).toString("base64");
+  expect(lastDoc().signer).toEqual({ name: actor.name, signature: original });
+  await deleteSignature(actor);
+  await rm(abs(first.path));
+  const r = await ensureIssuedPdf(actor, quote.id);
+  expect(lastDoc().signer).toEqual({ name: actor.name, signature: original });
+  expect(await text(await readFile(abs(r.path)))).toContain(norm(`Fdo.: ${actor.name}`));
+});
+
+test("una instantánea anterior, sin firmante, se genera con el recuadro vacío", async () => {
+  const { actor, quote } = await issued();
+  const doc = await prisma.issuedDocument.findUniqueOrThrow({ where: { quoteId: quote.id } });
+  const { signer: _signer, ...old } = doc.snapshot as Record<string, unknown>;
+  await prisma.issuedDocument.update({ where: { id: doc.id }, data: { snapshot: old as never } });
+  const r = await ensureIssuedPdf(actor, quote.id);
+  expect(lastDoc().signer).toBeNull();
+  expect(await text(await readFile(abs(r.path)))).toContain(norm("Firma y sello"));
+});
+
+test("la vista previa del borrador lleva la firma de quien la mira, o el recuadro si no tiene", async () => {
+  const { actor, quote } = await completeDraft();
+  await pdfResponse(actor, quote.id);
+  expect(lastDoc().signer).toEqual({ name: actor.name, signature: Buffer.from(TEST_SIGNATURE).toString("base64") });
+  const unsigned = await makeUser("presupuestador", { signature: false });
+  await pdfResponse(unsigned, quote.id);
+  expect(lastDoc().signer).toBeNull();
 });

@@ -1,5 +1,6 @@
 import type { PdfDocument, PdfRow } from "@/pdf/document";
 import { archivoFontFace } from "@/pdf/fonts";
+import { selloDataUri } from "@/pdf/stamp";
 import type { Template } from "../index";
 import { html, safe } from "./html";
 import { paginate } from "./paginate";
@@ -17,22 +18,48 @@ const FRAME = "box-sizing:border-box;width:calc(100% - 36mm);margin:0 18mm;font-
 const joinDot = (parts: string[]) => parts.map((p) => p.trim()).filter(Boolean).join(" · ");
 
 const row = (r: PdfRow) =>
-  r.kind === "line"
-    ? html`<tr class="line"><td></td><td>${r.text}</td><td class="n">${r.quantity}</td><td></td></tr>`
+  r.kind === "note" ? html`<tr class="note ${r.of}${r.kit ? " k" : ""}"><td></td><td colspan="3">${r.text}</td></tr>`
+  : r.kind === "line"
+    ? html`<tr class="line${r.kit ? " k" : ""}"><td></td><td>${r.text}</td><td class="n">${r.quantity}</td><td></td></tr>`
     : html`<tr class="${r.kind}"><td class="p">${r.number}</td><td>${r.title}</td><td></td><td class="n">${r.total}</td></tr>`;
 
-function body(d: PdfDocument): string {
-  const c = d.company;
+/** «Firma y sello» of the close: the stamp with the issuer's signature over it, or the empty box when there is none. */
+export function stampHtml(signer: PdfDocument["signer"]): string {
+  if (!signer) return html`<div class="stamp"><small>Firma y sello</small></div>`.__html;
+  return html`<div class="signed"><img class="sello" src="${selloDataUri()}" alt=""><img class="firma" src="data:image/png;base64,${signer.signature}" alt=""></div>
+<div class="fdo">Fdo.: ${signer.name}</div>`.__html;
+}
+
+/** Close of the last sheet: conditions, place and date | totals and signature. Also the preview in «Mi cuenta». */
+export function closeHtml(d: Pick<PdfDocument, "conditions" | "place" | "totals" | "signer">): string {
   const conditions = [
     ["Exclusiones", d.conditions.exclusions],
     ["Forma de pago", d.conditions.paymentTerms],
     ["Validez de la oferta", d.conditions.validity],
   ].filter(([, text]) => text.trim());
+  return html`  <div class="close">
+    <div class="left">
+      <div class="cond">${conditions.map(([h, p]) => html`<h2>${h}</h2><p>${p}</p>`)}</div>
+      <div class="place">${d.place}</div>
+    </div>
+    <div class="right">
+      <div class="totals">
+        <div><span>Importe del presupuesto</span><span>${d.totals.base}</span></div>
+        ${d.totals.taxes.map((t) => html`<div><span>${t.label}</span><span>${t.amount}</span></div>`)}
+        <div class="big"><span>Total presupuesto</span><span>${d.totals.total}</span></div>
+      </div>
+      ${safe(stampHtml(d.signer))}
+    </div>
+  </div>`.__html;
+}
+
+function body(d: PdfDocument): string {
+  const c = d.company;
   return html`<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${safe(archivoFontFace() + STYLES)}</style></head><body>
 ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
 <section class="letter">
-  <div class="from"><b>${c.legalName}</b>${[c.address, joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
-  <div class="to"><b>${d.recipient.name}</b>${[d.recipient.place, ...d.recipient.address, d.recipient.attention ?? ""].filter(Boolean).map((l) => html`<br>${l}`)}</div>
+  <div class="from"><b>${c.legalName}</b>${[...c.address.split(/\r?\n/).map((l) => l.trim()), joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
+  <div class="to"><b>${d.recipient.name}</b>${[...d.recipient.address, d.recipient.attention ?? ""].filter(Boolean).map((l) => html`<br>${l}`)}</div>
   <div class="place">${d.letter.place} a ${d.longDate}</div>
   <div class="subject">Asunto: ${d.reference}</div>
   <p>${d.letter.greeting}</p>
@@ -45,20 +72,7 @@ ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
     <thead><tr><th class="p">P</th><th>Denominación</th><th class="n qty">Cantidad</th><th class="n tot">Total</th></tr></thead>
     <tbody>${d.rows.map(row)}</tbody>
   </table>
-  <div class="close">
-    <div class="left">
-      <div class="cond">${conditions.map(([h, p]) => html`<h2>${h}</h2><p>${p}</p>`)}</div>
-      <div class="place">${d.place}</div>
-    </div>
-    <div class="right">
-      <div class="totals">
-        <div><span>Importe del presupuesto</span><span>${d.totals.base}</span></div>
-        ${d.totals.taxes.map((t) => html`<div><span>${t.label}</span><span>${t.amount}</span></div>`)}
-        <div class="big"><span>Total presupuesto</span><span>${d.totals.total}</span></div>
-      </div>
-      <div class="stamp"><small>Firma y sello</small></div>
-    </div>
-  </div>
+  ${safe(closeHtml(d))}
 </section>
 </body></html>`.__html;
 }
@@ -77,7 +91,7 @@ function footer(d: PdfDocument): string {
   return html`<style>${safe(archivoFontFace())}</style>
 <div style="${FRAME};height:7mm;display:flex;align-items:center;justify-content:space-between;gap:8mm;border-top:.75pt solid #c9d1cb;font-size:7pt;color:#56645f">
   <span>${d.shortDate}</span>
-  <span style="flex:1">${registry}</span>
+  <span style="flex:1;text-align:center">${registry}</span>
   <span style="white-space:nowrap">Página <span class="pageNumber"></span> de <span class="totalPages"></span></span>
 </div>`.__html;
 }

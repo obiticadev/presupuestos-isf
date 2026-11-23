@@ -49,7 +49,7 @@ test("contactos y ubicaciones: varios por cliente, email validado", async () => 
   const c = await createClient(p, datos);
   await saveContact(p, c.id, { name: "Laura Medina", role: "Mantenimiento", email: "lmedina@ejemplo.es", phone: "" });
   await saveContact(p, c.id, { name: "Óscar Prieto", role: "", email: "", phone: "600000002" });
-  await saveLocation(p, c.id, { name: "Nave 3", address: "C/ Forja 2", city: "Torrejón de Ardoz", province: "Madrid" });
+  await saveLocation(p, c.id, { name: "Nave 3", address: "C/ Forja 2", installation: "Torrejón de Ardoz", country: "Madrid" });
   await expect(saveContact(p, c.id, { name: "X", role: "", email: "no-es-email", phone: "" })).rejects.toThrow(ValidationError);
   const d = await getClient(c.id);
   expect([d.contacts.length, d.locations.length]).toEqual([2, 1]);
@@ -60,7 +60,7 @@ test("editar y eliminar un contacto y una ubicación", async () => {
   const c = await createClient(p, datos);
   const contact = await saveContact(p, c.id, { name: "Laura", role: "", email: "", phone: "" });
   await saveContact(p, c.id, { id: contact.id, name: "Laura Medina", role: "Jefa", email: "", phone: "" });
-  const loc = await saveLocation(p, c.id, { name: "Nave 3", address: "", city: "", province: "" });
+  const loc = await saveLocation(p, c.id, { name: "Nave 3", address: "", installation: "", country: "" });
   expect((await getClient(c.id)).contacts[0].name).toBe("Laura Medina");
   expect(await removeContact(p, contact.id)).toBe("deleted");
   expect(await removeLocation(p, loc.id)).toBe("deleted");
@@ -92,4 +92,14 @@ test("eliminar un cliente sin presupuestos lo borra con sus contactos", async ()
   expect(await prisma.clientContact.count()).toBe(0);
   await expect(getClient(c.id)).rejects.toThrow(NotFoundError);
   expect(await prisma.auditLog.count({ where: { entity: "client", entityId: c.id } })).toBeGreaterThanOrEqual(3);
+});
+
+test("una instalación guarda nombre, dirección, instalación y país", async () => {
+  const p = await makeUser("presupuestador");
+  const c = await createClient(p, datos);
+  await saveLocation(p, c.id, { name: "Nave 3", address: "C/ Forja 2", installation: "EDAR Sur", country: "España" });
+  const loc = (await getClient(c.id)).locations[0];
+  expect([loc.installation, loc.country]).toEqual(["EDAR Sur", "España"]);
+  const log = await prisma.auditLog.findMany({ where: { entity: "client", entityId: c.id } });
+  expect(log.map((l) => l.summary)).toContain("Talleres Henares, S.A.: instalación Nave 3 añadida");
 });
