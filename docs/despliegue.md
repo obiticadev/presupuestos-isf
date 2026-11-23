@@ -46,6 +46,7 @@ En la pestaña **Environment** del Compose, nunca en el repositorio:
 | `BETTER_AUTH_URL` | `http://192.168.105.83:3100` (la dirección exacta desde la que se entra) |
 | `BACKUP_DIR` | `/srv/presupuestos-backups` |
 | `APP_PORT` | solo si hay que cambiar el 3100 |
+| `APP_CHANNEL` | `beta` solo en el entorno de pruebas (:3101): añade «· beta» a la versión. En producción, sin definir |
 
 `POSTGRES_PASSWORD` se fija en el primer despliegue: PostgreSQL la guarda en su volumen y cambiarla después en Dokploy no cambia la de la base de datos. Si se cambia `BETTER_AUTH_SECRET`, se cierran todas las sesiones.
 
