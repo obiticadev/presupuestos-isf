@@ -101,8 +101,9 @@ export async function createRevision(actor: CurrentUser, id: string): Promise<Qu
       const q = await lockNumber(tx, id);
       if (q.status === "DRAFT") throw new ValidationError({ _: "Solo se revisa un presupuesto emitido" });
       if (q.supersededById) throw new ValidationError({ _: "Sustituido por una revisión posterior: revisa la última" });
-      if (await tx.quote.count({ where: { ...numberOf(q), extension: { gt: q.extension } } }))
-        throw new ValidationError({ _: "Ya tiene una ampliación posterior: solo avanza la más reciente" });
+      // Any extension takes revisions; the main line stops once it has extensions.
+      if (q.extension === 0 && (await tx.quote.count({ where: { ...numberOf(q), extension: { gt: 0 } } })))
+        throw new ValidationError({ _: "Ya tiene ampliaciones: la principal no admite nuevas revisiones" });
       const rev = await tx.quote.create({
         data: { ...HEADER(q), seqYear: q.seqYear, typeCode: q.typeCode, numberPattern: q.numberPattern, seq: q.seq, extension: q.extension, revision: q.revision + 1, parentId: q.id, ownerId: actor.id, createdById: actor.id, date: todayMadrid() },
       });

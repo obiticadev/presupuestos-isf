@@ -251,12 +251,25 @@ test("reglas de las ampliaciones", async () => {
   const draft = await completeDraft();
   await expect(createExtension(actor, draft.quote.id)).rejects.toThrow(ValidationError);
   await expect(createExtension(actor, a1.id)).rejects.toThrow("Solo se amplía la principal");
-  await expect(createRevision(actor, r0.id)).rejects.toThrow("Ya tiene una ampliación posterior: solo avanza la más reciente");
+  await expect(createRevision(actor, r0.id)).rejects.toThrow("Ya tiene ampliaciones: la principal no admite nuevas revisiones");
   const pending = await createRevision(actor, a1.id);
   await expect(createExtension(actor, quote.id)).rejects.toThrow("Hay un borrador pendiente en este presupuesto: emítelo o bórralo antes");
   await deleteDraft(actor, pending.id);
   await createExtension(actor, quote.id);
-  await expect(createRevision(actor, a1.id)).rejects.toThrow("Ya tiene una ampliación posterior: solo avanza la más reciente");
+});
+
+test("una ampliación anterior admite revisiones aunque haya otra posterior", async () => {
+  const { actor, r0, a1 } = await withExtension();
+  const a2 = await createExtension(actor, r0.id);
+  const sub = (await getQuote(a2.id)).sections[0].children[0];
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-despl", quantity: "100" });
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-prog", quantity: "1" });
+  const a2r0 = await issueQuote(actor, a2.id);
+  const r1 = await createRevision(actor, a1.id);
+  await createRevision(actor, a2r0.id); // two drafts of different extensions coexist
+  expect((await issueQuote(actor, r1.id)).reference).toBe(r0.reference!.replace("-R00", "-A01-R01"));
+  expect((await getQuote(a1.id)).supersededById).toBe(r1.id);
+  expect((await getQuote(a2r0.id)).supersededById).toBeNull();
 });
 
 test("una revisión sustituida no se amplía", async () => {
@@ -289,10 +302,11 @@ test("el listado trae una fila por línea viva y el historial de la A01 incluye 
   expect((await listRevisions(a1.id)).map((r) => [r.extension, r.revision])).toEqual([[1, 0], [0, 0]]);
 });
 
-test("nueva ampliación y revisión de la A01 a la vez: solo una sale adelante", async () => {
+test("nueva ampliación y revisión de la A01 a la vez: la revisión siempre sale; la ampliación, solo si llega antes", async () => {
   for (let i = 0; i < 5; i++) {
     const { actor, r0, a1 } = await withExtension();
-    const results = await Promise.allSettled([createExtension(actor, r0.id), createRevision(actor, a1.id)]);
-    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const [ext, rev] = await Promise.allSettled([createExtension(actor, r0.id), createRevision(actor, a1.id)]);
+    expect(rev.status).toBe("fulfilled");
+    if (ext.status === "rejected") expect(String(ext.reason)).toContain("Hay un borrador pendiente");
   }
 });

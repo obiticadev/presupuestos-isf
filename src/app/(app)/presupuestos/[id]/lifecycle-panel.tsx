@@ -26,12 +26,13 @@ const fmt = new Intl.DateTimeFormat("es-ES", { dateStyle: "short", timeStyle: "s
 
 /**
  * Issued quote: status selector (or «Sustituido por»), new revision or extension, and duplicate.
- * Only the newest line moves: once the number has a later extension, this line takes no more revisions.
+ * Any extension takes revisions; the main line takes none once it has extensions.
  */
 export function IssuedPanel({ q, number }: { q: QuoteDetail; number: NumberRow[] }) {
   const next = q.revisions.find((r) => r.id === q.supersededById);
-  const draft = number.find((r) => r.status === "DRAFT");
-  const later = number.some((r) => r.extension > q.extension);
+  // The main line shows any draft of its number (it blocks new extensions); an extension, only its own.
+  const draft = number.find((r) => r.status === "DRAFT" && (q.extension === 0 || r.extension === q.extension));
+  const later = q.extension === 0 && number.some((r) => r.extension > 0);
   const runOut = validityRunOut(q); // Emitido or Enviado would turn back into Caducado within the hour
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -62,12 +63,10 @@ export function IssuedPanel({ q, number }: { q: QuoteDetail; number: NumberRow[]
             <NewButton action={createExtensionAction} id={q.id} label="Nueva ampliación" />
           </div>
         )
-      ) : later ? null : (
+      ) : (
         <NewButton action={createRevisionAction} id={q.id} label="Nueva revisión" pri />
       ))}
-      {!next && later && (
-        <p className="locked">{q.extension ? "Hay una ampliación posterior: esta ya no admite nuevas revisiones." : "Ya tiene ampliaciones: la principal no admite nuevas revisiones."}</p>
-      )}
+      {!next && later && <p className="locked">Ya tiene ampliaciones: la principal no admite nuevas revisiones.</p>}
       {!q.issued?.pdfPath && <p className="warnbox" role="status">El PDF se generará al descargarlo.</p>}
       <a className="btn" href={`/api/presupuestos/${q.id}/pdf`} target="_blank" rel="noopener">Descargar PDF</a>
       <DuplicateButton id={q.id} />
