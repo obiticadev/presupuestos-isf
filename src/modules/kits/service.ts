@@ -79,7 +79,7 @@ export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
       const issues = await refIssues(tx, input.definition);
       if (Object.keys(issues).length) throw new ValidationError(issues);
       const name = input.name ?? (await autoKitName(tx, input.definition, input.id));
-      const definition = input.name ? input.definition : { ...input.definition, main: { ...input.definition.main, symbol: name.slice(0, 2) } };
+      const definition = input.name ? input.definition : { ...input.definition, main: { ...input.definition.main, symbol: name.replace(/-/g, "").slice(0, 2) } };
       const data = { name, description: input.description, definition: definition as Prisma.InputJsonValue };
       const before = input.id ? await tx.kitTemplate.findUnique({ where: { id: input.id } }) : null;
       if (input.id && !before) throw new NotFoundError("Conjunto no encontrado");
@@ -108,15 +108,18 @@ export async function setKitActive(actor: CurrentUser, id: string, active: boole
   });
 }
 
-/** How many quotes' kit instances came from this kit (copies keep working if it is deleted: templateId is set to null). */
-export const kitUses = (id: string) => prisma.kitInstance.count({ where: { templateId: id } });
+/** How many quotes contain this kit (their copies keep working if it is deleted: templateId is set to null). */
+export async function kitUses(id: string, db: Db = prisma): Promise<number> {
+  const rows = await db.kitInstance.findMany({ where: { templateId: id }, select: { section: { select: { quoteId: true } } } });
+  return new Set(rows.map((r) => r.section.quoteId)).size;
+}
 
 /** Deletes a kit no quote has used; a used one can only be deactivated. */
 export async function removeKit(actor: CurrentUser, id: string): Promise<void> {
   await prisma.$transaction(async (tx) => {
     const row = await tx.kitTemplate.findUnique({ where: { id } });
     if (!row) throw new NotFoundError("Conjunto no encontrado");
-    const uses = await tx.kitInstance.count({ where: { templateId: id } });
+    const uses = await kitUses(id, tx);
     if (uses) throw new ValidationError({ _: `Se usa en ${uses} presupuesto${uses === 1 ? "" : "s"}: desactívalo en su lugar` });
     await tx.kitTemplate.delete({ where: { id } });
     await logAction(tx, { userId: actor.id, entity: "kit", entityId: id, action: "delete", summary: `Baja del conjunto ${row.name}` });

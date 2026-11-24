@@ -14,9 +14,12 @@ const fromRef = (r: FormRef): StoredRef => (r.kind === "conceptId" ? { conceptId
 /** «Obligatorio» only matters when something is chosen or typed in when quoting: a fixed article always goes in. */
 export const showsRequired = (m: FormMaterial) => m.ref.kind === "categoryId" || m.ask;
 
+/** Saved before the new form: no component records «in the name». */
+export const isLegacyDefinition = (def: KitDefinition) => def.components.every((c) => c.inName === undefined);
+
 // Old definitions: a k other than 1 in PER_QTY_AND_PARAM and data shared by several components are lost (none in production).
 export function fromDefinition(def: KitDefinition): { main: FormRef; materials: FormMaterial[] } {
-  const legacy = def.components.every((c) => c.inName === undefined);
+  const legacy = isLegacyDefinition(def);
   return {
     main: toRef(def.main),
     materials: def.components.map((c, i) => {
@@ -36,7 +39,8 @@ export function toDefinition(main: FormRef, materials: FormMaterial[], info: Ref
     main: { ...fromRef(main), label: info(main).label },
     params: materials.filter((m) => m.ask).map((m) => {
       const { label, unit } = info(m.ref);
-      return { key: `q_${m.slot}`, label: `${label}: cantidad`, unit, required: m.required };
+      // Within kitDefinition's limits: a long description or unit name must not block saving with an error no field shows.
+      return { key: `q_${m.slot}`, label: `${label.slice(0, 289)}: cantidad`, unit: unit.slice(0, 20), required: m.required };
     }),
     components: materials.map((m) => {
       const param = `q_${m.slot}`;
@@ -54,8 +58,11 @@ export function materialSummary(m: FormMaterial, unit: string): string {
   return `${how} ${m.mult ? "× principal" : "en total"}`;
 }
 
-/** A kit whose name is not the automatic one keeps it at the front of the description (spec 5.7). */
-export function legacyDescription(name: string, base: string, description: string): string {
-  if (matchesAutoName(name, base)) return description;
+/**
+ * A kit saved before the new form whose name is not the automatic one keeps it at the front of the description (spec 5.7).
+ * Kits saved with the new form are left alone: their automatic name may differ later only because the catalogue changed.
+ */
+export function legacyDescription(name: string, base: string, description: string, legacy = true): string {
+  if (!legacy || matchesAutoName(name, base)) return description;
   return description ? `${name}. ${description}` : name;
 }

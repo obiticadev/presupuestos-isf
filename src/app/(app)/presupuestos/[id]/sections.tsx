@@ -258,19 +258,25 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
     `${n} × ${name(refConceptId(def.main) ?? choices.main) ?? def.main.label}`,
     ...def.params.filter((p) => params[p.key]).map((p) => `${p.label.toLowerCase()} ${params[p.key]} ${p.unit}`.trim()),
   ].join(" · ");
+  const validDatum = (raw: string | undefined) => { const v = parseDecimalEs(raw ?? ""); return v !== null && !v.startsWith("-"); };
+  // The datum a material typed in when quoting (q_…) gets: it is drawn in that material's circle, not in its own.
+  const askedOf = (c: (typeof def.components)[number]) => ("param" in c.formula && c.formula.param.startsWith("q_") ? c.formula.param : null);
   // One circle per element of the form (main choice, data, components); optional ones left empty are not drawn.
   // In a global-price subsection the lines are descriptive: a concept without sale price is fine.
   const usable = (id: string | undefined) => ctx.allConcepts.some((c) => c.id === id && c.active && (global || c.salePrice !== null));
   const choice = (label: string, id: string | undefined) => ({ label: usable(id) ? (name(id) ?? label) : `Falta ${label.toLowerCase()}`, missing: !usable(id) });
   const parts = [
     choice(def.main.label, refConceptId(def.main) ?? choices.main),
-    // A datum generated for a material typed in when quoting (q_…) shares that material's circle.
     ...def.params.filter((p) => !p.key.startsWith("q_") && (p.required || params[p.key])).map((p) => {
-      const v = parseDecimalEs(params[p.key] ?? "");
-      const ok = v !== null && !v.startsWith("-");
+      const ok = validDatum(params[p.key]);
       return { label: ok ? `${p.label} ${params[p.key]} ${p.unit}`.trim() : `Falta ${p.label.toLowerCase()}`, missing: !ok };
     }),
-    ...def.components.filter((c) => c.required || choices[c.slot] || refConceptId(c.ref)).map((c) => choice(c.label, refConceptId(c.ref) ?? choices[c.slot])),
+    ...def.components.filter((c) => (c.required || choices[c.slot] || refConceptId(c.ref)) && (!askedOf(c) || c.required || params[askedOf(c)!]))
+      .map((c) => {
+        const part = choice(c.label, refConceptId(c.ref) ?? choices[c.slot]);
+        const q = askedOf(c);
+        return q && !part.missing && !validDatum(params[q]) ? { label: `Falta ${c.label.toLowerCase()}: cantidad`, missing: true } : part;
+      }),
   ];
   const options = (ref: { conceptId: string } | { categoryId: string }, current: string | undefined) => {
     const cat = refCategoryId(ref);

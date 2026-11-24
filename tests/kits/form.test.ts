@@ -1,7 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { kitDefinition, type KitDefinition } from "@/modules/kits/definition";
 import { expandKit, type ConceptForKit } from "@/modules/kits/formulas";
-import { fromDefinition, legacyDescription, materialSummary, showsRequired, toDefinition, type FormMaterial, type RefInfo } from "@/modules/kits/form";
+import { fromDefinition, isLegacyDefinition, legacyDescription, materialSummary, showsRequired, toDefinition, type FormMaterial, type RefInfo } from "@/modules/kits/form";
 
 const concept = (id: string, categoryId: string): ConceptForKit => ({
   id, categoryId, description: id, unitName: "ud", salePrice: new Prisma.Decimal(10), taxName: "IVA 21 %", taxRatePct: new Prisma.Decimal(21), active: true,
@@ -88,4 +88,16 @@ test("el nombre antiguo pasa delante de la descripción, salvo si ya es automát
   expect(legacyDescription("Instalación de bomba", "BOM-MAN", "Bomba con…")).toBe("Instalación de bomba. Bomba con…");
   expect(legacyDescription("Instalación de bomba", "BOM-MAN", "")).toBe("Instalación de bomba");
   expect(legacyDescription("BOM-MAN-2", "BOM-MAN", "x")).toBe("x");
+});
+
+test("un conjunto guardado con el formulario nuevo no mete su nombre en la descripción aunque cambie el catálogo", () => {
+  expect(legacyDescription("BOM-MAN", "BOM-TF", "x", false)).toBe("x");
+  expect(isLegacyDefinition(BOMBA)).toBe(true);
+  expect(isLegacyDefinition({ ...BOMBA, components: [{ ...BOMBA.components[0], inName: false }] })).toBe(false);
+});
+
+test("los datos generados respetan los límites del esquema aunque la descripción o la unidad sean largas", () => {
+  const long: RefInfo = () => ({ label: "d".repeat(300), unit: "u".repeat(50), prefix: "X" });
+  const d = toDefinition(main, [mat({ ask: true })], long);
+  expect(kitDefinition.safeParse(d).success).toBe(true);
 });

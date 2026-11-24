@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import type { ActionResult } from "@/lib/action-result";
 import { saveKitAction, setKitActiveAction, type SaveKitResult } from "@/modules/kits/actions";
-import { fromDefinition, legacyDescription, materialSummary, showsRequired, toDefinition, type FormMaterial, type FormRef, type RefInfo } from "@/modules/kits/form";
+import { fromDefinition, isLegacyDefinition, legacyDescription, materialSummary, showsRequired, toDefinition, type FormMaterial, type FormRef, type RefInfo } from "@/modules/kits/form";
 import { categoryPrefix, codePrefix, kitBaseName, uniqueName } from "@/modules/kits/naming";
 import type { Kit } from "@/modules/kits/service";
 
@@ -84,7 +84,7 @@ export function KitForm({ kit, concepts, categories, taken }: { kit: Kit | null;
   const [main, setMain] = useState<FormRef>(initial.main);
   const [materials, setMaterials] = useState<FormMaterial[]>(initial.materials);
   const [sel, setSel] = useState(0);
-  const [description] = useState(() => (kit ? legacyDescription(kit.name, baseOf(initial.main, initial.materials), kit.description) : ""));
+  const [description] = useState(() => (kit ? legacyDescription(kit.name, baseOf(initial.main, initial.materials), kit.description, isLegacyDefinition(kit.definition)) : ""));
 
   useEffect(() => {
     if (state?.ok && state.id && state.id !== kit?.id) router.replace(`/conjuntos/${state.id}`);

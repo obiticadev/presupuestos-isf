@@ -108,3 +108,19 @@ test("un conjunto usado en un presupuesto no se elimina", async () => {
   await expect(removeKit(actor, "kit-bomba")).rejects.toThrow("Se usa en 1 presupuesto: desactívalo en su lugar");
   expect((await getKit("kit-bomba")).active).toBe(true);
 });
+
+test("dos conjuntos iguales en el mismo presupuesto cuentan como un presupuesto", async () => {
+  const { actor, sub } = await makeDraft();
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "1", params: {}, choices: {} });
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "2", params: {}, choices: {} });
+  expect(await kitUses("kit-bomba")).toBe(1);
+});
+
+test("el símbolo no lleva guiones aunque el prefijo del principal sea de una letra", async () => {
+  const p = await makeUser("presupuestador");
+  const d = def();
+  await prisma.category.create({ data: { id: "cat-x", name: "X" } });
+  const k = await saveKit(p, { description: "", definition: { ...d, main: { categoryId: "cat-x", label: "X" }, components: d.components.map((c) => ({ ...c, inName: true })) } });
+  expect(k.name).toBe("X-MAN");
+  expect(k.definition.main.symbol).toBe("XM");
+});
