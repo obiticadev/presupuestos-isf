@@ -99,6 +99,13 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 - Formato de `kitDefinition` intacto más la fórmula `PARAM` y los opcionales `main.symbol` y `components[].inName`; etiquetas hasta 300. Sin migración: los conjuntos antiguos se traducen al abrirlos.
 - Pruebas: 403/403 en verde. Revisión final de la rama hecha y sus importantes corregidos (1.9.8).
 - Aplazado (menores): claves repetidas en el historial si dos materiales dan la misma frase; descripción entera en el desplegable «Añadir conjunto»; un nombre antiguo como «BOM-MAN-2024» se toma por automático.
+- **Conjunto en el borrador (1.9.9 → 1.9.13, 2026-11-24)**, a partir de la revisión del usuario con capturas:
+  - en el presupuesto, el conjunto se guarda al cambiar y su descripción se ve;
+  - buscador propio (`src/components/combobox.tsx`): código, descripción y categoría, sin mayúsculas ni tildes, con ↑ ↓ Enter, Tab (elige lo resaltado) y Esc, y una ✕ que borra y reabre la lista;
+  - árbol elemento | artículo | medida con todos los elementos, fijos en gris, en escritorio, iPad y móvil (codos medidos a ≤ 0,3 px);
+  - medida fija modificable solo en el borrador (`params.k_<slot>`, sin migración) con aviso y «Volver al original»;
+  - «Cambiar conjunto», que conserva cantidad, comentario y lo compatible.
+  - Diseño, plan y maqueta en `docs/superpowers/specs/2026-11-24-conjunto-borrador-design.md`, `docs/superpowers/plans/2026-11-24-conjunto-borrador.md` y `docs/diseno/maquetas/conjunto-borrador.html`.
 - Siguiente paso: revisión del usuario; después, decidir si `:3101` pasa a `features` o se fusiona en `master`.
 
 ### Mejoras tras el uso real (rama `mejoras-uso-real`) — en curso

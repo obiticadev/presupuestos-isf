@@ -16,14 +16,15 @@ function Marked({ text, q }: { text: string; q: string }) {
  * exact code typed by hand counts as chosen; leaving it empty clears the choice. With `name` the choice travels in a hidden
  * field; with `submit` the form is sent after each choice. Remount it (key) to show a value changed from outside.
  */
-export function Combobox({ items, value, onPick, name, placeholder, submit, invalid, label }: {
+export function Combobox({ items, value, onPick, name, placeholder, submit, invalid, label, autoFocus }: {
   items: ComboItem[]; value: string; onPick?: (id: string) => void; name?: string; placeholder?: string;
-  submit?: boolean; invalid?: boolean; label?: string;
+  submit?: boolean; invalid?: boolean; label?: string; autoFocus?: boolean;
 }) {
   const [text, setText] = useState(() => textOf(items.find((i) => i.id === value)));
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [current, setCurrent] = useState(value);
   const chosen = useRef(value); // read by blur right after a pick, before React re-renders
   const moved = useRef(false); // arrows used since the list opened
   const field = useRef<HTMLInputElement>(null);
@@ -36,8 +37,8 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
     const next = item?.id ?? "";
     setText(textOf(item)); setQuery(""); setOpen(false);
     if (next === chosen.current) return;
-    chosen.current = next;
-    if (hidden.current) hidden.current.value = next;
+    chosen.current = next; setCurrent(next);
+    if (hidden.current) hidden.current.value = next; // now, for the submit below
     onPick?.(next);
     if (submit) hidden.current?.form?.requestSubmit();
   };
@@ -48,7 +49,7 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
       <input
         ref={field} role="combobox" aria-expanded={open} aria-controls={`${id}-l`} aria-autocomplete="list" aria-label={label}
         aria-activedescendant={open && list[active] ? `${id}-${active}` : undefined} aria-invalid={invalid || undefined}
-        autoComplete="off" value={text} placeholder={placeholder}
+        autoComplete="off" value={text} placeholder={placeholder} autoFocus={autoFocus}
         onFocus={(e) => { e.currentTarget.select(); reopen(); }}
         onChange={(e) => { setText(e.target.value); setQuery(e.target.value); setActive(0); setOpen(true); }}
         onBlur={() => {
@@ -69,7 +70,8 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
       />
       <button type="button" className="clr" aria-label="Borrar" tabIndex={-1}
         onMouseDown={(e) => { e.preventDefault(); setText(""); reopen(); field.current?.focus(); }}>✕</button>
-      {name && <input ref={hidden} type="hidden" name={name} defaultValue={value} />}
+      {/* controlled: a hidden field's value is its attribute, which a parent re-render would reset */}
+      {name && <input ref={hidden} type="hidden" name={name} value={current} />}
       {open && (
         <ul role="listbox" id={`${id}-l`} className={columns ? "cols" : undefined}>
           {query.trim() && <li className="hint" aria-hidden>{list.length} de {items.length}</li>}

@@ -607,3 +607,73 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .cb li mark{background:var(--amber-bg);color:inherit}
 .cb li.none,.cb li.hint{display:block;color:var(--mut);cursor:default}
 .cb li.hint{font-size:12px;padding:6px 12px;background:var(--band)}
+
+/* Conjunto en el borrador: árbol elemento | artículo | medida (spec 2026-11-24 §2; geometría medida en la maqueta conjunto-borrador.html) */
+.kq{container-type:inline-size;border-top:1px solid var(--rule)}
+/* Árbol: tres columnas alineadas en todas las filas: elemento | artículo | medida */
+.kq-tree{padding:14px 16px 16px;display:grid;grid-template-columns:190px minmax(0,1fr) 230px;column-gap:12px}
+.kq-r{display:contents}
+.kq-r>*{padding:5px 0}
+.kq-n{position:relative;display:flex;flex-direction:column;justify-content:flex-start;padding-left:34px}
+/* Eje común: nombre, artículo y medida centrados a 25 px del borde superior de la fila, aunque «opcional» la alargue */
+.kq-r>.kq-a,.kq-r>.kq-m{align-self:start}
+.kq-n b{font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center;min-height:40px}
+.kq-n em{font-style:normal;font-size:11px;color:var(--mut);margin-top:-8px;padding-left:50px}
+.kq-r.kq-main .kq-n{padding-left:0}
+/* Línea vertical continua desde el principal hasta el último material, con su codo */
+.kq-r:not(.kq-main)>.kq-n::before{content:"";position:absolute;left:21px;top:0;bottom:0;border-left:1.5px solid var(--ink)}
+.kq-r.kq-last>.kq-n::before{bottom:auto;height:25px}
+.kq-r:not(.kq-main)>.kq-n::after{content:"";position:absolute;left:21px;top:24px;width:13px;border-top:1.5px solid var(--ink)}
+.kq-r.kq-main>.kq-n::before{content:"";position:absolute;left:21px;top:35px;bottom:0;border-left:1.5px solid var(--ink)}
+.kq-tag{font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 5px;border:1.5px solid var(--rule);color:var(--mut);text-transform:uppercase;width:44px;box-sizing:border-box;text-align:center;background:var(--sheet);flex:none}
+.kq-tag.kq-el{border-color:var(--green);color:var(--green)}
+.kq-a{display:flex;align-items:center;min-width:0}
+.kq-ro{flex:1;min-width:0;display:flex;align-items:center;font:400 14px var(--font-archivo),sans-serif;border:1.5px solid var(--rule);background:var(--band);color:var(--mut);padding:8px 10px;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kq-a .cb{flex:1}
+.kq-m{display:grid;grid-template-columns:5.5rem minmax(0,1fr) 34px;gap:6px;align-items:center}
+.kq-m input{width:100%;text-align:right;font:400 14px var(--font-archivo),sans-serif;border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px}
+.kq-m input[readonly]{background:var(--band);color:var(--mut);border-color:var(--rule)}
+.kq-m input.changed{background:var(--amber-bg);color:var(--ink);border-color:var(--amber-line)}
+.kq-m small{font-size:12px;color:var(--mut);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kq-pen{all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border:1.5px solid var(--rule);font-size:14px;box-sizing:border-box}
+.kq-pen:hover{border-color:var(--ink)}
+/* Aviso: ocupa artículo + medida; la línea del árbol sigue por su columna */
+.kq-r.kq-wn .kq-n{min-height:0}.kq-r.kq-wn>.kq-n::after,.kq-r.kq-lwn>.kq-n::before{display:none}
+.kq-r.kq-wn .kq-warn{grid-column:2/4;padding:0 0 6px}
+.kq-warn{font-size:12px;color:var(--amber);font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.kq-warn button{font:600 12px var(--font-archivo),sans-serif;border:1.5px solid var(--amber-line);background:var(--sheet);color:var(--amber);padding:4px 8px;cursor:pointer}
+
+/* iPad (contenedor < 760 px): columna de nombre más estrecha y medida algo menor */
+@container (max-width:760px){
+  .kq-tree{grid-template-columns:186px minmax(0,1fr) 196px}
+  .kq-m{grid-template-columns:4.5rem minmax(0,1fr) 34px}
+}
+/* Móvil (contenedor < 560 px): el nombre arriba; debajo el artículo y, debajo, la medida.
+   Una sola línea vertical que nace bajo la etiqueta del principal y un codo a la altura de cada nombre. */
+@container (max-width:560px){
+  .kq-tree{display:block;padding:12px}
+  .kq-r{display:block;position:relative;padding:0 0 12px 34px}
+  .kq-r>*{padding:3px 0}
+  .kq-r .kq-n{min-height:0;padding-left:0}
+  .kq-r .kq-n em{padding-left:50px}
+  .kq-n::before,.kq-n::after{display:none!important}
+  .kq-r.kq-main{padding-left:0}
+  .kq-r.kq-main>.kq-a,.kq-r.kq-main>.kq-m{margin-left:34px}
+  .kq-r.kq-main::after{content:"";position:absolute;left:21px;top:33px;bottom:0;border-left:1.5px solid var(--ink)}
+  .kq-r:not(.kq-main)::before{content:"";position:absolute;left:21px;top:0;bottom:0;border-left:1.5px solid var(--ink)}
+  .kq-r:not(.kq-main):not(.kq-wn)::after{content:"";position:absolute;left:21px;top:22px;width:13px;border-top:1.5px solid var(--ink)}
+  .kq-r.kq-last::before{bottom:auto;height:23px}
+  .kq-r.kq-lwn::before{display:none}
+  .kq-r.kq-wn{margin-top:-6px}
+  .kq-r.kq-wn .kq-n{display:none}
+  .kq-m{grid-template-columns:6rem minmax(0,1fr) 34px}
+}
+
+@container (max-width:560px){.kq-r .kq-r.kq-wn{padding:0;margin:0}.kq-r .kq-r.kq-wn::before,.kq-r .kq-r.kq-wn::after{display:none}}
+.kq-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kq-acts{display:flex;justify-content:flex-end;padding:0 16px 12px}
+.kq-m input[aria-invalid]{border-color:var(--red)}
+/* Cambiar conjunto */
+.kbtns{flex-wrap:wrap}
+.kswap{order:10;flex-basis:100%;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.kswap p{grid-column:1/-1;font-size:12px;color:var(--mut);margin:0}

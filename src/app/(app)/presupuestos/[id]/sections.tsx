@@ -1,12 +1,17 @@
 // Server components for the quote table: partidas, subpartidas, lines and kit blocks.
 // Every editable control is a small ActionForm bound to one Server Action; read-only quotes render plain text.
 import { ActionForm, ConfirmButton, SubmitOnBlur, SubmitOnChange } from "@/components/action-form";
+import { Combobox } from "@/components/combobox";
+import { Prisma } from "@/generated/prisma/browser";
 import type { ReactNode } from "react";
 import { CloseButton, CollapseKitButton, Menu, OpenButton, OpenIfIncomplete } from "@/components/disclosure";
 import { Comment, CommentButton } from "./comment";
+import { FixedMeasure, KitSwap } from "./kit-fields";
 import { formatDecimalEs, parseDecimalEs } from "@/lib/decimal";
 import type { ConceptOption } from "@/modules/catalog/service";
 import { kitDefinition, refCategoryId, refConceptId } from "@/modules/kits/definition";
+import { overrideKey } from "@/modules/kits/formulas";
+import { categoryPrefix, codePrefix } from "@/modules/kits/naming";
 import {
   addCatalogLineAction, addCustomLineAction, addKitAction, addSectionAction, adjustPriceAction, moveLineAction, moveSectionAction,
   removeKitAction, removeLineAction, removeSectionAction, updateKitAction, updateLineAction, updateSectionAction,
@@ -282,14 +287,29 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
     const cat = refCategoryId(ref);
     return ctx.allConcepts.filter((c) => c.categoryId === cat && ((c.active && (global || c.salePrice !== null)) || c.id === current));
   };
-  // Closed, the select shows the chosen concept's name too; an empty category says so instead of a bare «Elige…».
-  const choiceOptions = (ref: { conceptId: string } | { categoryId: string }, current: string | undefined, none: string) => {
-    const list = options(ref, current);
-    return [
-      <option key="" value="">{list.length ? none : `No hay conceptos${global ? "" : " con precio"} en esta categoría`}</option>,
-      ...list.map((o) => <option key={o.id} value={o.id}>{o.code} · {o.description}{o.active ? "" : " (desactivado)"}</option>),
-    ];
+  // The tree (spec 2026-11-24 §2): what each element shows in its three columns.
+  const unitOf = (id: string | undefined) => ctx.allConcepts.find((c) => c.id === id)?.unitName ?? "";
+  const tagOf = (ref: { conceptId: string } | { categoryId: string }, label: string) => {
+    const id = refConceptId(ref);
+    const code = id && ctx.allConcepts.find((c) => c.id === id)?.code;
+    return (code ? codePrefix(code) : categoryPrefix(label)) || label.slice(0, 3).toUpperCase();
   };
+  const picker = (slot: string, ref: { conceptId: string } | { categoryId: string }, label: string, required: boolean) => {
+    const current = choices[slot];
+    const items = options(ref, current).map((o) => ({ id: o.id, code: o.code, description: `${o.description}${o.active ? "" : " (desactivado)"}` }));
+    const empty = `No hay conceptos${global ? "" : " con precio"} en esta categoría`;
+    // key: remount with the saved choice after each save
+    return <Combobox key={current ?? ""} items={items} value={current ?? ""} name={`choice.${slot}`} submit label={label}
+      placeholder={items.length ? (required ? "Elige…" : "Ninguno (opcional)") : empty} />;
+  };
+  const article = (slot: string, ref: { conceptId: string } | { categoryId: string }, label: string, required: boolean) => {
+    const id = refConceptId(ref);
+    if (!id) return picker(slot, ref, label, required);
+    const c = ctx.allConcepts.find((x) => x.id === id);
+    return <span className="kq-ro" title={c ? `${c.code} · ${c.description}` : label}>{c ? `${c.code} · ${c.description}` : label}</span>;
+  };
+  const dataParams = def.params.filter((p) => !p.key.startsWith("q_"));
+  const lastRow = def.components.length ? def.components.at(-1)!.slot : dataParams.at(-1)?.key;
   const description = ctx.kits.find((k) => k.id === kit.templateId)?.description;
 
   return (
@@ -312,30 +332,57 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
         <>
           <Panel id={`editar-conjunto-${kit.id}`}>
             {/* Saved on each change, without closing: the circles and the summary follow what is chosen. */}
-            <ActionForm action={updateKitAction} className="kitform">
+            <ActionForm action={updateKitAction} className="kq">
               <input type="hidden" name="id" value={kit.id} />
-              <SubmitOnBlur><label className="field">Cantidad<input name="quantity" defaultValue={n} inputMode="decimal" required /></label></SubmitOnBlur>
-              {refCategoryId(def.main) && (
-                <SubmitOnChange><label className="field">{def.main.label}
-                  {/* key: a select keeps its first default on form.reset(); remount it with the saved choice */}
-                  <select key={choices.main ?? ""} name="choice.main" defaultValue={choices.main ?? ""}>
-                    {choiceOptions(def.main, choices.main, "Elige…")}
-                  </select>
-                </label></SubmitOnChange>
-              )}
-              {def.params.map((p) => (
-                <SubmitOnBlur key={p.key}><label className="field">{p.label}{p.unit ? ` (${p.unit})` : ""}{p.required ? "" : " · opcional"}
-                  <input name={`param.${p.key}`} defaultValue={params[p.key] ?? ""} inputMode="decimal" />
-                </label></SubmitOnBlur>
-              ))}
-              {def.components.filter((c) => refCategoryId(c.ref)).map((c) => (
-                <SubmitOnChange key={c.slot}><label className="field">{c.label}{c.required ? "" : " · opcional"}
-                  <select key={choices[c.slot] ?? ""} name={`choice.${c.slot}`} defaultValue={choices[c.slot] ?? ""}>
-                    {choiceOptions(c.ref, choices[c.slot], c.required ? "Elige…" : "Ninguno")}
-                  </select>
-                </label></SubmitOnChange>
-              ))}
-              <span className="kitformacts"><button className="btn pri">Recalcular</button><CloseButton /></span>
+              <div className="kq-tree">
+                <div className="kq-r kq-main">
+                  <div className="kq-n"><b><span className={`kq-tag${refCategoryId(def.main) ? " kq-el" : ""}`}>{tagOf(def.main, def.main.label)}</span>Principal</b></div>
+                  <div className="kq-a">{article("main", def.main, def.main.label, true)}</div>
+                  <SubmitOnBlur><div className="kq-m">
+                    <input name="quantity" defaultValue={n} inputMode="decimal" required aria-label="Cantidad" />
+                    <small>{unitOf(refConceptId(def.main) ?? choices.main)}</small>
+                  </div></SubmitOnBlur>
+                </div>
+                {dataParams.map((p) => (
+                  <div key={p.key} className={`kq-r${p.key === lastRow ? " kq-last" : ""}`}>
+                    <div className="kq-n"><b><span className="kq-tag">Dato</span><span className="kq-l" title={p.label}>{p.label}</span></b>{!p.required && <em>opcional</em>}</div>
+                    <div className="kq-a" />
+                    <SubmitOnBlur><div className="kq-m">
+                      <input name={`param.${p.key}`} defaultValue={params[p.key] ?? ""} inputMode="decimal" aria-label={p.label} />
+                      <small>{p.unit}</small>
+                    </div></SubmitOnBlur>
+                  </div>
+                ))}
+                {def.components.map((c) => {
+                  const asked = askedOf(c);
+                  const per = c.formula.type === "PER_QTY" || c.formula.type === "PER_QTY_AND_PARAM";
+                  const fixedId = refConceptId(c.ref);
+                  const unit = `${unitOf(fixedId ?? choices[c.slot]) || (asked ? def.params.find((p) => p.key === asked)?.unit ?? "" : "")} ${per ? "× principal" : "en total"}`.trim();
+                  const last = c.slot === lastRow;
+                  const own = params[overrideKey(c.slot)];
+                  const parsed = own ? parseDecimalEs(own) : null;
+                  return (
+                    <div key={c.slot} className={`kq-r${last ? " kq-last" : ""}`}>
+                      <div className="kq-n"><b><span className={`kq-tag${fixedId ? "" : " kq-el"}`}>{tagOf(c.ref, c.label)}</span><span className="kq-l" title={c.label}>{c.label}</span></b>{!c.required && <em>opcional</em>}</div>
+                      <div className="kq-a">{article(c.slot, c.ref, c.label, c.required)}</div>
+                      {asked ? (
+                        <SubmitOnBlur><div className="kq-m">
+                          <input name={`param.${asked}`} defaultValue={params[asked] ?? ""} inputMode="decimal" placeholder="0" aria-label={`${c.label}: cantidad`} />
+                          <small title={unit}>{unit}</small>
+                        </div></SubmitOnBlur>
+                      ) : c.formula.type === "PARAM" || c.formula.type === "PER_QTY_AND_PARAM" ? (
+                        // an old kit: the amount comes from a datum of its own row
+                        <div className="kq-m"><span /><small title={unit}>{unit}</small></div>
+                      ) : (
+                        <FixedMeasure name={`param.${overrideKey(c.slot)}`} value={own ?? formatDecimalEs(c.formula.k, { min: 0, max: 4 })}
+                          original={formatDecimalEs(c.formula.k, { min: 0, max: 4 })} unit={unit} last={last} label={c.label}
+                          changed={!!own && (parsed === null || !new Prisma.Decimal(parsed).equals(c.formula.k))} />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="kq-acts"><CloseButton /></div>
             </ActionForm>
           </Panel>
           <div className="kitfoot">
@@ -344,6 +391,7 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
                 {missing.length ? "Completar" : "Editar"}
               </OpenButton>
               <ActionForm action={removeKitAction}><input type="hidden" name="id" value={kit.id} /><ConfirmButton label="Quitar" confirm="¿Quitar el conjunto? Se quitan sus líneas." /></ActionForm>
+              <KitSwap kitId={kit.id} kits={ctx.kits.filter((k) => k.id !== kit.templateId)} />
               <CommentButton id={kit.id} has={!!kit.comment} label="Añadir comentario al conjunto" />
             </div>
             <CollapseKitButton />
