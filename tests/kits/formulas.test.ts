@@ -109,3 +109,34 @@ test("definiciones antiguas siguen siendo válidas y se admiten etiquetas de 300
   expect(kitDefinitionSchema.safeParse(withLabel(300)).success).toBe(true);
   expect(kitDefinitionSchema.safeParse(withLabel(301)).success).toBe(false);
 });
+
+const FIX_DEF: KitDefinition = {
+  main: { conceptId: "cuadro", label: "Cuadro" }, params: [],
+  components: [
+    { slot: "c1", label: "Fija", ref: { conceptId: "manguera" }, required: true, formula: { type: "FIXED", k: "3" } },
+    { slot: "c2", label: "Por N", ref: { conceptId: "bomba" }, required: true, formula: { type: "PER_QTY", k: "2" } },
+  ],
+};
+
+test("una medida modificada (k_<slot>) sustituye a k en FIXED y PER_QTY", () => {
+  const x = expandKit(FIX_DEF, { quantity: "5", params: { k_c1: "1,5", k_c2: "3" }, choices: {} }, CONCEPTS);
+  expect(x.missing).toEqual([]);
+  expect(x.lines.map((l) => [l.conceptId, l.quantity.toString()])).toEqual([["cuadro", "5"], ["manguera", "1.5"], ["bomba", "15"]]);
+});
+
+test("una medida modificada no numérica deja el conjunto incompleto", () => {
+  const x = expandKit(FIX_DEF, { quantity: "5", params: { k_c1: "abc" }, choices: {} }, CONCEPTS);
+  expect(x.lines).toEqual([]);
+  expect(x.missing).toContain("Fija: medida no válida");
+});
+
+test("medida modificada 0 deja fuera el material sin error", () => {
+  const x = expandKit(FIX_DEF, { quantity: "5", params: { k_c1: "0" }, choices: {} }, CONCEPTS);
+  expect(x.missing).toEqual([]);
+  expect(x.lines.map((l) => l.slot)).toEqual(["main", "c2"]);
+});
+
+test("k_<slot> se ignora en materiales con cantidad escrita", () => {
+  const x = expandKit(BOMBA_DEF, { quantity: "2", params: { distancia: "10", k_c1: "9" }, choices: { main: "bomba", c1: "manguera" } }, CONCEPTS);
+  expect(x.lines.map((l) => [l.slot, l.quantity.toFixed(0)])).toEqual([["main", "2"], ["c1", "20"]]);
+});

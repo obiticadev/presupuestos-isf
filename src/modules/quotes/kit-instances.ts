@@ -4,13 +4,17 @@ import { parseOrThrow } from "@/lib/validation";
 import type { KitInstance, Prisma } from "@/generated/prisma/client";
 import type { CurrentUser } from "@/modules/auth/session";
 import { kitDefinition, refConceptId, type KitDefinition } from "@/modules/kits/definition";
-import { expandKit, type ConceptForKit } from "@/modules/kits/formulas";
+import { expandKit, overrideKey, type ConceptForKit } from "@/modules/kits/formulas";
 import { kitInstanceInput, type KitInstanceInput } from "./schema";
 import { logQuote, withDraft, type Tx } from "./service";
 
-/** Keeps only the data and choices the definition knows about. */
+/** Keeps only the data and choices the definition knows about, plus a draft's own measure of a fixed material (never empty). */
 function clean(def: KitDefinition, input: { params: Record<string, string>; choices: Record<string, string> }) {
   const params = Object.fromEntries(def.params.filter((p) => input.params[p.key] !== undefined).map((p) => [p.key, input.params[p.key].trim()]));
+  for (const c of def.components) {
+    const own = input.params[overrideKey(c.slot)]?.trim();
+    if (own && (c.formula.type === "FIXED" || c.formula.type === "PER_QTY")) params[overrideKey(c.slot)] = own;
+  }
   const slots = ["main", ...def.components.map((c) => c.slot)];
   const choices = Object.fromEntries(slots.filter((s) => input.choices[s]).map((s) => [s, input.choices[s]]));
   return { params, choices };

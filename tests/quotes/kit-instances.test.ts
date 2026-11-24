@@ -141,3 +141,20 @@ test("un concepto elegido que luego se desactiva deja la instancia incompleta al
   const q = await getQuote(quote.id);
   expect([q.base.toFixed(2), q.sections[0].children[0].kits[0].missing]).toEqual(["0.00", ["Manguera ya no está disponible"]]);
 });
+
+const progDef = {
+  main: { conceptId: "concept-ser-prog", label: "Hora de programador" }, params: [],
+  components: [{ slot: "c1", label: "Desplazamiento", ref: { conceptId: "concept-ser-despl" }, required: true, inName: true, formula: { type: "FIXED" as const, k: "1.5" } }],
+};
+
+test("modificar y restaurar la medida fija recalcula; una vacía no se guarda", async () => {
+  const { actor, admin, quote, sub } = await makeDraft();
+  const tpl = await saveKit(admin, { name: "Prog con desplazamiento", description: "", definition: progDef });
+  const k = await addKitInstance(actor, sub.id, { templateId: tpl.id, quantity: "2", params: {}, choices: {} });
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("100.45"); // 2 × 50 + 1,5 × 0,30
+  await updateKitInstance(actor, k.id, { quantity: "2", params: { k_c1: "10" }, choices: {} });
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("103.00"); // 2 × 50 + 10 × 0,30
+  await updateKitInstance(actor, k.id, { quantity: "2", params: { k_c1: "" }, choices: {} });
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("100.45");
+  expect((await prisma.kitInstance.findUniqueOrThrow({ where: { id: k.id } })).params).toEqual({});
+});
