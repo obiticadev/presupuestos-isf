@@ -21,7 +21,7 @@ export type EditorContext = {
   concepts: ConceptOption[];
   /** Every concept, to name the current choice of a kit even if it was deactivated. */
   allConcepts: ConceptOption[];
-  kits: { id: string; name: string }[];
+  kits: { id: string; name: string; description: string }[];
 };
 
 type Dec = { toString(): string };
@@ -264,7 +264,8 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
   const choice = (label: string, id: string | undefined) => ({ label: usable(id) ? (name(id) ?? label) : `Falta ${label.toLowerCase()}`, missing: !usable(id) });
   const parts = [
     choice(def.main.label, refConceptId(def.main) ?? choices.main),
-    ...def.params.filter((p) => p.required || params[p.key]).map((p) => {
+    // A datum generated for a material typed in when quoting (q_…) shares that material's circle.
+    ...def.params.filter((p) => !p.key.startsWith("q_") && (p.required || params[p.key])).map((p) => {
       const v = parseDecimalEs(params[p.key] ?? "");
       const ok = v !== null && !v.startsWith("-");
       return { label: ok ? `${p.label} ${params[p.key]} ${p.unit}`.trim() : `Falta ${p.label.toLowerCase()}`, missing: !ok };
@@ -280,7 +281,7 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
     <details id={`conjunto-${kit.id}`} className={`kit${missing.length ? " inc" : ""}`}>
       <OpenIfIncomplete incomplete={missing.length > 0} />
       <summary>
-        <Silhouette main={def.main.label} parts={parts} />
+        <Silhouette main={def.main.symbol ?? def.main.label} parts={parts} />
         <b>Conjunto · {kit.name}</b>
         <span className="sum mut">{summary}</span>
         {missing.length ? <span className="badge amber">Incompleto</span> : !global && <b>{money(amount)}</b>}
@@ -391,7 +392,7 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
             <input type="hidden" name="subsectionId" value={sub.id} />
             <select name="templateId" required defaultValue="" aria-label="Conjunto">
               <option value="" disabled>Elige un conjunto…</option>
-              {ctx.kits.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}
+              {ctx.kits.map((k) => <option key={k.id} value={k.id} data-d={k.description || undefined}>{k.name}</option>)}
             </select>
             <input name="quantity" placeholder="Cantidad (N)" inputMode="decimal" required aria-label="Cantidad" className="num" />
             <button className="btn pri">Añadir</button>
