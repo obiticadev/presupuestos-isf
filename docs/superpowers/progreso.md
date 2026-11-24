@@ -106,7 +106,10 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
   - medida fija modificable solo en el borrador (`params.k_<slot>`, sin migración) con aviso y «Volver al original»;
   - «Cambiar conjunto», que conserva cantidad, comentario y lo compatible.
   - Diseño, plan y maqueta en `docs/superpowers/specs/2026-11-24-conjunto-borrador-design.md`, `docs/superpowers/plans/2026-11-24-conjunto-borrador.md` y `docs/diseno/maquetas/conjunto-borrador.html`.
-- Siguiente paso: revisión del usuario; después, decidir si `:3101` pasa a `features` o se fusiona en `master`.
+- 1.9.14 (2026-11-24): cantidad del principal dentro del árbol en móvil y lista del buscador que se recoloca (izquierda o hacia arriba) sin provocar scroll. 412/412 pruebas, build correcto. `features` subida a `mejoras-uso-real` (`:3101`) y fusionada en `master` (PR #8); **producción sin desplegar** (sigue en 1.8.7).
+- **Pendiente (usuario, 2026-11-24), para otro momento:**
+  - desalineamiento de filas en el árbol del conjunto en escritorio (BOM-MAN incompleto, filas «Principal» y «Mangueras», a unos 1200 px); revisar si influye `.kq-r .kq-m{align-self:start}` de la 1.9.14;
+  - una opción para borrar un conjunto; concretar con el usuario dónde (hoy hay «Quitar» en el borrador y «Borrar» en `/conjuntos/[id]`, solo si ningún presupuesto lo usa).
 
 ### Mejoras tras el uso real (rama `mejoras-uso-real`) — en curso
 
