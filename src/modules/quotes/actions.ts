@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
-import { addKitInstance, removeKitInstance, updateKitInstance } from "./kit-instances";
+import { addKitInstance, changeKitInstance, removeKitInstance, updateKitInstance } from "./kit-instances";
 import { addNote, deleteNote, editNote } from "./notes";
 import { deleteAllQuotes } from "./reset";
 import * as quotes from "./service";
@@ -86,6 +86,7 @@ const kitFields = (f: FormData) => {
 export const addKitAction: Action = action((actor, f) =>
   addKitInstance(actor, str(f, "subsectionId"), { templateId: str(f, "templateId"), ...kitFields(f) }));
 export const updateKitAction: Action = action((actor, f) => updateKitInstance(actor, str(f, "id"), kitFields(f)));
+export const changeKitAction: Action = action((actor, f) => changeKitInstance(actor, str(f, "id"), str(f, "templateId")));
 export const removeKitAction: Action = action((actor, f) => removeKitInstance(actor, str(f, "id")));
 
 export const setWaiverAction: Action = action((actor, f) =>

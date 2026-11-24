@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conjuntos: maquetas finales</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1240px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:56px 0 12px;border-top:2px solid var(--ink);padding-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.variant{font-size:24px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 18px;max-width:880px}
+.pick{font:700 12px var(--font-archivo);letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border:1.5px solid var(--green);color:var(--green);background:var(--sheet);cursor:pointer}
+.pick[aria-pressed=true]{background:var(--green);color:#fff}
+section.chosen{outline:3px solid var(--green);outline-offset:12px}
+.frame{background:var(--paper);border:1.5px solid var(--rule);padding:22px 26px}
+.frame h1{font-size:34px}
+.top{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:12px;margin:16px 0 22px}
+/* controles comunes */
+.in{font:600 14px var(--font-archivo);color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:0 10px;height:38px;width:100%;min-width:0}
+.in.num{text-align:right}
+.in:disabled{border-style:dashed;color:var(--mut);background:var(--paper)}
+.search{position:relative}
+.search .in{padding-left:30px}
+.search::before{content:"⌕";position:absolute;left:10px;top:50%;transform:translateY(-52%);color:var(--mut);font-size:16px}
+.unit{font-size:13px;font-weight:600;color:var(--mut)}
+.sw{appearance:none;width:38px;height:22px;border:1.5px solid var(--ink);background:var(--band);position:relative;cursor:pointer;margin:0;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;background:var(--mut);transition:left .15s}
+.sw:checked{background:var(--green);border-color:var(--green)}
+.sw:checked::after{left:18px;background:#fff}
+.ck{width:18px;height:18px;accent-color:var(--green);margin:0}
+.x{font:600 16px var(--font-archivo);width:38px;height:38px;border:1.5px solid var(--ink);background:var(--sheet);cursor:pointer}
+.x:hover{border-color:var(--red);color:var(--red)}
+.cell{display:flex;align-items:center;justify-content:center}
+.cell.l{justify-content:flex-start;gap:8px}
+.add{border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font:600 14px var(--font-archivo);height:42px;cursor:pointer;width:100%}
+.add:hover{color:var(--ink);background:var(--sheet)}
+/* principal */
+.root{border:2px solid var(--green);background:var(--sheet);padding:12px 14px;display:grid;gap:10px}
+.root .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
+.seg{display:inline-flex;border:1.5px solid var(--ink)}
+.seg button{font:600 13px var(--font-archivo);border:0;background:var(--sheet);padding:0 12px;height:34px;cursor:pointer}
+.seg button+button{border-left:1.5px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+/* árbol: bus vertical y una rama por fila, todas sobre la misma rejilla */
+.bus{position:relative;margin-left:22px;padding-left:30px}
+.bus::before{content:"";position:absolute;left:0;top:0;bottom:21px;border-left:2px solid var(--ink)}
+.row{position:relative}
+.row::before{content:"";position:absolute;left:-30px;top:21px;width:30px;border-top:2px solid var(--ink)}
+.hdr,.dep{display:grid;align-items:center;column-gap:12px}
+.hdr{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);padding:10px 12px 6px}
+.hdr>span{text-align:center}.hdr>span:first-child{text-align:left}
+.dep{border:1.5px solid var(--ink);background:var(--sheet);padding:2px 12px;min-height:42px;margin-bottom:8px}
+/* F1: fila completa */
+.g1{grid-template-columns:minmax(0,1fr) 5.5rem 2.2rem 6.5rem 6.5rem 5.5rem 38px}
+/* F3: fila + resultado de la prueba */
+.g3{grid-template-columns:minmax(0,1fr) 5.5rem 2.2rem 6.5rem 6.5rem 5.5rem 6rem 38px}
+.res{text-align:right;font-weight:800;font-size:14px}
+.res.ask{color:var(--amber);font-size:12px}
+/* F2: rama resumida + panel */
+.two{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}
+.g2{grid-template-columns:minmax(0,1fr) auto 1.2rem}
+.dep.sel{box-shadow:inset 4px 0 0 var(--green);background:#f1f7f5}
+.dep.g2{cursor:pointer;padding:8px 12px}
+.dep small{display:block;color:var(--mut);font-size:12px;font-weight:400}
+.sum{font-size:13px;font-weight:700;text-align:right;white-space:nowrap}
+.chev{color:var(--mut);text-align:right}
+.panel{border:1.5px solid var(--ink);background:var(--sheet);padding:16px;display:grid;gap:14px;position:sticky;top:12px}
+.prow{display:grid;grid-template-columns:11rem minmax(0,1fr);align-items:center;gap:10px;font-size:13px;font-weight:600}
+.prow .qty{display:grid;grid-template-columns:5.5rem 2.2rem;gap:8px;align-items:center}
+.prow label{display:flex;align-items:center;gap:8px}
+/* prueba */
+.sim{border:1.5px dashed var(--ink);background:var(--band);padding:12px 14px;margin-top:18px}
+.sim .h{display:flex;gap:10px;align-items:center;font-weight:700;margin-bottom:6px}
+.sim .h .in{width:5.5rem}
+.sim table{background:transparent}
+.sim td{padding:6px 8px;border-bottom:1px solid var(--rule);font-size:13px}
+.sim td.n{text-align:right;font-weight:800;width:8rem}
+.sim .ask{color:var(--amber)}
+.foot{display:flex;gap:10px;align-items:center;margin-top:20px}
+.test{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+.test .in{width:5.5rem}
+/* lista */
+.tagline{font-size:13px}
+.tagline b{color:var(--green)}
+#picks{position:sticky;bottom:0;background:var(--ink);color:#fff;padding:10px 16px;margin-top:40px;font-size:13px;z-index:5}
+#picks b{color:#7fd1b9}
+@media (max-width:980px){.two{grid-template-columns:1fr}.top{grid-template-columns:1fr}.hdr{display:none}
+  .g1,.g3{grid-template-columns:minmax(0,1fr) 5.5rem 2.2rem;row-gap:6px;padding:8px 12px}
+  .g1>.cell:nth-child(n+4),.g3>.cell:nth-child(n+4){justify-content:flex-start}}
+</style>
+</head>
+<body>
+<h1>Conjuntos: maquetas finales</h1>
+<p class="why">Las tres parten del árbol: el principal arriba y los materiales colgando de una línea. Todas usan las mismas reglas: cantidad, interruptor «× cantidad del principal», «se pone al presupuestar» y «obligatorio». Lo que cambia es cómo se organiza la pantalla. Todas son interactivas, así que cambia valores y mira el resultado. El material se elige con un buscador del catálogo. Pulsa <b>«Me quedo con esta»</b> en la que prefieras.</p>
+
+<!-- ============ F1 ============ -->
+<section data-choice="F1">
+  <div class="lbl"><span>Final 1</span><button class="pick" data-choice="F1">Me quedo con esta</button></div>
+  <p class="variant">1 · Árbol con filas completas</p>
+  <p class="why">Cada rama es una fila con todos sus ajustes a la vista, en columnas alineadas con títulos. La prueba va debajo. Es la más directa: no hay que abrir nada.</p>
+  <div class="frame" data-v="1"></div>
+</section>
+
+<!-- ============ F2 ============ -->
+<section data-choice="F2">
+  <div class="lbl"><span>Final 2</span><button class="pick" data-choice="F2">Me quedo con esta</button></div>
+  <p class="variant">2 · Árbol limpio y panel de edición</p>
+  <p class="why">Cada rama solo dice qué es y cuánto lleva, en una frase. Al pulsarla se edita en el panel de la derecha. Es el árbol más limpio, pero hay que pulsar para cambiar cada material.</p>
+  <div class="frame" data-v="2"></div>
+</section>
+
+<!-- ============ F3 ============ -->
+<section data-choice="F3">
+  <div class="lbl"><span>Final 3</span><button class="pick" data-choice="F3">Me quedo con esta</button></div>
+  <p class="variant">3 · Árbol con el resultado en cada rama</p>
+  <p class="why">Como la 1, pero la prueba no va en un cuadro aparte. Escribes una cantidad de prueba junto al principal y cada rama muestra a la derecha lo que saldría. Ves la cuenta mientras montas.</p>
+  <div class="frame" data-v="3"></div>
+</section>
+
+<!-- ============ LISTA ============ -->
+<div class="lbl"><span>Y la lista de la pestaña (común a las tres)</span></div>
+<table>
+  <thead><tr><th>Conjunto</th><th>Principal → lo que lleva</th><th class="n">Materiales</th><th>Estado</th></tr></thead>
+  <tbody>
+    <tr><td class="code">Instalación de bomba</td><td class="tagline"><b>Bombas</b> → Manguera, Válvula antirretorno, Cuadro de maniobra, Hora de oficial</td><td class="n">4</td><td>Activo</td></tr>
+    <tr><td class="code">Toma de corriente empotrada</td><td class="tagline"><b>Mecanismos</b> → Caja de empotrar, Marco, Cable 2,5 mm²</td><td class="n">3</td><td>Activo</td></tr>
+    <tr><td class="code">Punto de luz</td><td class="tagline"><b>Luminarias</b> → Caja, Cable, Interruptor</td><td class="n">3</td><td><span class="badge amber">Incompleto</span></td></tr>
+  </tbody>
+</table>
+
+<label class="field" style="margin-top:28px">Comentarios para Claude
+  <textarea id="notes" rows="3" placeholder="Lo que te gusta o cambiarías de la que elijas"></textarea>
+</label>
+<div id="picks">Elegida → <b id="p">—</b></div>
+
+<script>
+// Datos de ejemplo comunes; cada variante pinta su propia copia y recalcula sola.
+const seed = () => [
+  { mat: "Se elige de «Mangueras» al presupuestar", short: "Manguera", qty: "", unit: "m", mult: true, ask: true, req: true },
+  { mat: "VAL-010 · Válvula antirretorno 1\"", short: "Válvula antirretorno", qty: "1", unit: "ud", mult: true, ask: false, req: true },
+  { mat: "CUA-001 · Cuadro de maniobra", short: "Cuadro de maniobra", qty: "1", unit: "ud", mult: false, ask: false, req: true },
+  { mat: "MO-002 · Hora de oficial", short: "Hora de oficial", qty: "1,5", unit: "h", mult: true, ask: false, req: false },
+];
+const num = (s) => Number(String(s).replace(",", ".")) || 0;
+const fmt = (v) => String(Math.round(v * 100) / 100).replace(".", ",");
+const result = (d, n) => (d.ask ? null : num(d.qty) * (d.mult ? n : 1));
+const sentence = (d) => (d.ask ? "se pone al presupuestar" : `${d.qty || "?"} ${d.unit}`) + (d.mult ? " × principal" : " en total");
+
+function head(v) {
+  return `<div class="crumb">Conjuntos / Instalación de bomba</div>
+  <div class="head"><h1>Instalación de bomba</h1></div>
+  <div class="top">
+    <label class="field">Nombre<input class="in" value="Instalación de bomba"></label>
+    <label class="field">Descripción<input class="in" value="Bomba con su manguera, válvula, cuadro y montaje"></label>
+  </div>
+  <div class="root">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="t">Principal</span>
+      <div class="seg"><button aria-pressed="true">Se elige al presupuestar</button><button>Siempre el mismo</button></div>
+    </div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr)${v === 3 ? " auto" : ""};gap:12px;align-items:center">
+      <div class="search"><input class="in" value="Categoría: Bombas"></div>
+      ${v === 3 ? `<span class="test">Prueba con <input class="in num" data-n value="4"></span>` : ""}
+    </div>
+  </div>`;
+}
+
+function render(frame) {
+  const v = Number(frame.dataset.v), deps = frame._deps, n = num(frame.querySelector("[data-n]")?.value ?? frame._n);
+  frame._n = n;
+  const cls = v === 1 ? "g1" : v === 3 ? "g3" : "g2";
+  let rows;
+  if (v === 2) {
+    rows = deps.map((d, i) => `<div class="row"><div class="dep g2${i === frame._sel ? " sel" : ""}" data-sel="${i}">
+      <span><b>${d.short}</b><small>${d.mat}${d.req ? "" : " · opcional"}</small></span><span class="sum">${sentence(d)}</span><span class="chev">›</span></div></div>`).join("");
+  } else {
+    rows = `<div class="hdr ${cls}"><span>Material</span><span>Cantidad</span><span></span><span>× principal</span><span>Al presup.</span><span>Obligatorio</span>${v === 3 ? "<span style='text-align:right'>Saldría</span>" : ""}<span></span></div>` +
+      deps.map((d, i) => {
+        const r = result(d, n);
+        return `<div class="row"><div class="dep ${cls}">
+        <div class="search"><input class="in" value='${d.mat}'></div>
+        <input class="in num" data-i="${i}" data-k="qty" value="${d.ask ? "" : d.qty}" ${d.ask ? "disabled placeholder='—'" : ""}>
+        <span class="unit">${d.unit}</span>
+        <div class="cell"><input type="checkbox" class="sw" data-i="${i}" data-k="mult" ${d.mult ? "checked" : ""} aria-label="Multiplicar por la cantidad del principal"></div>
+        <div class="cell"><input type="checkbox" class="ck" data-i="${i}" data-k="ask" ${d.ask ? "checked" : ""} aria-label="La cantidad se pone al presupuestar"></div>
+        <div class="cell"><input type="checkbox" class="ck" data-i="${i}" data-k="req" ${d.req ? "checked" : ""} aria-label="Obligatorio"></div>
+        ${v === 3 ? `<span class="res${r === null ? " ask" : ""}">${r === null ? "se pregunta" : `${fmt(r)} ${d.unit}`}</span>` : ""}
+        <button class="x" title="Quitar">×</button></div></div>`;
+      }).join("");
+  }
+  const tree = `<div class="bus" style="margin-top:14px">${rows}<div class="row"><button class="add">+ Añadir material del catálogo</button></div></div>`;
+  const sim = `<div class="sim"><div class="h">Prueba: con el principal en <input class="in num" data-n value="${fmt(n)}"> sale…</div><table><tbody>
+    <tr><td>Principal (el elegido)</td><td class="n">${fmt(n)} ud</td></tr>
+    ${deps.map((d) => { const r = result(d, n); return `<tr><td>${d.short} <span class="mut">(${d.mult ? "× " + fmt(n) : "una vez"})</span></td><td class="n${r === null ? " ask" : ""}">${r === null ? "se pregunta" : fmt(r) + " " + d.unit}</td></tr>`; }).join("")}
+  </tbody></table></div>`;
+  const d = deps[frame._sel];
+  const panel = `<div class="panel"><h3>Material seleccionado</h3>
+    <div class="prow"><span>Material</span><div class="search"><input class="in" value='${d.mat}'></div></div>
+    <div class="prow"><span>Cantidad</span><div class="qty"><input class="in num" data-i="${frame._sel}" data-k="qty" value="${d.ask ? "" : d.qty}" ${d.ask ? "disabled placeholder='—'" : ""}><span class="unit">${d.unit}</span></div></div>
+    <div class="prow"><span>× cantidad del principal</span><label><input type="checkbox" class="sw" data-i="${frame._sel}" data-k="mult" ${d.mult ? "checked" : ""}></label></div>
+    <div class="prow"><span>Se pone al presupuestar</span><label><input type="checkbox" class="ck" data-i="${frame._sel}" data-k="ask" ${d.ask ? "checked" : ""}></label></div>
+    <div class="prow"><span>Obligatorio</span><label><input type="checkbox" class="ck" data-i="${frame._sel}" data-k="req" ${d.req ? "checked" : ""}></label></div>
+    <button class="btn" style="justify-self:start">Quitar material</button></div>`;
+  const body = v === 2 ? `<div class="two"><div>${tree}${sim}</div>${panel}</div>` : v === 1 ? tree + sim : tree;
+  const focus = document.activeElement && frame.contains(document.activeElement) ? [document.activeElement.dataset.i, document.activeElement.dataset.k, "n" in document.activeElement.dataset] : null;
+  frame.innerHTML = head(v) + body + `<div class="foot"><button class="btn pri">Guardar</button><span class="mut" style="font-size:12px">Cambiar el conjunto no altera los presupuestos donde ya se usó.</span></div>`;
+  if (focus) {
+    const el = focus[2] ? frame.querySelectorAll("[data-n]")[0] : frame.querySelector(`[data-i="${focus[0]}"][data-k="${focus[1]}"]`);
+    if (el) { el.focus(); if (el.setSelectionRange && el.type === "text") el.setSelectionRange(el.value.length, el.value.length); }
+  }
+}
+
+document.querySelectorAll(".frame").forEach((f) => {
+  f._deps = seed(); f._n = 4; f._sel = 0; render(f);
+  f.addEventListener("input", (e) => {
+    const t = e.target;
+    if ("n" in t.dataset) { f._n = num(t.value); return render(f); }
+    if (t.dataset.k === "qty") { f._deps[t.dataset.i].qty = t.value; render(f); }
+  });
+  f.addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.type === "checkbox" && t.dataset.k) { f._deps[t.dataset.i][t.dataset.k] = t.checked; render(f); }
+  });
+  f.addEventListener("click", (e) => {
+    const s = e.target.closest("[data-sel]");
+    if (s) { f._sel = Number(s.dataset.sel); render(f); }
+    const b = e.target.closest(".seg button");
+    if (b) b.parentElement.querySelectorAll("button").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  });
+});
+
+// Elección y comentarios, legibles desde Chrome en window.picks.
+window.picks = { final: null, notes: "" };
+document.querySelectorAll(".pick").forEach((b) => b.addEventListener("click", () => {
+  window.picks.final = b.dataset.choice;
+  document.querySelectorAll(".pick").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  document.querySelectorAll("section[data-choice]").forEach((s) => s.classList.toggle("chosen", s.dataset.choice === b.dataset.choice));
+  document.getElementById("p").textContent = b.dataset.choice;
+}));
+document.getElementById("notes").addEventListener("input", (e) => { window.picks.notes = e.target.value; });
+</script>
+</body>
+</html>

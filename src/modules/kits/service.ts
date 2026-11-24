@@ -6,12 +6,14 @@ import { Prisma, type KitTemplate } from "@/generated/prisma/client";
 import { logAction } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { kitDefinition, refCategoryId, refConceptId, type KitDefinition } from "./definition";
+import { categoryPrefix, codePrefix, kitBaseName, uniqueName } from "./naming";
 
+type Db = Prisma.TransactionClient | typeof prisma;
 export type Kit = Omit<KitTemplate, "definition"> & { definition: KitDefinition };
 
 const kitInput = z.object({
   id: z.string().optional(),
-  name: z.string().trim().min(1, "Escribe el nombre").max(100, "Máximo 100 caracteres"),
+  name: z.string().trim().min(1, "Escribe el nombre").max(100, "Máximo 100 caracteres").optional(),
   description: z.string().trim().max(2000, "Máximo 2000 caracteres"),
   definition: kitDefinition,
 });
@@ -32,7 +34,7 @@ export async function getKit(id: string): Promise<Kit> {
 }
 
 /** What is wrong with the concepts and categories a definition names: each must exist and be active. Keyed by field path. */
-async function refIssues(tx: Prisma.TransactionClient | typeof prisma, def: KitDefinition): Promise<Record<string, string>> {
+async function refIssues(tx: Db, def: KitDefinition): Promise<Record<string, string>> {
   const refs = [{ path: "definition.main", ref: def.main }, ...def.components.map((c, i) => ({ path: `definition.components.${i}.ref`, ref: c.ref }))];
   const issues: Record<string, string> = {};
   for (const { path, ref } of refs) {
@@ -56,19 +58,35 @@ export async function kitIssues(tx: Prisma.TransactionClient | typeof prisma, ki
   return Object.values(await refIssues(tx, kit.definition));
 }
 
+async function refPrefix(tx: Db, ref: KitDefinition["main"] | KitDefinition["components"][number]["ref"]): Promise<string> {
+  const conceptId = refConceptId(ref);
+  if (conceptId) return codePrefix((await tx.concept.findUnique({ where: { id: conceptId } }))?.code ?? "");
+  return categoryPrefix((await tx.category.findUnique({ where: { id: refCategoryId(ref)! } }))?.name ?? "");
+}
+
+/** The automatic name (spec 5.3): base name, or base-2, base-3… if another kit already has it. */
+export async function autoKitName(tx: Db, def: KitDefinition, excludeId?: string): Promise<string> {
+  const base = kitBaseName(await refPrefix(tx, def.main), await Promise.all(def.components.filter((c) => c.inName).map((c) => refPrefix(tx, c.ref))));
+  const taken = await tx.kitTemplate.findMany({ where: excludeId ? { id: { not: excludeId } } : undefined, select: { name: true } });
+  return uniqueName(base, taken.map((k) => k.name));
+}
+
+/** Without a name, the kit gets the automatic one and its first two letters as the symbol. */
 export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
   const input = parseOrThrow(kitInput, raw);
   try {
     return await prisma.$transaction(async (tx) => {
       const issues = await refIssues(tx, input.definition);
       if (Object.keys(issues).length) throw new ValidationError(issues);
-      const data = { name: input.name, description: input.description, definition: input.definition as Prisma.InputJsonValue };
+      const name = input.name ?? (await autoKitName(tx, input.definition, input.id));
+      const definition = input.name ? input.definition : { ...input.definition, main: { ...input.definition.main, symbol: name.replace(/-/g, "").slice(0, 2) } };
+      const data = { name, description: input.description, definition: definition as Prisma.InputJsonValue };
       const before = input.id ? await tx.kitTemplate.findUnique({ where: { id: input.id } }) : null;
       if (input.id && !before) throw new NotFoundError("Conjunto no encontrado");
       const row = before ? await tx.kitTemplate.update({ where: { id: before.id }, data }) : await tx.kitTemplate.create({ data });
       await logAction(tx, {
         userId: actor.id, entity: "kit", entityId: row.id, action: before ? "update" : "create",
-        summary: before ? `Conjunto ${row.name} modificado` : `Alta del conjunto ${row.name}`, data: input.definition,
+        summary: before ? `Conjunto ${row.name} modificado` : `Alta del conjunto ${row.name}`, data: { name, description: input.description, definition },
       });
       return toKit(row);
     });
@@ -87,5 +105,23 @@ export async function setKitActive(actor: CurrentUser, id: string, active: boole
       userId: actor.id, entity: "kit", entityId: id, action: active ? "reactivate" : "deactivate",
       summary: `Conjunto ${row.name} ${active ? "activado" : "desactivado"}`,
     });
+  });
+}
+
+/** How many quotes contain this kit (their copies keep working if it is deleted: templateId is set to null). */
+export async function kitUses(id: string, db: Db = prisma): Promise<number> {
+  const rows = await db.kitInstance.findMany({ where: { templateId: id }, select: { section: { select: { quoteId: true } } } });
+  return new Set(rows.map((r) => r.section.quoteId)).size;
+}
+
+/** Deletes a kit no quote has used; a used one can only be deactivated. */
+export async function removeKit(actor: CurrentUser, id: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const row = await tx.kitTemplate.findUnique({ where: { id } });
+    if (!row) throw new NotFoundError("Conjunto no encontrado");
+    const uses = await kitUses(id, tx);
+    if (uses) throw new ValidationError({ _: `Se usa en ${uses} presupuesto${uses === 1 ? "" : "s"}: desactívalo en su lugar` });
+    await tx.kitTemplate.delete({ where: { id } });
+    await logAction(tx, { userId: actor.id, entity: "kit", entityId: id, action: "delete", summary: `Baja del conjunto ${row.name}` });
   });
 }

@@ -15,7 +15,7 @@ const factor = z.string().transform((value, ctx) => {
   return n;
 });
 
-const label = z.string().trim().min(1, "Escribe el nombre").max(80, "Máximo 80 caracteres");
+const label = z.string().trim().min(1, "Escribe el nombre").max(300, "Máximo 300 caracteres");
 const ref = z.union([
   z.object({ conceptId: z.string().min(1, "Elige un concepto") }).strict(),
   z.object({ categoryId: z.string().min(1, "Elige una categoría") }).strict(),
@@ -25,16 +25,17 @@ const formula = z.discriminatedUnion("type", [
   z.object({ type: z.literal("FIXED"), k: factor }),
   z.object({ type: z.literal("PER_QTY"), k: factor }),
   z.object({ type: z.literal("PER_QTY_AND_PARAM"), param: z.string().min(1, "Elige el dato"), k: factor }),
+  z.object({ type: z.literal("PARAM"), param: z.string().min(1, "Elige el dato"), k: factor }),
 ]);
 
 export const kitDefinition = z.object({
-  main: z.intersection(ref, z.object({ label })),
+  main: z.intersection(ref, z.object({ label, symbol: z.string().max(2).optional() })),
   params: z.array(z.object({
     key: z.string().regex(/^[a-z][a-z0-9_]*$/, "Clave en minúsculas, sin espacios"),
     label, unit: z.string().trim().max(20, "Máximo 20 caracteres"), required: z.boolean(),
   })).max(20),
   components: z.array(z.object({
-    slot: z.string().regex(/^c\d+$/), label, ref, required: z.boolean(), formula,
+    slot: z.string().regex(/^c\d+$/), label, ref, required: z.boolean(), formula, inName: z.boolean().optional(),
   })).max(30),
 }).superRefine((def, ctx) => {
   const keys = def.params.map((p) => p.key);
@@ -44,7 +45,7 @@ export const kitDefinition = z.object({
   const slots = def.components.map((c) => c.slot);
   def.components.forEach((c, i) => {
     if (slots.indexOf(c.slot) !== i) ctx.addIssue({ code: "custom", path: ["components", i, "slot"], message: "Hueco repetido" });
-    if (c.formula.type === "PER_QTY_AND_PARAM" && !keys.includes(c.formula.param))
+    if ((c.formula.type === "PER_QTY_AND_PARAM" || c.formula.type === "PARAM") && !keys.includes(c.formula.param))
       ctx.addIssue({ code: "custom", path: ["components", i, "formula", "param"], message: "Ese dato no existe en el conjunto" });
   });
 });
@@ -61,5 +62,6 @@ export function describeFormula(f: KitFormula, params: KitDefinition["params"]):
   const k = f.k.replace(".", ",");
   if (f.type === "FIXED") return k;
   if (f.type === "PER_QTY") return `${k} × N`;
+  if (f.type === "PARAM") return `${k} × ${params.find((p) => p.key === f.param)?.label ?? f.param}`;
   return `${k} × N × ${params.find((p) => p.key === f.param)?.label ?? f.param}`;
 }

@@ -11,13 +11,16 @@ export type ConceptForKit = {
 export type KitInput = { quantity: string; params: Record<string, string>; choices: Record<string, string> };
 export type KitExpansion = { lines: { slot: string; conceptId: string; quantity: Decimal }[]; missing: string[] };
 
+/** Where a draft keeps its own measure for a fixed material (FIXED / PER_QTY): the kit's copy stays untouched. */
+export const overrideKey = (slot: string) => `k_${slot}`;
+
 const num = (s: string | undefined) => {
   const n = parseDecimalEs(s ?? "");
   return n === null ? null : new Prisma.Decimal(n);
 };
 
 /**
- * Main line (slot "main", quantity N) plus one line per component: FIXED k, PER_QTY k × N, PER_QTY_AND_PARAM k × N × data.
+ * Main line (slot "main", quantity N) plus one line per component: FIXED k, PER_QTY k × N, PER_QTY_AND_PARAM k × N × data, PARAM k × data.
  * Anything missing leaves the whole kit unvalued (lines = []): a pump is never priced without its hose.
  * `descriptive` (a global-price subsection): the lines carry no price, so a concept without sale price is valid.
  */
@@ -64,14 +67,20 @@ export function expandKit(def: KitDefinition, input: KitInput, concepts: Map<str
   for (const c of def.components) {
     const id = resolve(c.slot, c.ref, c.label, c.required);
     if (!id || !n) continue;
-    const k = new Prisma.Decimal(c.formula.k);
+    let k = new Prisma.Decimal(c.formula.k);
+    const own = (input.params[overrideKey(c.slot)] ?? "").trim();
+    if (own && (c.formula.type === "FIXED" || c.formula.type === "PER_QTY")) {
+      const v = num(own);
+      if (!v || v.lt(0)) { missing.push(`${c.label}: medida no válida`); continue; }
+      k = v;
+    }
     let q: Decimal;
     if (c.formula.type === "FIXED") q = k;
     else if (c.formula.type === "PER_QTY") q = k.mul(n);
     else {
       const v = values.get(c.formula.param);
       if (!v) continue; // an optional datum left empty: the component does not apply
-      q = k.mul(n).mul(v);
+      q = c.formula.type === "PARAM" ? k.mul(v) : k.mul(n).mul(v);
     }
     if (q.gt(0)) lines.push({ slot: c.slot, conceptId: id, quantity: q });
   }

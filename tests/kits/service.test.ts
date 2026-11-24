@@ -2,7 +2,9 @@ import { ValidationError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { setConceptActive } from "@/modules/catalog/service";
 import type { KitDefinition } from "@/modules/kits/definition";
-import { getKit, listKits, saveKit, setKitActive } from "@/modules/kits/service";
+import { getKit, kitUses, listKits, removeKit, saveKit, setKitActive } from "@/modules/kits/service";
+import { addKitInstance } from "@/modules/quotes/kit-instances";
+import { makeDraft } from "../helpers/quotes";
 import { makeUser } from "../helpers/users";
 
 const def = (over: Partial<KitDefinition> = {}): KitDefinition => ({
@@ -57,4 +59,68 @@ test("un presupuestador guarda y desactiva un conjunto", async () => {
   const k = await saveKit(p, { name: "X", description: "", definition: def() });
   await setKitActive(p, k.id, false);
   expect((await getKit(k.id)).active).toBe(false);
+});
+
+const seedDef = (): KitDefinition => {
+  const d = BOMBA_SEED();
+  return { ...d, components: d.components.map((c, i) => ({ ...c, inName: i === 0 })) };
+};
+const BOMBA_SEED = (): KitDefinition => ({
+  main: { categoryId: "cat-bombas", label: "Bombas" },
+  params: [{ key: "q_c1", label: "Mangueras: cantidad", unit: "", required: true }],
+  components: [{ slot: "c1", label: "Mangueras", ref: { categoryId: "cat-mangueras" }, required: true, formula: { type: "PER_QTY_AND_PARAM", param: "q_c1", k: "1" } }],
+});
+
+test("sin nombre, saveKit pone el automático y su símbolo; si se repite, -2", async () => {
+  const p = await makeUser("presupuestador");
+  const a = await saveKit(p, { description: "", definition: seedDef() });
+  expect(a.name).toBe("BOM-MAN");
+  expect(a.definition.main.symbol).toBe("BO");
+  expect((await saveKit(p, { description: "", definition: seedDef() })).name).toBe("BOM-MAN-2");
+});
+
+test("editar un conjunto con nombre automático no lo renombra a -2", async () => {
+  const p = await makeUser("presupuestador");
+  const a = await saveKit(p, { description: "", definition: seedDef() });
+  expect((await saveKit(p, { id: a.id, description: "x", definition: seedDef() })).name).toBe("BOM-MAN");
+});
+
+test("un artículo fijo da el prefijo de su código", async () => {
+  const p = await makeUser("presupuestador");
+  const d = def();
+  const k = await saveKit(p, { description: "", definition: { ...d, components: d.components.map((c) => ({ ...c, inName: true })) } });
+  expect(k.name).toBe("SER-MAN");
+});
+
+test("un conjunto sin usar se elimina y queda en el historial", async () => {
+  const p = await makeUser("presupuestador");
+  const k = await saveKit(p, { name: "Para borrar", description: "", definition: def() });
+  expect(await kitUses(k.id)).toBe(0);
+  await removeKit(p, k.id);
+  await expect(getKit(k.id)).rejects.toThrow("Conjunto no encontrado");
+  expect(await prisma.auditLog.count({ where: { entity: "kit", entityId: k.id, action: "delete" } })).toBe(1);
+});
+
+test("un conjunto usado en un presupuesto no se elimina", async () => {
+  const { actor, sub } = await makeDraft();
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "1", params: {}, choices: {} });
+  expect(await kitUses("kit-bomba")).toBe(1);
+  await expect(removeKit(actor, "kit-bomba")).rejects.toThrow("Se usa en 1 presupuesto: desactívalo en su lugar");
+  expect((await getKit("kit-bomba")).active).toBe(true);
+});
+
+test("dos conjuntos iguales en el mismo presupuesto cuentan como un presupuesto", async () => {
+  const { actor, sub } = await makeDraft();
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "1", params: {}, choices: {} });
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "2", params: {}, choices: {} });
+  expect(await kitUses("kit-bomba")).toBe(1);
+});
+
+test("el símbolo no lleva guiones aunque el prefijo del principal sea de una letra", async () => {
+  const p = await makeUser("presupuestador");
+  const d = def();
+  await prisma.category.create({ data: { id: "cat-x", name: "X" } });
+  const k = await saveKit(p, { description: "", definition: { ...d, main: { categoryId: "cat-x", label: "X" }, components: d.components.map((c) => ({ ...c, inName: true })) } });
+  expect(k.name).toBe("X-MAN");
+  expect(k.definition.main.symbol).toBe("XM");
 });

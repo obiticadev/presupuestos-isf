@@ -18,15 +18,18 @@ export default async function ConjuntosPage() {
         <div className="actions"><Link className="btn pri" href="/conjuntos/nuevo">Nuevo conjunto</Link></div>
       </div>
       <p className="mut" style={{ marginTop: 8, maxWidth: 720 }}>
-        Un conjunto calcula solo las cantidades de lo que acompaña a un concepto principal: por ejemplo, los metros de manguera de cada bomba según su distancia al cuadro.
+        Un conjunto agrupa los materiales que dependen de un material principal: al presupuestar se elige el principal y su cantidad, y la app añade y calcula el resto.
       </p>
       <table style={{ marginTop: 18 }}>
-        <thead><tr><th>Nombre</th><th>Descripción</th><th className="n">Componentes</th><th>Estado</th></tr></thead>
+        <thead><tr><th>Conjunto</th><th>Principal → lo que lleva</th><th className="n">Materiales</th><th>Estado</th></tr></thead>
         <tbody>
           {kits.map((k, i) => (
             <tr key={k.id} style={k.active ? undefined : { opacity: 0.6 }}>
-              <td><Link className="code" href={`/conjuntos/${k.id}`}>{k.name}</Link></td>
-              <td>{k.description || <span className="mut">—</span>}</td>
+              <td>
+                <Link className="code" href={`/conjuntos/${k.id}`}>{k.name}</Link>
+                {k.description && <div className="mut" style={{ fontSize: 12 }}>{k.description}</div>}
+              </td>
+              <td><b>{k.definition.main.label}</b>{k.definition.components.length > 0 && <> → {k.definition.components.map((c) => c.label).join(", ")}</>}</td>
               <td className="n">{k.definition.components.length}</td>
               <td>{k.active ? "Activo" : <span className="badge off">Desactivado</span>}{incomplete[i] && <> <span className="badge amber">Incompleto</span></>}</td>
             </tr>

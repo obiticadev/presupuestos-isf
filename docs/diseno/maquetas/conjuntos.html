@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conjuntos: maquetas</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1240px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:48px 0 10px;border-top:1.5px solid var(--ink);padding-top:10px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.variant{font-size:22px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 14px;max-width:860px}
+.pick{font:700 12px var(--font-archivo);letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border:1.5px solid var(--green);color:var(--green);background:var(--sheet);cursor:pointer}
+.pick[aria-pressed=true]{background:var(--green);color:#fff}
+.chosen{outline:3px solid var(--green);outline-offset:8px}
+.inl{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+.inl input,.inl select{font:400 14px var(--font-archivo);border:1.5px solid var(--ink);background:var(--sheet);padding:6px 8px;min-height:36px}
+.inl input.n{width:4.5rem;text-align:right}
+.chip{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;background:var(--band);border:1px solid var(--rule)}
+.chip.g{background:#e3efeb;border-color:#b5d3ca;color:var(--green)}
+.x{font:600 16px var(--font-archivo);width:34px;height:34px;border:1.5px solid var(--ink);background:var(--sheet);cursor:pointer}
+.x:hover{border-color:var(--red);color:var(--red)}
+.preview{background:var(--band);border:1.5px dashed var(--ink);padding:14px;font-size:13px}
+.preview b{font-weight:700}
+.preview table{background:transparent;margin-top:8px}
+.preview td,.preview th{padding:5px 8px}
+/* A · receta */
+.rec{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:24px;align-items:start}
+.step{display:grid;grid-template-columns:34px 1fr;gap:12px;padding:14px 0;border-top:1px solid var(--rule)}
+.step:first-child{border-top:0;padding-top:0}
+.num{width:30px;height:30px;border:1.5px solid var(--ink);display:grid;place-items:center;font-weight:800}
+.dep{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px 12px;border:1.5px solid var(--ink);background:var(--sheet);margin-top:8px}
+.dep .opt{font-size:12px;color:var(--mut)}
+/* B · esquema */
+.tree{display:grid;grid-template-columns:minmax(0,1fr) 0 360px;gap:0 24px;align-items:start}
+.root{border:2px solid var(--green);background:var(--sheet);padding:14px;position:relative}
+.root .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
+.bus{border-left:2px solid var(--ink);margin-left:28px;padding:6px 0 6px 0}
+.br{display:flex;align-items:center;margin:10px 0}
+.br::before{content:"";width:28px;border-top:2px solid var(--ink)}
+.node{border:1.5px solid var(--ink);background:var(--sheet);padding:9px 12px;flex:1;cursor:pointer}
+.node.on{box-shadow:inset 4px 0 0 var(--green);background:#f1f7f5}
+.node small{display:block;color:var(--mut);font-size:12px}
+.node.dash{border-style:dashed;color:var(--mut);text-align:center}
+.side{border:1.5px solid var(--ink);background:var(--sheet);padding:14px;margin-left:24px;display:grid;gap:10px}
+.wire{display:flex;align-items:flex-start}
+.wire .stub{width:30px;border-top:2px solid var(--ink);margin-top:28px}
+/* C · tabla */
+.tbl td{vertical-align:middle}
+.tbl td input,.tbl td select{font:400 14px var(--font-archivo);border:1.5px solid var(--ink);background:var(--sheet);padding:6px 8px;min-height:36px;width:100%}
+.tbl .main td{background:#f1f7f5;font-weight:600}
+/* Lista */
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:28px;align-items:start}
+.card{border:1.5px solid var(--ink);background:var(--sheet);padding:14px;display:grid;gap:8px}
+.card h4{font-size:16px;font-weight:800}
+.card .arrow{font-size:13px}
+.card .arrow span{color:var(--mut)}
+.extras label{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--rule);font-size:14px;cursor:pointer}
+.extras input{width:18px;height:18px;accent-color:var(--green);margin-top:2px}
+.extras small{display:block;color:var(--mut)}
+#picks{position:sticky;bottom:0;background:var(--ink);color:#fff;padding:10px 16px;margin-top:40px;font-size:13px;display:flex;gap:16px;flex-wrap:wrap}
+#picks b{color:#7fd1b9}
+@media (max-width:900px){.rec,.tree{grid-template-columns:1fr}.side{margin:16px 0 0}}
+</style>
+</head>
+<body>
+<h1>Conjuntos: cómo se montan</h1>
+<p class="why">Ejemplo genérico, no de bombas: <b>«Toma de corriente empotrada»</b>. Principal: un mecanismo que se elige de la categoría <i>Mecanismos</i> al presupuestar. Lleva una caja de empotrar (1 por toma), un marco (1 por toma), cable de 2,5 mm² (metros por toma según «Distancia al cuadro») y, opcional, tubo corrugado. Pulsa <b>«Me quedo con esta»</b> en la opción que prefieras de cada bloque y deja comentarios abajo.</p>
+
+<!-- ================= 1. CREAR / EDITAR ================= -->
+<div class="lbl">1 · Pantalla para crear un conjunto</div>
+
+<!-- A -->
+<section id="edit-a" data-group="editor" data-choice="A">
+  <div class="lbl" style="margin-top:20px;border:0;padding:0"><span>Opción A</span><button class="pick" data-group="editor" data-choice="A">Me quedo con esta</button></div>
+  <p class="variant">A · Receta en pasos, con frases</p>
+  <p class="why">Tres pasos numerados de arriba abajo. Cada dependiente se lee como una frase («1 caja por cada toma»). A la derecha, una vista previa con números de ejemplo.</p>
+  <div class="rec">
+    <div class="sheet">
+      <div class="step"><div class="num">1</div><div style="display:grid;gap:10px">
+        <b>Nombre del conjunto</b>
+        <label class="field">Nombre<input value="Toma de corriente empotrada"></label>
+      </div></div>
+      <div class="step"><div class="num">2</div><div style="display:grid;gap:10px">
+        <b>Elemento principal</b><span class="mut" style="font-size:13px">Es lo que eliges al añadir el conjunto al presupuesto; su cantidad manda.</span>
+        <div class="pair">
+          <label class="field">Se llama en el presupuesto<input value="Toma"></label>
+          <label class="field">Del catálogo<select><option>Elegir de la categoría «Mecanismos» al presupuestar</option><option>Siempre: MEC-014 · Base schuko blanca</option></select></label>
+        </div>
+      </div></div>
+      <div class="step"><div class="num">3</div><div>
+        <b>Lo que lleva cada toma</b>
+        <div class="dep"><div class="inl"><input class="n" value="1"><select><option>por cada toma</option><option>en total</option><option>por cada toma y metro de…</option></select><select><option>CAJ-002 · Caja de empotrar universal</option></select></div><button class="x">×</button></div>
+        <div class="dep"><div class="inl"><input class="n" value="1"><select><option>por cada toma</option></select><select><option>Elegir de «Marcos» al presupuestar</option></select></div><button class="x">×</button></div>
+        <div class="dep"><div class="inl"><input class="n" value="2"><select><option>por cada toma y metro de…</option></select><select><option>Distancia al cuadro (m)</option></select><select><option>CAB-25 · Cable H07V-K 2,5 mm²</option></select></div><button class="x">×</button></div>
+        <div class="dep"><div class="inl"><input class="n" value="1"><select><option>por cada toma y metro de…</option></select><select><option>Distancia al cuadro (m)</option></select><select><option>Elegir de «Tubos» al presupuestar</option></select><span class="opt">· opcional</span></div><button class="x">×</button></div>
+        <div style="display:flex;gap:10px;margin-top:10px"><button class="btn">+ Añadir material</button><button class="btn">+ Añadir dato a preguntar</button></div>
+        <p class="mut" style="font-size:12px;margin-top:8px">Datos que se preguntan al presupuestar: <span class="chip">Distancia al cuadro · m · obligatorio</span></p>
+      </div></div>
+    </div>
+    <div class="preview">
+      <b>Así saldrá en el presupuesto</b><br><span class="mut">Ejemplo con 3 tomas y 12 m al cuadro</span>
+      <table><tbody>
+        <tr><td>3</td><td>Base schuko blanca</td></tr>
+        <tr><td>3</td><td>Caja de empotrar universal</td></tr>
+        <tr><td>3</td><td>Marco (a elegir)</td></tr>
+        <tr><td>72 m</td><td>Cable 2,5 mm² <span class="mut">= 2 × 3 × 12</span></td></tr>
+        <tr><td>36 m</td><td>Tubo (opcional) <span class="mut">= 1 × 3 × 12</span></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+</section>
+
+<!-- B -->
+<section id="edit-b" data-group="editor" data-choice="B">
+  <div class="lbl"><span>Opción B</span><button class="pick" data-group="editor" data-choice="B">Me quedo con esta</button></div>
+  <p class="variant">B · Esquema unifilar: el principal y sus ramas</p>
+  <p class="why">El conjunto se dibuja como un esquema: el principal arriba y cada material colgando de una línea. Al pulsar una rama se edita a la derecha. Es el estilo visual de la app y deja claro que todo depende del principal.</p>
+  <div class="tree">
+    <div>
+      <div class="root"><div class="t">Principal</div><b style="font-size:16px">Toma</b><small class="mut" style="display:block">de «Mecanismos», se elige al presupuestar</small></div>
+      <div class="bus">
+        <div class="br"><div class="node"><b>Caja de empotrar universal</b><small>1 por cada toma</small></div></div>
+        <div class="br"><div class="node"><b>Marco</b><small>1 por cada toma · de «Marcos»</small></div></div>
+        <div class="br"><div class="node on"><b>Cable 2,5 mm²</b><small>2 m por toma y metro de distancia</small></div></div>
+        <div class="br"><div class="node"><b>Tubo</b><small>opcional · 1 por toma y metro</small></div></div>
+        <div class="br"><div class="node dash">+ Añadir material</div></div>
+      </div>
+      <p class="mut" style="font-size:12px;margin-top:8px">Se pregunta: <span class="chip">Distancia al cuadro · m</span> <a href="#" class="mut">+ dato</a></p>
+    </div>
+    <div class="wire"><div class="stub"></div></div>
+    <div class="side" style="margin-left:0">
+      <h3>Rama seleccionada</h3>
+      <label class="field">Material<select><option>CAB-25 · Cable H07V-K 2,5 mm²</option><option>Elegir de una categoría al presupuestar…</option></select></label>
+      <label class="field">Cuánto<div class="inl"><input class="n" value="2"><select><option>por cada toma y metro de</option><option>por cada toma</option><option>en total</option></select><select><option>Distancia al cuadro</option></select></div></label>
+      <label class="check"><input type="checkbox" checked>Obligatorio</label>
+      <div class="preview">3 tomas · 12 m → <b>72 m</b></div>
+      <button class="btn" style="justify-self:start">Quitar rama</button>
+    </div>
+  </div>
+</section>
+
+<!-- C -->
+<section id="edit-c" data-group="editor" data-choice="C">
+  <div class="lbl"><span>Opción C</span><button class="pick" data-group="editor" data-choice="C">Me quedo con esta</button></div>
+  <p class="variant">C · Tabla, como el catálogo</p>
+  <p class="why">Una fila por material, con la principal resaltada arriba. Es lo más compacto: con muchos materiales se ve todo de una vez, pero se lee menos como una frase.</p>
+  <table class="tbl">
+    <thead><tr><th style="width:34%">Material</th><th style="width:9%">Cantidad</th><th style="width:28%">Cómo se cuenta</th><th>Obligatorio</th><th>Ejemplo (3 · 12 m)</th><th></th></tr></thead>
+    <tbody>
+      <tr class="main"><td>Principal · de «Mecanismos» al presupuestar</td><td>N</td><td>La pide quien presupuesta</td><td>Sí</td><td>3</td><td></td></tr>
+      <tr><td><select><option>CAJ-002 · Caja de empotrar</option></select></td><td><input value="1"></td><td><select><option>por cada principal</option></select></td><td><input type="checkbox" checked style="width:18px"></td><td>3</td><td><button class="x">×</button></td></tr>
+      <tr><td><select><option>de «Marcos» al presupuestar</option></select></td><td><input value="1"></td><td><select><option>por cada principal</option></select></td><td><input type="checkbox" checked style="width:18px"></td><td>3</td><td><button class="x">×</button></td></tr>
+      <tr><td><select><option>CAB-25 · Cable 2,5 mm²</option></select></td><td><input value="2"></td><td><select><option>× principal × Distancia al cuadro</option></select></td><td><input type="checkbox" checked style="width:18px"></td><td>72 m</td><td><button class="x">×</button></td></tr>
+      <tr><td><select><option>de «Tubos» al presupuestar</option></select></td><td><input value="1"></td><td><select><option>× principal × Distancia al cuadro</option></select></td><td><input type="checkbox" style="width:18px"></td><td>36 m</td><td><button class="x">×</button></td></tr>
+    </tbody>
+  </table>
+  <div style="display:flex;gap:10px;margin-top:10px"><button class="btn">+ Añadir material</button><button class="btn">+ Añadir dato</button></div>
+</section>
+
+<!-- ================= 2. LISTA ================= -->
+<div class="lbl">2 · La lista de la pestaña Conjuntos</div>
+<div class="cols">
+  <section data-group="lista" data-choice="tabla">
+    <div class="lbl" style="margin-top:0"><span>Lista 1 · Tabla con resumen</span><button class="pick" data-group="lista" data-choice="tabla">Me quedo con esta</button></div>
+    <table>
+      <thead><tr><th>Conjunto</th><th>Principal → lleva</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td class="code">Toma de corriente empotrada</td><td>Toma → caja, marco, cable, tubo</td><td>Activo</td></tr>
+        <tr><td class="code">Instalación de bomba</td><td>Bomba → manguera</td><td>Activo</td></tr>
+        <tr><td class="code">Punto de luz</td><td>Luminaria → caja, cable, interruptor</td><td><span class="badge amber">Incompleto</span></td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section data-group="lista" data-choice="fichas">
+    <div class="lbl" style="margin-top:0"><span>Lista 2 · Fichas con mini esquema</span><button class="pick" data-group="lista" data-choice="fichas">Me quedo con esta</button></div>
+    <div style="display:grid;gap:12px">
+      <div class="card"><h4>Toma de corriente empotrada</h4><div class="arrow"><span class="chip g">Toma</span> → <span class="chip">Caja</span> <span class="chip">Marco</span> <span class="chip">Cable</span> <span class="chip">Tubo</span></div><small class="mut">Pregunta: Distancia al cuadro</small></div>
+      <div class="card"><h4>Instalación de bomba</h4><div class="arrow"><span class="chip g">Bomba</span> → <span class="chip">Manguera</span></div><small class="mut">Pregunta: Distancia al cuadro</small></div>
+      <div class="card" style="border-color:var(--amber-line)"><h4>Punto de luz <span class="badge amber">Incompleto</span></h4><div class="arrow"><span class="chip g">Luminaria</span> → <span class="chip">Caja</span> <span class="chip">Cable</span> <span class="chip">Interruptor</span></div></div>
+    </div>
+  </section>
+</div>
+
+<!-- ================= 3. EXTRAS ================= -->
+<div class="lbl">3 · Extras (marca los que quieras, ninguno es obligatorio)</div>
+<div class="extras">
+  <label><input type="checkbox" value="vista-previa"><span><b>Vista previa con números de ejemplo</b><small>Mientras montas el conjunto, ves cuánto saldría de cada material con una cantidad de prueba.</small></span></label>
+  <label><input type="checkbox" value="duplicar"><span><b>Duplicar un conjunto</b><small>Para crear uno parecido a otro sin empezar de cero.</small></span></label>
+  <label><input type="checkbox" value="buscador"><span><b>Buscador de catálogo al elegir material</b><small>Escribes parte del código o la descripción en vez de recorrer una lista larga.</small></span></label>
+  <label><input type="checkbox" value="ayuda-ejemplos"><span><b>Ayuda con ejemplos variados</b><small>Un texto corto en la pestaña con dos o tres ejemplos (tomas, bombas, puntos de luz) en vez de solo bombas.</small></span></label>
+</div>
+
+<label class="field" style="margin-top:24px">Comentarios para Claude (lo que te gusta, lo que no, mezclas entre opciones…)
+  <textarea id="notes" rows="4" placeholder="Por ejemplo: la B, pero con la vista previa de la A"></textarea>
+</label>
+
+<div id="picks">Elegido → Pantalla: <b id="p-editor">—</b> · Lista: <b id="p-lista">—</b> · Extras: <b id="p-extras">—</b></div>
+
+<script>
+// Las elecciones quedan en window.picks y en el DOM, para que Claude las lea desde Chrome.
+window.picks = { editor: null, lista: null, extras: [], notes: "" };
+document.querySelectorAll(".pick").forEach((b) => b.addEventListener("click", () => {
+  const g = b.dataset.group, c = b.dataset.choice;
+  window.picks[g] = c;
+  document.querySelectorAll(`.pick[data-group=${g}]`).forEach((x) => x.setAttribute("aria-pressed", x === b));
+  document.querySelectorAll(`section[data-group=${g}]`).forEach((s) => s.classList.toggle("chosen", s.dataset.choice === c));
+  document.getElementById(`p-${g}`).textContent = c;
+}));
+document.querySelectorAll(".extras input").forEach((i) => i.addEventListener("change", () => {
+  window.picks.extras = [...document.querySelectorAll(".extras input:checked")].map((x) => x.value);
+  document.getElementById("p-extras").textContent = window.picks.extras.join(", ") || "—";
+}));
+document.getElementById("notes").addEventListener("input", (e) => { window.picks.notes = e.target.value; });
+document.querySelectorAll(".node").forEach((n) => n.addEventListener("click", () => {
+  document.querySelectorAll(".node").forEach((x) => x.classList.toggle("on", x === n && !n.classList.contains("dash")));
+}));
+</script>
+</body>
+</html>

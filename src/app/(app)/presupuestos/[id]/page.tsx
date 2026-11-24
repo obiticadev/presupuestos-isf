@@ -58,7 +58,7 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
     editable, quoteId: q.id, totals: q.totals,
     taxes: taxes.map((t) => ({ id: t.id, name: t.name })),
     concepts: concepts.filter((c) => c.active),
-    kits: kits.map((k) => ({ id: k.id, name: k.name })),
+    kits: kits.map((k) => ({ id: k.id, name: k.name, description: k.description })),
     allConcepts: concepts,
   };
   const title = quoteLabel(q);

@@ -2,9 +2,11 @@ import { prisma } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { getKit, saveKit, setKitActive } from "@/modules/kits/service";
-import { addKitInstance, removeKitInstance, updateKitInstance } from "@/modules/quotes/kit-instances";
-import { addCatalogLine, adjustPrice, getQuote, removeLine, updateLine, updateSection } from "@/modules/quotes/service";
-import { conceptFields, makeDraft } from "../helpers/quotes";
+import { addKitInstance, changeKitInstance, removeKitInstance, updateKitInstance } from "@/modules/quotes/kit-instances";
+import { issueQuote } from "@/modules/quotes/issue";
+import { LOCKED } from "@/modules/quotes/schema";
+import { addCatalogLine, adjustPrice, getQuote, removeLine, setComment, updateLine, updateSection } from "@/modules/quotes/service";
+import { completeDraft, conceptFields, makeDraft } from "../helpers/quotes";
 
 const bombas = { templateId: "kit-bomba", quantity: "2", params: { distancia: "10" }, choices: { main: "concept-bom-mayor75", c1: "concept-man-4x25" } };
 
@@ -140,4 +142,60 @@ test("un concepto elegido que luego se desactiva deja la instancia incompleta al
   await updateKitInstance(actor, k.id, bombas);
   const q = await getQuote(quote.id);
   expect([q.base.toFixed(2), q.sections[0].children[0].kits[0].missing]).toEqual(["0.00", ["Manguera ya no está disponible"]]);
+});
+
+const progDef = {
+  main: { conceptId: "concept-ser-prog", label: "Hora de programador" }, params: [],
+  components: [{ slot: "c1", label: "Desplazamiento", ref: { conceptId: "concept-ser-despl" }, required: true, inName: true, formula: { type: "FIXED" as const, k: "1.5" } }],
+};
+
+test("modificar y restaurar la medida fija recalcula; una vacía no se guarda", async () => {
+  const { actor, admin, quote, sub } = await makeDraft();
+  const tpl = await saveKit(admin, { name: "Prog con desplazamiento", description: "", definition: progDef });
+  const k = await addKitInstance(actor, sub.id, { templateId: tpl.id, quantity: "2", params: {}, choices: {} });
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("100.45"); // 2 × 50 + 1,5 × 0,30
+  await updateKitInstance(actor, k.id, { quantity: "2", params: { k_c1: "10" }, choices: {} });
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("103.00"); // 2 × 50 + 10 × 0,30
+  await updateKitInstance(actor, k.id, { quantity: "2", params: { k_c1: "" }, choices: {} });
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("100.45");
+  expect((await prisma.kitInstance.findUniqueOrThrow({ where: { id: k.id } })).params).toEqual({});
+});
+
+// Bomba (principal de la misma categoría) con un desplazamiento fijo delante: la manguera pasa de c1 a c2.
+const bombaConDespl = {
+  main: { categoryId: "cat-bombas", label: "Bomba" },
+  params: [{ key: "q_c2", label: "Manguera: cantidad", unit: "m", required: true }],
+  components: [
+    { slot: "c1", label: "Desplazamiento", ref: { conceptId: "concept-ser-despl" }, required: true, inName: false, formula: { type: "FIXED" as const, k: "1" } },
+    { slot: "c2", label: "Manguera", ref: { categoryId: "cat-mangueras" }, required: true, inName: true, formula: { type: "PER_QTY_AND_PARAM" as const, param: "q_c2", k: "1" } },
+  ],
+};
+
+test("cambiar de conjunto conserva cantidad, comentario y elecciones compatibles", async () => {
+  const { actor, admin, quote, sub } = await makeDraft();
+  const b = await saveKit(admin, { name: "Bomba con desplazamiento", description: "", definition: bombaConDespl });
+  const k = await addKitInstance(actor, sub.id, bombas);
+  await setComment(actor, { kind: "kit", id: k.id, comment: "Revisar acceso" });
+  await changeKitInstance(actor, k.id, b.id);
+  const after = await prisma.kitInstance.findUniqueOrThrow({ where: { id: k.id } });
+  expect([after.name, after.templateId, after.quantity.toFixed(0), after.comment, after.choices])
+    .toEqual(["Bomba con desplazamiento", b.id, "2", "Revisar acceso", { main: "concept-bom-mayor75", c2: "concept-man-4x25" }]);
+  // the hose had 10 m per pump typed (same formula): it carries over, so the kit stays valued
+  expect([after.params, after.missing]).toEqual([{ q_c2: "10" }, []]);
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("404.30"); // 2 × 102 + 1 × 0,30 + 2 × 10 × 10
+  expect(await prisma.auditLog.count({ where: { entityId: quote.id, summary: { contains: "Conjunto cambiado: Instalación de bomba → Bomba con desplazamiento" } } })).toBe(1);
+});
+
+test("no se cambia a un conjunto desactivado ni en un presupuesto emitido", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const b = await saveKit(admin, { name: "Bomba con desplazamiento", description: "", definition: bombaConDespl });
+  const k = await addKitInstance(actor, sub.id, bombas);
+  await setKitActive(admin, b.id, false);
+  await expect(changeKitInstance(actor, k.id, b.id)).rejects.toThrow(ValidationError);
+
+  const done = await completeDraft();
+  const k2 = await addKitInstance(done.actor, done.sub.id, bombas);
+  await issueQuote(done.actor, done.quote.id);
+  await setKitActive(admin, b.id, true);
+  await expect(changeKitInstance(done.actor, k2.id, b.id)).rejects.toThrow(LOCKED);
 });

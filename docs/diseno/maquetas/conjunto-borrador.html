@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conjunto en el borrador</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1240px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:44px 0 10px;border-top:1.5px solid var(--ink);padding-top:10px}
+.variant{font-size:20px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 12px;max-width:880px}
+.frame{background:var(--sheet);border:1.5px solid var(--ink)}
+.widths{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.widths>div>small{display:block;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+
+/* ---------- Buscador (A2) ---------- */
+.cb{position:relative;min-width:0}
+.cb input{width:100%;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 30px 8px 10px;min-height:40px;text-overflow:ellipsis}
+.cb input:focus{outline:2px solid var(--green);outline-offset:1px}
+/* Sin flecha: con algo escrito o elegido sale una ✕ que lo borra y vuelve a abrir la lista */
+.cb .clr{all:unset;position:absolute;right:5px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:grid;place-items:center;font-size:14px;color:var(--mut);cursor:pointer}
+.cb .clr:hover{color:var(--ink);background:var(--band)}
+.cb .clr:focus-visible{outline:2px solid var(--green)}
+.cb:not(.filled) .clr{display:none}
+.cb ul{position:absolute;z-index:5;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(640px,90vw);margin:0;padding:0;list-style:none;border:1.5px solid var(--ink);background:var(--sheet);max-height:300px;overflow:auto}
+.cb li{display:grid;grid-template-columns:7.5rem minmax(0,1fr) 6.5rem;gap:12px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer;font:400 14px var(--font-archivo),sans-serif}
+.cb li:last-child{border-bottom:0}
+.cb li[aria-selected=true],.cb li:hover{background:var(--band)}
+.cb li b{font-weight:600}.cb li span{font-weight:400}.cb li small{color:var(--mut);font-size:12px;font-weight:400;text-align:right}
+.cb li mark{background:var(--amber-bg);color:inherit}
+.cb li.none,.cb li.hint{display:block;color:var(--mut);font-weight:400;cursor:default;background:none}
+.cb li.hint{font-size:12px;padding:6px 12px;background:var(--band)}
+.cb.kits li{grid-template-columns:9rem minmax(0,1fr)}
+
+/* ---------- Conjunto ---------- */
+.k{border:1.5px solid var(--ink);background:var(--sheet);container-type:inline-size}
+.k.inc{border-color:var(--amber-line)}
+.khead{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--rule);flex-wrap:wrap}
+.khead b{font-size:14px;letter-spacing:.04em;text-transform:uppercase}
+.khead .sum{flex:1;font-size:13px;min-width:0}
+.kdesc{padding:10px 16px 0;font-size:13px;color:var(--mut)}
+.foot{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--rule);flex-wrap:wrap}
+.foot .r{margin-left:auto}
+
+/* Árbol: tres columnas alineadas en todas las filas: elemento | artículo | medida */
+.tree{padding:14px 16px 16px;display:grid;grid-template-columns:190px minmax(0,1fr) 230px;column-gap:12px}
+.row{display:contents}
+.row>*{padding:5px 0}
+.nm{position:relative;display:flex;flex-direction:column;justify-content:flex-start;padding-left:34px}
+/* Eje común: nombre, artículo y medida centrados a 25 px del borde superior de la fila, aunque «opcional» la alargue */
+.row>.art,.row>.med{align-self:start}
+.nm b{font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center;min-height:40px}
+.nm em{font-style:normal;font-size:11px;color:var(--mut);margin-top:-8px;padding-left:50px}
+.row.main .nm{padding-left:0}
+/* Línea vertical continua desde el principal hasta el último material, con su codo */
+.row:not(.main)>.nm::before{content:"";position:absolute;left:21px;top:0;bottom:0;border-left:1.5px solid var(--ink)}
+.row.last>.nm::before{bottom:auto;height:25px}
+.row:not(.main)>.nm::after{content:"";position:absolute;left:21px;top:24px;width:13px;border-top:1.5px solid var(--ink)}
+.row.main>.nm::before{content:"";position:absolute;left:21px;top:35px;bottom:0;border-left:1.5px solid var(--ink)}
+.tag{font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 5px;border:1.5px solid var(--rule);color:var(--mut);text-transform:uppercase;width:44px;box-sizing:border-box;text-align:center;background:var(--sheet);flex:none}
+.tag.el{border-color:var(--green);color:var(--green)}
+.art{display:flex;align-items:center;min-width:0}
+.ro{flex:1;min-width:0;display:flex;align-items:center;font:400 14px var(--font-archivo),sans-serif;border:1.5px solid var(--rule);background:var(--band);color:var(--mut);padding:8px 10px;min-height:40px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.art .cb{flex:1}
+.med{display:grid;grid-template-columns:5.5rem minmax(0,1fr) 34px;gap:6px;align-items:center}
+.med input{width:100%;text-align:right;font:400 14px var(--font-archivo),sans-serif;border:1.5px solid var(--ink);background:var(--sheet);padding:8px 10px;min-height:40px}
+.med input[readonly]{background:var(--band);color:var(--mut);border-color:var(--rule)}
+.med input.changed{background:var(--amber-bg);color:var(--ink);border-color:var(--amber-line)}
+.med small{font-size:12px;color:var(--mut);line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pen{all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border:1.5px solid var(--rule);font-size:14px;box-sizing:border-box}
+.pen:hover{border-color:var(--ink)}
+/* Aviso: ocupa artículo + medida; la línea del árbol sigue por su columna */
+.row.wnote .nm{min-height:0}.row.wnote>.nm::after,.row.lastwnote>.nm::before{display:none}
+.row.wnote .warn{grid-column:2/4;padding:0 0 6px}
+.warn{font-size:12px;color:var(--amber);font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.warn button{font:600 12px var(--font-archivo),sans-serif;border:1.5px solid var(--amber-line);background:var(--sheet);color:var(--amber);padding:4px 8px;cursor:pointer}
+
+/* iPad (contenedor < 760 px): columna de nombre más estrecha y medida algo menor */
+@container (max-width:760px){
+  .tree{grid-template-columns:186px minmax(0,1fr) 196px}
+  .med{grid-template-columns:4.5rem minmax(0,1fr) 34px}
+}
+@container (max-width:560px){.khead .sum{flex-basis:100%;order:3}}
+/* Móvil (contenedor < 560 px): el nombre arriba; debajo el artículo y, debajo, la medida.
+   Una sola línea vertical que nace bajo la etiqueta del principal y un codo a la altura de cada nombre. */
+@container (max-width:560px){
+  .tree{display:block;padding:12px}
+  .row{display:block;position:relative;padding:0 0 12px 34px}
+  .row>*{padding:3px 0}
+  .row .nm{min-height:0;padding-left:0}
+  .row .nm em{padding-left:50px}
+  .nm::before,.nm::after{display:none!important}
+  .row.main{padding-left:0}
+  .row.main>.art,.row.main>.med{margin-left:34px}
+  .row.main::after{content:"";position:absolute;left:21px;top:33px;bottom:0;border-left:1.5px solid var(--ink)}
+  .row:not(.main)::before{content:"";position:absolute;left:21px;top:0;bottom:0;border-left:1.5px solid var(--ink)}
+  .row:not(.main):not(.wnote)::after{content:"";position:absolute;left:21px;top:22px;width:13px;border-top:1.5px solid var(--ink)}
+  .row.last::before{bottom:auto;height:23px}
+  .row.lastwnote::before{display:none}
+  .row.wnote{margin-top:-6px}
+  .row.wnote .nm{display:none}
+  .med{grid-template-columns:6rem minmax(0,1fr) 34px}
+}
+
+/* Cambiar conjunto */
+.swap{display:none;padding:12px;border-top:1px solid var(--rule);background:var(--band)}
+.swap.on{display:block}
+.swap .line{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
+.swap p{font-size:12px;color:var(--mut);margin:8px 0 0}
+</style>
+</head>
+<body>
+<h1>Conjunto en el borrador: maquetas (2)</h1>
+<p class="why">Ejemplo: conjunto <b>SER-SER-BOM</b>. Principal SER-PROG fijo; Desplazamiento fijo, 1,5 km en total; Mangueras se elige al presupuestar, opcional, cantidad × principal; Bomba BOM-HASTA75 fija, 1 ud × principal. Todo es clicable.</p>
+
+<!-- ============ A2 ============ -->
+<div class="lbl">A2 · Buscador: código, descripción y categoría</div>
+<p class="why">Busca en las tres cosas a la vez: prueba «mang», «servicios», «bom» o «7,5». La flecha es la misma que la de los desplegables de la app y gira al abrir. La lista tiene el mismo borde, letra y resaltado que los desplegables de la app.</p>
+<div class="frame" style="padding:16px;min-height:380px;max-width:640px"><label class="field">Artículo del catálogo<div class="cb" data-cb><input placeholder="Escribe el código, la descripción o la categoría" autocomplete="off"></div></label></div>
+
+<!-- ============ B1 ============ -->
+<div class="lbl">B1 · Árbol afinado, a tres anchos</div>
+<p class="why">Tres columnas alineadas en todas las filas (elemento | artículo | medida). «opcional» va debajo del nombre y ya no pisa la caja. La línea del árbol es continua desde el principal hasta el último material, y el aviso queda dentro del árbol. En móvil, cada elemento se apila: nombre, artículo y medida. Prueba ✎ en Desplazamiento o en Bomba, y «Cambiar conjunto» abajo.</p>
+<div class="widths">
+  <div style="width:100%"><small>Escritorio</small><div data-slot></div></div>
+  <div style="width:720px"><small>iPad (vertical)</small><div data-slot></div></div>
+  <div style="width:380px"><small>Móvil</small><div data-slot></div></div>
+</div>
+
+<template id="kit">
+<div class="k inc" data-kit>
+  <div class="khead"><span class="mini"><i>SE</i><s></s><s data-c="man" class="miss"></s><s></s></span><b>Conjunto · <span data-name>SER-SER-BOM</span></b><span class="sum mut">2 × Hora de programador</span><span class="badge amber">Incompleto</span></div>
+  <p class="kdesc" data-desc>Programación con desplazamiento y manguera opcional</p>
+  <div class="tree">
+    <div class="row main">
+      <div class="nm"><b><span class="tag el">SER</span>Principal</b></div>
+      <div class="art"><span class="ro">SER-PROG · Hora de programador</span></div>
+      <div class="med"><input value="2" aria-label="Cantidad"><small>h</small></div>
+    </div>
+    <div class="row">
+      <div class="nm"><b><span class="tag">SER</span>Desplazamiento</b></div>
+      <div class="art"><span class="ro">SER-DESPL · Desplazamiento</span></div>
+      <div class="med" data-orig="1,5"><input value="1,5" readonly><small>km en total</small><button class="pen" title="Cambiar la medida solo en este borrador">✎</button></div>
+    </div>
+    <div class="row">
+      <div class="nm"><b><span class="tag el">MAN</span>Mangueras</b><em>opcional</em></div>
+      <div class="art"><div class="cb" data-cb data-filter="MAN" data-circle="man"><input placeholder="Elige una manguera…" autocomplete="off"></div></div>
+      <div class="med"><input placeholder="0"><small>m × principal</small></div>
+    </div>
+    <div class="row last">
+      <div class="nm"><b><span class="tag">BOM</span>Bomba</b></div>
+      <div class="art"><span class="ro">BOM-HASTA75 · Bomba de potencia menor o igual que 7,5 kW</span></div>
+      <div class="med" data-orig="1"><input value="1" readonly><small>ud × principal</small><button class="pen" title="Cambiar la medida solo en este borrador">✎</button></div>
+    </div>
+  </div>
+  <div class="swap">
+    <div class="line"><div class="cb kits" data-cb data-kits><input placeholder="Busca otro conjunto…" autocomplete="off"></div><button class="btn pri" data-apply>Cambiar</button><button class="btn" data-cancel aria-label="Cerrar">✕</button></div>
+    <p>Se conservan la cantidad y el comentario, y lo elegido o escrito en los elementos que el nuevo conjunto también tenga. Lo demás se vuelve a pedir.</p>
+  </div>
+  <div class="foot"><button class="btn">Quitar</button><button class="btn" data-swap>Cambiar conjunto</button><button class="btn" title="Comentario">💬</button><button class="btn pri r">✓</button></div>
+</div>
+</template>
+
+<script>
+const CONCEPTS = [
+  ["BOM-HASTA75","Bomba de potencia menor o igual que 7,5 kW","Bombas"],
+  ["BOM-MAYOR75","Bomba de potencia mayor que 7,5 kW","Bombas"],
+  ["IMP-01","Contactor importado","Material"],
+  ["MAN-12X075","Manguera 12 hilos x 0,75 mm²","Mangueras"],
+  ["MAN-4X25","Manguera 4 hilos x 2,5 mm²","Mangueras"],
+  ["SER-DESPL","Desplazamiento","Servicios"],
+  ["SER-PROG","Hora de programador","Servicios"],
+];
+const KITS = [
+  ["SER-SER-BOM","Programación con desplazamiento y manguera opcional"],
+  ["SER-SER","Programación con desplazamiento"],
+  ["BOM-MAN","Bomba con su manguera"],
+  ["PER-SER","Personal con servicios"],
+];
+document.querySelectorAll("[data-slot]").forEach((s) => s.append(document.getElementById("kit").content.cloneNode(true)));
+
+const norm = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+const fold = (s) => [...s].map((c) => norm(c)[0] ?? c).join("");
+const hl = (text, q) => { if (!q) return text; const i = fold(text).indexOf(fold(q)); return i < 0 ? text : text.slice(0, i) + "<mark>" + text.slice(i, i + q.length) + "</mark>" + text.slice(i + q.length); };
+
+document.querySelectorAll("[data-cb]").forEach((cb) => {
+  const input = cb.querySelector("input"); const kits = "kits" in cb.dataset;
+  const clr = document.createElement("button"); clr.type = "button"; clr.className = "clr"; clr.textContent = "✕"; clr.setAttribute("aria-label", "Borrar");
+  input.after(clr);
+  const fill = () => cb.classList.toggle("filled", input.value !== "");
+  // mousedown keeps the focus in the field, so the list reopens at once
+  clr.onmousedown = (e) => { e.preventDefault(); input.value = ""; delete cb.dataset.value; fill(); idx = 0; input.focus(); render(); };
+  clr.onclick = () => { input.value = ""; delete cb.dataset.value; fill(); idx = 0; input.focus(); render(); };
+  const pool = kits ? KITS : CONCEPTS.filter((c) => !cb.dataset.filter || c[0].startsWith(cb.dataset.filter));
+  let ul = null, list = [], idx = 0;
+  const close = () => { ul?.remove(); ul = null; cb.classList.remove("open"); };
+  const choose = (c) => {
+    input.value = c[0] + " · " + c[1]; cb.dataset.value = c[0]; fill(); close();
+    const k = cb.closest("[data-kit]"); const circle = cb.dataset.circle && k.querySelector(`[data-c="${cb.dataset.circle}"]`);
+    if (circle) { circle.classList.remove("miss"); if (!k.querySelector(".mini .miss")) { k.classList.remove("inc"); k.querySelector(".badge")?.remove(); } }
+  };
+  const render = () => {
+    const q = input.value.trim();
+    list = pool.filter((c) => !q || fold(c.join(" ")).includes(fold(q)));
+    idx = Math.min(idx, Math.max(list.length - 1, 0));
+    if (!ul) { ul = document.createElement("ul"); ul.setAttribute("role", "listbox"); cb.append(ul); cb.classList.add("open"); }
+    ul.innerHTML = (q ? `<li class="hint">${list.length} de ${pool.length}</li>` : "") + (list.length ? list.map((c, i) =>
+      `<li role="option" data-i="${i}" aria-selected="${i === idx}"><b>${hl(c[0], q)}</b><span>${hl(c[1], q)}</span>${kits ? "" : `<small>${hl(c[2], q)}</small>`}</li>`).join("")
+      : `<li class="none">Nada coincide con «${q}»</li>`);
+    ul.querySelectorAll("[data-i]").forEach((li) => li.onmousedown = (e) => { e.preventDefault(); choose(list[+li.dataset.i]); });
+  };
+  input.addEventListener("focus", () => { idx = 0; render(); });
+  input.addEventListener("input", () => { fill(); idx = 0; render(); });
+  input.addEventListener("blur", close);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { if (!ul) render(); idx = Math.min(idx + 1, list.length - 1); render(); e.preventDefault(); }
+    else if (e.key === "ArrowUp") { idx = Math.max(idx - 1, 0); render(); e.preventDefault(); }
+    else if (e.key === "Enter") { if (ul && list[idx]) choose(list[idx]); e.preventDefault(); }
+    else if (e.key === "Escape") close();
+  });
+});
+
+document.querySelectorAll(".med[data-orig]").forEach((m) => {
+  const input = m.querySelector("input"), orig = m.dataset.orig, row = m.closest(".row");
+  let note = null;
+  const sync = () => {
+    const changed = input.value.trim() !== orig;
+    input.classList.toggle("changed", changed);
+    if (changed && !note) {
+      note = document.createElement("div"); note.className = "row wnote" + (row.classList.contains("last") ? " lastwnote" : "");
+      note.innerHTML = `<div class="nm"></div><div class="warn"><span>⚠ Medida cambiada solo en este borrador; el conjunto dice ${orig}.</span><button type="button">Volver al original</button></div>`;
+      // the last material keeps closing the tree: the note goes below, and its line stops at the material
+      row.after(note);
+      note.querySelector("button").onclick = () => { input.value = orig; input.readOnly = true; sync(); };
+    } else if (!changed && note) { note.remove(); note = null; }
+  };
+  m.querySelector(".pen").onclick = () => { input.readOnly = false; input.focus(); input.select(); };
+  input.addEventListener("input", sync);
+  input.addEventListener("blur", () => { if (input.value.trim() === orig) input.readOnly = true; });
+});
+
+document.querySelectorAll("[data-kit]").forEach((k) => {
+  const swap = k.querySelector(".swap");
+  k.querySelector("[data-swap]").onclick = () => { swap.classList.add("on"); swap.querySelector("input").focus(); };
+  k.querySelector("[data-cancel]").onclick = () => swap.classList.remove("on");
+  k.querySelector("[data-apply]").onclick = () => {
+    const v = swap.querySelector("[data-kits]").dataset.value; if (!v) return;
+    const kit = KITS.find((x) => x[0] === v);
+    k.querySelector("[data-name]").textContent = kit[0]; k.querySelector("[data-desc]").textContent = kit[1];
+    swap.classList.remove("on");
+  };
+});
+</script>
+</body>
+</html>
