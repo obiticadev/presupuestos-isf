@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conjuntos: interfaz completa</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1260px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:56px 0 10px;border-top:2px solid var(--ink);padding-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.variant{font-size:24px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 16px;max-width:900px}
+.pick{font:700 12px var(--font-archivo);letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border:1.5px solid var(--green);color:var(--green);background:var(--sheet);cursor:pointer}
+.pick[aria-pressed=true]{background:var(--green);color:#fff}
+section.chosen{outline:3px solid var(--green);outline-offset:12px}
+.frame{background:var(--paper);border:1.5px solid var(--rule);padding:22px 26px}
+/* controles */
+.in{font:600 14px var(--font-archivo);color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:0 10px;height:38px;width:100%;min-width:0}
+textarea.in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
+.in.num{text-align:right}
+.in:disabled{border-style:dashed;color:var(--mut);background:var(--paper)}
+.unit{font-size:13px;font-weight:600;color:var(--mut)}
+.fl{display:grid;gap:4px;font-size:12px;font-weight:600;color:var(--mut)}
+.sw{appearance:none;width:38px;height:22px;border:1.5px solid var(--ink);background:var(--band);position:relative;cursor:pointer;margin:0;flex:none}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;background:var(--mut);transition:left .15s}
+.sw:checked{background:var(--green);border-color:var(--green)}
+.sw:checked::after{left:18px;background:#fff}
+.ck{width:18px;height:18px;accent-color:var(--green);margin:0;flex:none}
+.seg{display:inline-flex;border:1.5px solid var(--ink);justify-self:start;width:max-content}
+.seg button{font:600 13px var(--font-archivo);border:0;background:var(--sheet);padding:0 12px;height:34px;cursor:pointer;white-space:nowrap}
+.seg button+button{border-left:1.5px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.fixed{height:38px;display:flex;align-items:center;border:1.5px dashed var(--mut);padding:0 10px;font-size:13px;font-weight:600;color:var(--mut);background:var(--paper)}
+.add{border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font:600 14px var(--font-archivo);height:42px;cursor:pointer;width:100%}
+.add:hover{color:var(--ink);background:var(--sheet)}
+/* nombre automático */
+.idrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.code{font-size:30px;font-weight:800;color:var(--green);letter-spacing:.03em;font-stretch:90%}
+.code .seg2{border-bottom:3px solid var(--green)}
+.autonote{font-size:12px;color:var(--mut)}
+.clash{background:var(--amber-bg);border-left:4px solid var(--amber-line);color:var(--amber);padding:9px 12px;font-size:13px;font-weight:600;display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.clash button{font:700 12px var(--font-archivo);border:1.5px solid var(--amber-line);background:var(--sheet);color:var(--amber);padding:5px 10px;cursor:pointer}
+/* símbolo grande */
+.big{display:flex;align-items:center}
+.big i{width:44px;height:44px;border:2px solid var(--ink);display:grid;place-items:center;font:800 17px var(--font-archivo);font-style:normal;background:var(--sheet)}
+.big s{display:block;width:40px;height:2px;background:var(--ink);position:relative}
+.big s::after{content:"";position:absolute;right:-2px;top:-10px;width:20px;height:20px;border:2px solid var(--ink);border-radius:50%;background:var(--sheet)}
+.big s.opt::after{border-style:dashed}
+/* principal */
+.root{border:2px solid var(--green);background:var(--sheet);padding:14px;display:grid;gap:10px}
+.root .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
+.rgrid{display:grid;grid-template-columns:minmax(0,1fr) 11rem;gap:12px;align-items:end}
+/* árbol */
+.bus{position:relative;margin:14px 0 0 22px;padding-left:30px}
+.bus::before{content:"";position:absolute;left:0;top:-14px;bottom:21px;border-left:2px solid var(--ink)}
+.row{position:relative;margin-bottom:8px}
+.row::before{content:"";position:absolute;left:-30px;top:21px;width:30px;border-top:2px solid var(--ink)}
+.dep{display:grid;grid-template-columns:minmax(0,1fr) auto 1.2rem;gap:12px;align-items:center;border:1.5px solid var(--ink);background:var(--sheet);padding:8px 12px;min-height:42px;cursor:pointer}
+.dep:hover{background:#f7faf9}
+.dep.sel{box-shadow:inset 4px 0 0 var(--green);background:#f1f7f5}
+.dep small{display:block;color:var(--mut);font-size:12px}
+.dep .pf{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--green);padding:1px 6px;margin-right:6px;letter-spacing:.04em}
+.dep .pf.off{background:var(--band);color:var(--mut)}
+.sum{font-size:13px;font-weight:700;text-align:right;white-space:nowrap}
+.chev{color:var(--mut);text-align:right}
+/* editor de material */
+.ed{display:grid;gap:12px}
+.erow{display:grid;grid-template-columns:10rem minmax(0,1fr);align-items:center;gap:10px;font-size:13px;font-weight:600}
+.erow .qty{display:grid;grid-template-columns:6rem 2.4rem;gap:8px;align-items:center}
+.hint{margin-left:calc(10rem + 10px);font-size:12px;color:var(--mut);font-weight:400;margin-top:-6px}
+.box{border:1.5px solid var(--ink);background:var(--sheet);padding:16px}
+.foot{display:flex;gap:10px;align-items:center;margin-top:20px;flex-wrap:wrap}
+/* L1 */
+.l1{display:grid;grid-template-columns:minmax(0,1fr) 420px;gap:24px;align-items:start;margin-top:18px}
+.l1 .box{position:sticky;top:12px}
+/* L2 */
+.l2{display:grid;grid-template-columns:300px minmax(0,1fr);gap:24px;align-items:start}
+.card{border:1.5px solid var(--ink);background:var(--sheet);padding:16px;display:grid;gap:12px;position:sticky;top:12px}
+.inline{border:1.5px solid var(--green);border-top:0;background:var(--sheet);padding:14px;margin-top:-1px}
+/* L3 */
+.map{border:1.5px solid var(--ink);background:var(--sheet);padding:22px 18px 14px;overflow-x:auto}
+.hbus{display:flex;align-items:flex-start;min-width:max-content}
+.hroot{border:2px solid var(--green);padding:10px 12px;min-width:150px;cursor:pointer;background:var(--sheet)}
+.hroot.sel{background:#f1f7f5;box-shadow:inset 0 -4px 0 var(--green)}
+.hroot .t{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
+.hnode{display:flex;flex-direction:column;align-items:center;width:150px;cursor:pointer;position:relative;padding-top:0}
+.hnode::before{content:"";position:absolute;top:26px;left:0;right:50%;border-top:2px solid var(--ink)}
+.hnode::after{content:"";position:absolute;top:26px;left:50%;right:0;border-top:2px solid var(--ink)}
+.hnode:last-child::after{display:none}
+.hnode .c{width:24px;height:24px;border:2px solid var(--ink);border-radius:50%;background:var(--sheet);margin-top:15px;position:relative;z-index:1}
+.hnode.opt .c{border-style:dashed}
+.hnode.sel .c{background:var(--green);border-color:var(--green)}
+.hnode b{font-size:13px;margin-top:8px;text-align:center;padding:0 6px}
+.hnode small{font-size:11px;color:var(--mut);text-align:center;padding:0 6px}
+.hnode.addn .c{border-style:dashed;display:grid;place-items:center;font-weight:800;color:var(--mut);line-height:1}
+.l3ed{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:24px;margin-top:18px;align-items:start}
+#picks{position:sticky;bottom:0;background:var(--ink);color:#fff;padding:10px 16px;margin-top:36px;font-size:13px;z-index:5}
+#picks b{color:#7fd1b9}
+@media (max-width:1000px){.l1,.l2,.l3ed{grid-template-columns:1fr}.rgrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>Conjuntos: pantalla completa de crear y editar</h1>
+<p class="why">Tres maneras de organizar la misma pantalla. En las tres el <b>nombre se genera solo con la opción D</b> (prefijo del principal más los materiales que marques «en el nombre»), la descripción se escribe a mano y el símbolo (cuadrado con 2 letras y un círculo por material) se ve tal cual. <b>Nombres repetidos:</b> el ejemplo empieza a propósito con <b>BOM-MAN</b>, que ya existe. Verás el aviso con la solución: marcar otro material con un clic o, si no, se guarda como «-2». Todo es interactivo.</p>
+
+<section data-choice="1">
+  <div class="lbl"><span>Interfaz 1</span><button class="pick" data-choice="1">Me quedo con esta</button></div>
+  <p class="variant">1 · Árbol con panel a la derecha</p>
+  <p class="why">La que elegiste, pulida. Arriba el nombre generado y el símbolo, debajo el principal y el árbol, y a la derecha el panel del material pulsado.</p>
+  <div class="frame" data-l="1"></div>
+</section>
+
+<section data-choice="2">
+  <div class="lbl"><span>Interfaz 2</span><button class="pick" data-choice="2">Me quedo con esta</button></div>
+  <p class="variant">2 · Ficha fija a la izquierda y árbol que se despliega</p>
+  <p class="why">A la izquierda, una ficha que siempre se ve: nombre, símbolo, descripción y estado. A la derecha, el árbol. El material pulsado se abre debajo de su rama, sin panel aparte, así que editas sin apartar la vista del árbol.</p>
+  <div class="frame" data-l="2"></div>
+</section>
+
+<section data-choice="3">
+  <div class="lbl"><span>Interfaz 3</span><button class="pick" data-choice="3">Me quedo con esta</button></div>
+  <p class="variant">3 · Esquema horizontal, como el símbolo en grande</p>
+  <p class="why">El conjunto se dibuja como su propio símbolo, pero en grande: el principal a la izquierda y un círculo por material a lo largo de la línea. Pulsas un círculo y se edita debajo. Es la más visual y la que más se parece al símbolo del presupuesto.</p>
+  <div class="frame" data-l="3"></div>
+</section>
+
+<label class="field" style="margin-top:28px">Comentarios para Claude
+  <textarea id="notes" rows="3" placeholder="Qué te gusta de cada una o qué mezclarías"></textarea>
+</label>
+<div id="picks">Elegida → <b id="p">—</b></div>
+
+<script>
+// Catálogo de ejemplo y conjuntos que ya existen (para el aviso de nombre repetido).
+const CATS = { Bombas: "BOM", Mangueras: "MAN", Marcos: "MAR", "Mano de obra": "MO" };
+const ITEMS = ["VAL-010 · Válvula antirretorno 1\"", "CUA-001 · Cuadro de maniobra", "MO-002 · Hora de oficial", "MO-003 · Hora de ayudante", "CAJ-002 · Caja de empotrar", "BOM-003 · Bomba sumergible 1 CV"];
+const EXIST = ["BOM-MAN", "BOM-01", "MEC-MAR", "LUM-INT"];
+const UNIT = { MAN: "m", MO: "h" };
+const num = (s) => Number(String(s).replace(",", ".")) || 0;
+const pref = (x) => (x.mode === "cat" ? CATS[x.cat] : x.item.split("-")[0]);
+const label = (x) => (x.mode === "cat" ? x.cat : x.item.split(" · ")[1]);
+const unitOf = (x) => UNIT[pref(x)] ?? "ud";
+const opts = (list, v) => list.map((o) => `<option${o === v ? " selected" : ""}>${o}</option>`).join("");
+const sentence = (d) => (d.ask ? "cantidad al presupuestar" : `${d.qty || "?"} ${unitOf(d)}`) + (d.mult ? " × principal" : " en total");
+const seed = () => ({
+  main: { mode: "cat", cat: "Bombas", item: ITEMS[5] },
+  deps: [
+    { mode: "cat", cat: "Mangueras", item: ITEMS[0], qty: "", mult: true, ask: true, req: true, inName: true },
+    { mode: "item", cat: "Bombas", item: ITEMS[0], qty: "1", mult: true, ask: false, req: true, inName: false },
+    { mode: "item", cat: "Bombas", item: ITEMS[1], qty: "1", mult: false, ask: false, req: true, inName: false },
+    { mode: "item", cat: "Mano de obra", item: ITEMS[2], qty: "1,5", mult: true, ask: false, req: false, inName: false },
+  ],
+  sel: 0, desc: "Bomba sumergible con montaje completo",
+});
+const baseName = (S) => [pref(S.main), ...S.deps.filter((d) => d.inName).map(pref)].join("-");
+const finalName = (S) => (EXIST.includes(baseName(S)) ? baseName(S) + "-2" : baseName(S));
+
+function nameBlock(S, big) {
+  const b = baseName(S), clash = EXIST.includes(b);
+  const next = S.deps.findIndex((d) => !d.inName);
+  const parts = finalName(S).split("-");
+  return `<div class="idrow">
+      <span class="code">${parts.map((p, i) => (i === 0 ? `<span class="seg2">${p.slice(0, 2)}</span>${p.slice(2)}` : p)).join("-")}</span>
+      ${symbol(S, big)}
+    </div>
+    <p class="autonote">Nombre automático: prefijo del principal + los materiales marcados «en el nombre». Las 2 letras subrayadas van en el símbolo.</p>
+    ${clash ? `<div class="clash">Ya existe un conjunto ${b}.
+      ${next >= 0 ? `<button data-fix="${next}">Añadir ${pref(S.deps[next])} al nombre → ${b}-${pref(S.deps[next])}</button> o` : ""}
+      se guardará como <b>${b}-2</b>.</div>` : ""}`;
+}
+function symbol(S, big) {
+  return big ? `<span class="big"><i>${pref(S.main).slice(0, 2)}</i>${S.deps.map((d) => `<s class="${d.req ? "" : "opt"}"></s>`).join("")}</span>`
+    : `<span class="mini"><i>${pref(S.main).slice(0, 2)}</i>${S.deps.map(() => "<s></s>").join("")}</span>`;
+}
+const picker = (x, who) => `
+  <div class="seg" data-who="${who}"><button data-mode="cat" aria-pressed="${x.mode === "cat"}">Se elige al presupuestar</button><button data-mode="item" aria-pressed="${x.mode === "item"}">Siempre el mismo</button></div>
+  ${x.mode === "cat" ? `<label class="fl">De la categoría<select class="in" data-who="${who}" data-k="cat">${opts(Object.keys(CATS), x.cat)}</select></label>`
+    : `<label class="fl">Artículo del catálogo<select class="in" data-who="${who}" data-k="item">${opts(ITEMS, x.item)}</select></label>`}`;
+function principal(S) {
+  return `<div class="root"><span class="t">Principal</span>
+    <div class="rgrid"><div style="display:grid;gap:10px">${picker(S.main, "main")}</div>
+    <label class="fl">Cantidad<div class="fixed">Se pide al presupuestar</div></label></div></div>`;
+}
+function editor(S) {
+  const d = S.deps[S.sel];
+  if (!d) return `<p class="mut">Añade un material para editarlo.</p>`;
+  return `<div class="ed">
+    <h3>Material: ${label(d)}</h3>
+    <div style="display:grid;gap:10px">${picker(d, "dep")}</div>
+    <div class="erow"><span>Cantidad</span><div class="qty"><input class="in num" data-k="qty" data-focus="qty" value="${d.ask ? "" : d.qty}" ${d.ask ? "disabled placeholder='—'" : ""}><span class="unit">${unitOf(d)}</span></div></div>
+    <div class="erow"><span>Se pone al presupuestar</span><span><input type="checkbox" class="ck" data-k="ask" ${d.ask ? "checked" : ""}></span></div>
+    <div class="erow"><span>× cantidad del principal</span><span><input type="checkbox" class="sw" data-k="mult" ${d.mult ? "checked" : ""}></span></div>
+    <p class="hint">${d.mult ? "Si el principal lleva 2, esto se multiplica por 2." : "Va una sola vez, lleve el principal lo que lleve."}</p>
+    <div class="erow"><span>Obligatorio</span><span><input type="checkbox" class="ck" data-k="req" ${d.req ? "checked" : ""}></span></div>
+    <div class="erow"><span>En el nombre (${pref(d)})</span><span><input type="checkbox" class="ck" data-k="inName" ${d.inName ? "checked" : ""}></span></div>
+    <button class="btn" data-del style="justify-self:start">Quitar material</button></div>`;
+}
+const branch = (S, d, i) => `<div class="dep${i === S.sel ? " sel" : ""}" data-sel="${i}">
+  <span><span class="pf${d.inName ? "" : " off"}">${pref(d)}</span><b>${label(d)}</b><small>${d.mode === "cat" ? "se elige de «" + d.cat + "» al presupuestar" : d.item}${d.req ? "" : " · opcional"}</small></span>
+  <span class="sum">${sentence(d)}</span><span class="chev">${i === S.sel ? "⌄" : "›"}</span></div>`;
+const desc = (S) => `<label class="fl">Descripción (a mano)<textarea class="in" rows="2" data-desc data-focus="desc">${S.desc}</textarea></label>`;
+const foot = `<div class="foot"><button class="btn pri">Guardar</button><span class="mut" style="font-size:12px">Cambiar el conjunto no altera los presupuestos donde ya se usó.</span></div>`;
+
+const layouts = {
+  1: (S) => `<div class="crumb">Conjuntos / ${finalName(S)}</div>
+    ${nameBlock(S, false)}
+    <div style="max-width:720px;margin-top:12px">${desc(S)}</div>
+    <div class="l1"><div>${principal(S)}
+      <div class="bus">${S.deps.map((d, i) => `<div class="row">${branch(S, d, i)}</div>`).join("")}<div class="row"><button class="add" data-add>+ Añadir material</button></div></div></div>
+      <div class="box">${editor(S)}</div></div>${foot}`,
+  2: (S) => `<div class="crumb">Conjuntos / ${finalName(S)}</div>
+    <div class="l2">
+      <div class="card"><h3>Ficha</h3>${nameBlock(S, true)}${desc(S)}
+        <label class="fl">Estado<div class="fixed" style="border-style:solid;color:var(--ink);background:var(--sheet)">Activo</div></label>
+        <button class="btn pri">Guardar</button></div>
+      <div>${principal(S)}
+        <div class="bus">${S.deps.map((d, i) => `<div class="row">${branch(S, d, i)}${i === S.sel ? `<div class="inline">${editor(S)}</div>` : ""}</div>`).join("")}<div class="row"><button class="add" data-add>+ Añadir material</button></div></div>
+      </div></div>`,
+  3: (S) => `<div class="crumb">Conjuntos / ${finalName(S)}</div>
+    ${nameBlock(S, false)}
+    <div class="map" style="margin-top:12px"><div class="hbus">
+      <div class="hroot${S.sel === -1 ? " sel" : ""}" data-sel="-1"><div class="t">Principal · ${pref(S.main).slice(0, 2)}</div><b>${label(S.main)}</b><br><small class="mut">${S.main.mode === "cat" ? "se elige al presupuestar" : "siempre el mismo"}</small></div>
+      ${S.deps.map((d, i) => `<div class="hnode${d.req ? "" : " opt"}${i === S.sel ? " sel" : ""}" data-sel="${i}"><span class="c"></span><b>${label(d)}</b><small>${sentence(d)}</small></div>`).join("")}
+      <div class="hnode addn" data-add><span class="c">+</span><b class="mut">Añadir</b></div>
+    </div></div>
+    <div class="l3ed"><div class="box">${S.sel === -1 ? `<div class="ed"><h3>Principal</h3>${picker(S.main, "main")}<p class="mut" style="font-size:12px">Su cantidad se pide al presupuestar.</p></div>` : editor(S)}</div>
+      <div>${desc(S)}</div></div>${foot}`,
+};
+
+function render(f) {
+  const S = f._S, active = document.activeElement, keep = active && f.contains(active) ? active.dataset.focus : null;
+  f.innerHTML = layouts[f.dataset.l](S);
+  if (keep) { const el = f.querySelector(`[data-focus="${keep}"]`); if (el) { el.focus(); el.setSelectionRange?.(el.value.length, el.value.length); } }
+}
+document.querySelectorAll(".frame").forEach((f) => {
+  f._S = seed(); render(f);
+  const S = f._S;
+  f.addEventListener("click", (e) => {
+    const t = e.target;
+    const fix = t.closest("[data-fix]"); if (fix) { S.deps[fix.dataset.fix].inName = true; return render(f); }
+    const add = t.closest("[data-add]"); if (add) { S.deps.push({ mode: "item", cat: "Mano de obra", item: ITEMS[3], qty: "1", mult: true, ask: false, req: true, inName: false }); S.sel = S.deps.length - 1; return render(f); }
+    if (t.closest("[data-del]")) { S.deps.splice(S.sel, 1); S.sel = Math.min(S.sel, S.deps.length - 1); return render(f); }
+    if (t.matches(".seg button")) { (t.parentElement.dataset.who === "main" ? S.main : S.deps[S.sel])[ "mode"] = t.dataset.mode; return render(f); }
+    const sel = t.closest("[data-sel]"); if (sel && !t.closest(".inline")) { S.sel = Number(sel.dataset.sel); return render(f); }
+  });
+  f.addEventListener("input", (e) => {
+    const t = e.target;
+    if (t.dataset.k === "qty") { S.deps[S.sel].qty = t.value; render(f); }
+    if ("desc" in t.dataset) S.desc = t.value;
+  });
+  f.addEventListener("change", (e) => {
+    const t = e.target;
+    if (t.tagName === "SELECT" && t.dataset.who) { (t.dataset.who === "main" ? S.main : S.deps[S.sel])[t.dataset.k] = t.value; return render(f); }
+    if (t.type === "checkbox" && t.dataset.k) { S.deps[S.sel][t.dataset.k] = t.checked; render(f); }
+  });
+});
+window.picks = { ui: null, notes: "" };
+document.querySelectorAll(".pick").forEach((b) => b.addEventListener("click", () => {
+  window.picks.ui = b.dataset.choice;
+  document.querySelectorAll(".pick").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  document.querySelectorAll("section[data-choice]").forEach((s) => s.classList.toggle("chosen", s.dataset.choice === b.dataset.choice));
+  document.getElementById("p").textContent = b.dataset.choice;
+}));
+document.getElementById("notes").addEventListener("input", (e) => { window.picks.notes = e.target.value; });
+</script>
+</body>
+</html>

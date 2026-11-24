@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conjuntos: cuánto lleva</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1240px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:40px 0 10px;border-top:1.5px solid var(--ink);padding-top:10px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.variant{font-size:20px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 14px;max-width:860px}
+.pick{font:700 12px var(--font-archivo);letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border:1.5px solid var(--green);color:var(--green);background:var(--sheet);cursor:pointer}
+.pick[aria-pressed=true]{background:var(--green);color:#fff}
+.chosen{outline:3px solid var(--green);outline-offset:8px}
+.chip{display:inline-block;font-size:12px;font-weight:700;padding:2px 8px;background:var(--band);border:1px solid var(--rule)}
+/* Esquema B (contexto) */
+.tree{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:24px;align-items:start}
+.root{border:2px solid var(--green);background:var(--sheet);padding:14px}
+.root .t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
+.bus{border-left:2px solid var(--ink);margin-left:28px;padding:6px 0}
+.br{display:flex;align-items:center;margin:10px 0}
+.br::before{content:"";width:28px;border-top:2px solid var(--ink)}
+.node{border:1.5px solid var(--ink);background:var(--sheet);padding:9px 12px;flex:1}
+.node.on{box-shadow:inset 4px 0 0 var(--green);background:#f1f7f5}
+.node small{display:block;color:var(--mut);font-size:12px}
+.node.dash{border-style:dashed;color:var(--mut);text-align:center}
+.side{border:1.5px solid var(--ink);background:var(--sheet);padding:16px;display:grid;gap:12px}
+.q{font-size:13px;font-weight:700}
+.seg{display:grid;gap:6px}
+.seg label{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--rule);padding:9px 10px;cursor:pointer;font-size:14px}
+.seg label:has(input:checked){border-color:var(--green);background:#f1f7f5}
+.seg input{accent-color:var(--green);width:16px;height:16px;margin-top:2px}
+.seg small{display:block;color:var(--mut);font-size:12px}
+.sentence{font-size:15px;line-height:2.4}
+.sentence input,.sentence select{font:600 14px var(--font-archivo);border:1.5px solid var(--ink);background:var(--sheet);padding:4px 8px;min-height:34px;vertical-align:middle}
+.sentence input.n{width:4rem;text-align:right}
+.result{background:var(--band);border-left:4px solid var(--green);padding:10px 12px;font-size:13px}
+.result b{font-size:15px}
+.calc{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:15px;font-weight:700}
+.calc input{font:700 15px var(--font-archivo);width:4rem;text-align:right;border:1.5px solid var(--ink);padding:6px 8px}
+.tog{font:600 13px var(--font-archivo);border:1.5px dashed var(--mut);background:var(--sheet);color:var(--mut);padding:7px 10px;cursor:pointer}
+.tog[aria-pressed=true]{border-style:solid;border-color:var(--green);color:var(--green);background:#f1f7f5}
+.three{display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:28px;align-items:start}
+#picks{position:sticky;bottom:0;background:var(--ink);color:#fff;padding:10px 16px;margin-top:40px;font-size:13px}
+#picks b{color:#7fd1b9}
+@media (max-width:900px){.tree{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<h1>Opción B: cómo decir «cuánto lleva»</h1>
+<p class="why">Mantenemos el esquema de la opción B. Lo que cambia es el panel de la derecha, el de editar un material. En las tres variantes quitamos los desplegables con reglas («por cada toma y metro de…»). Siempre se ve el resultado con un ejemplo, para comprobar que la cuenta es la que quieres.</p>
+
+<div class="lbl">Contexto · el esquema que elegiste (con «Cable 2,5 mm²» seleccionado)</div>
+<div class="tree">
+  <div>
+    <div class="root"><div class="t">Principal</div><b style="font-size:16px">Toma</b><small class="mut" style="display:block">se elige al presupuestar entre los de «Mecanismos»</small></div>
+    <div class="bus">
+      <div class="br"><div class="node"><b>Caja de empotrar universal</b><small>1 por cada toma</small></div></div>
+      <div class="br"><div class="node"><b>Marco</b><small>1 por cada toma · se elige entre los de «Marcos»</small></div></div>
+      <div class="br"><div class="node on"><b>Cable 2,5 mm²</b><small>2 m por cada toma y cada metro de «Distancia al cuadro»</small></div></div>
+      <div class="br"><div class="node"><b>Tubo</b><small>opcional · 1 m por cada toma y cada metro de «Distancia al cuadro»</small></div></div>
+      <div class="br"><div class="node dash">+ Añadir material</div></div>
+    </div>
+    <p class="mut" style="font-size:12px;margin-top:8px">Al presupuestar se preguntará: <span class="chip">Distancia al cuadro (m)</span> <a href="#" class="mut">+ añadir pregunta</a></p>
+  </div>
+  <div class="side" style="color:var(--mut);place-items:center;min-height:200px;border-style:dashed">El panel de editar va aquí ↓ (tres variantes debajo)</div>
+</div>
+
+<div class="lbl">Material: qué artículo es (igual en las tres variantes)</div>
+<div class="side" style="max-width:400px">
+  <div class="q">¿Qué material es?</div>
+  <div class="seg">
+    <label><input type="radio" name="m0" checked><span>Siempre el mismo artículo<small>Por ejemplo, siempre CAB-25 · Cable H07V-K 2,5 mm²</small></span></label>
+    <label><input type="radio" name="m0"><span>Se elige al presupuestar<small>Quien presupuesta escoge uno de una categoría (por ejemplo, «Marcos»)</small></span></label>
+  </div>
+  <label class="field">Artículo del catálogo<input value="CAB-25 · Cable H07V-K 2,5 mm²"></label>
+</div>
+
+<div class="lbl">Cuánto lleva: tres maneras de preguntarlo</div>
+<div class="three">
+
+<section data-group="cuanto" data-choice="1">
+  <div class="lbl" style="margin-top:0"><span>Variante 1</span><button class="pick" data-group="cuanto" data-choice="1">Me quedo con esta</button></div>
+  <p class="variant">1 · Primero elijo el caso</p>
+  <p class="why">Tres casos explicados con un ejemplo. Al elegir uno, aparece una frase para rellenar.</p>
+  <div class="side">
+    <div class="q">¿Cuánto lleva?</div>
+    <div class="seg">
+      <label><input type="radio" name="c1"><span>Una cantidad fija<small>Ej.: 1 cuadro para todo el conjunto, pongas 1 toma o 10</small></span></label>
+      <label><input type="radio" name="c1"><span>Lo mismo por cada toma<small>Ej.: 1 caja por cada toma → 3 tomas = 3 cajas</small></span></label>
+      <label><input type="radio" name="c1" checked><span>Según un dato que se pregunta<small>Ej.: metros de cable según la distancia al cuadro</small></span></label>
+    </div>
+    <div class="sentence">Por cada toma, <input class="n" value="2"> m por cada metro de <select><option>Distancia al cuadro</option></select></div>
+    <div class="result">Ejemplo: 3 tomas a 12 m → <b>72 m</b> de cable</div>
+  </div>
+</section>
+
+<section data-group="cuanto" data-choice="2">
+  <div class="lbl" style="margin-top:0"><span>Variante 2</span><button class="pick" data-group="cuanto" data-choice="2">Me quedo con esta</button></div>
+  <p class="variant">2 · Una sola frase</p>
+  <p class="why">Rellenas una frase. Lo que antes era un desplegable de reglas ahora son dos casillas que la completan.</p>
+  <div class="side">
+    <div class="q">¿Cuánto lleva?</div>
+    <div class="sentence">Lleva <input class="n" value="2"> m</div>
+    <label class="check"><input type="checkbox" checked>…por cada toma</label>
+    <label class="check"><input type="checkbox" checked>…y por cada metro de&nbsp;<select style="font:600 14px var(--font-archivo);border:1.5px solid var(--ink);padding:4px 8px"><option>Distancia al cuadro</option></select></label>
+    <div class="result">Se lee: «Lleva <b>2 m por cada toma y por cada metro de distancia al cuadro</b>».<br>Ejemplo: 3 tomas a 12 m → <b>72 m</b></div>
+  </div>
+</section>
+
+<section data-group="cuanto" data-choice="3">
+  <div class="lbl" style="margin-top:0"><span>Variante 3</span><button class="pick" data-group="cuanto" data-choice="3">Me quedo con esta</button></div>
+  <p class="variant">3 · Como una multiplicación</p>
+  <p class="why">Un número multiplicado por lo que actives. Es directo si estás acostumbrado a hacer la cuenta a mano.</p>
+  <div class="side">
+    <div class="q">¿Cuánto lleva?</div>
+    <div class="calc"><input value="2"> m <span>×</span>
+      <button class="tog" aria-pressed="true">nº de tomas</button><span>×</span>
+      <button class="tog" aria-pressed="true">Distancia al cuadro</button>
+    </div>
+    <p class="mut" style="font-size:12px">Pulsa para activar o quitar cada multiplicador. Si no activas ninguno, es una cantidad fija.</p>
+    <div class="result">Ejemplo: 2 × 3 tomas × 12 m = <b>72 m</b></div>
+  </div>
+</section>
+</div>
+
+<label class="field" style="margin-top:28px">Comentarios para Claude
+  <textarea id="notes" rows="3" placeholder="Lo que te gusta, lo que no o una mezcla de variantes"></textarea>
+</label>
+<div id="picks">Elegido → Cuánto lleva: <b id="p-cuanto">—</b></div>
+
+<script>
+// Las elecciones quedan en window.picks, para que Claude las lea desde Chrome.
+window.picks = { cuanto: null, notes: "" };
+document.querySelectorAll(".pick").forEach((b) => b.addEventListener("click", () => {
+  const g = b.dataset.group, c = b.dataset.choice;
+  window.picks[g] = c;
+  document.querySelectorAll(`.pick[data-group=${g}]`).forEach((x) => x.setAttribute("aria-pressed", x === b));
+  document.querySelectorAll(`section[data-group=${g}]`).forEach((s) => s.classList.toggle("chosen", s.dataset.choice === c));
+  document.getElementById(`p-${g}`).textContent = c;
+}));
+document.querySelectorAll(".tog").forEach((t) => t.addEventListener("click", () => t.setAttribute("aria-pressed", t.getAttribute("aria-pressed") !== "true")));
+document.getElementById("notes").addEventListener("input", (e) => { window.picks.notes = e.target.value; });
+</script>
+</body>
+</html>

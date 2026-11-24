@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conjuntos: nombre automático</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1180px;margin:0 auto}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:48px 0 10px;border-top:2px solid var(--ink);padding-top:12px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.variant{font-size:22px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 14px;max-width:880px}
+.rule{font-size:13px;background:var(--sheet);border-left:4px solid var(--green);padding:10px 12px;margin-bottom:12px;max-width:880px}
+.pick{font:700 12px var(--font-archivo);letter-spacing:.06em;text-transform:uppercase;padding:8px 14px;border:1.5px solid var(--green);color:var(--green);background:var(--sheet);cursor:pointer}
+.pick[aria-pressed=true]{background:var(--green);color:#fff}
+section.chosen{outline:3px solid var(--green);outline-offset:10px}
+td{vertical-align:middle}
+.nm{font-weight:800;color:var(--green);font-size:15px;white-space:nowrap;letter-spacing:.02em}
+.cnt{font-size:13px}
+.cnt b{font-weight:700}
+.pro{font-size:12px;color:var(--ok);font-weight:600}
+.con{font-size:12px;color:var(--amber);font-weight:600}
+.src{background:var(--sheet);border:1.5px solid var(--ink)}
+.src td,.src th{font-size:13px}
+#picks{position:sticky;bottom:0;background:var(--ink);color:#fff;padding:10px 16px;margin-top:36px;font-size:13px;z-index:5}
+#picks b{color:#7fd1b9}
+</style>
+</head>
+<body>
+<h1>Nombre automático del conjunto</h1>
+<p class="why">El nombre se genera solo, al estilo de los códigos del catálogo (<b>BOM-MAYOR75</b>, <b>MAN-4X25</b>). Sus <b>dos primeras letras</b> son las que aparecen en el cuadradito del símbolo del conjunto (cuadrado con 2 letras y un círculo por elemento), que no cambia. La <b>descripción</b> se escribe a mano. La forma de añadirlo al presupuesto <b>no se toca</b>.</p>
+
+<div class="lbl">Los cuatro conjuntos de ejemplo</div>
+<table class="src">
+  <thead><tr><th>#</th><th>Principal</th><th>Lo que lleva</th><th>Descripción (a mano)</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>Se elige de <b>Bombas</b></td><td>Mangueras (se elige) · VAL-010 Válvula · CUA-001 Cuadro · MO-002 Hora de oficial</td><td>Bomba sumergible con montaje completo</td></tr>
+    <tr><td>2</td><td>Se elige de <b>Bombas</b></td><td>Mangueras (se elige)</td><td>Solo bomba y manguera</td></tr>
+    <tr><td>3</td><td>Se elige de <b>Mecanismos</b></td><td>CAJ-002 Caja · Marcos (se elige) · CAB-25 Cable 2,5</td><td>Toma de corriente empotrada</td></tr>
+    <tr><td>4</td><td>Siempre <b>LUM-018</b> Luminaria LED</td><td>CAJ-002 Caja · CAB-15 Cable 1,5 · INT-001 Interruptor</td><td>Punto de luz con interruptor</td></tr>
+  </tbody>
+</table>
+<p class="why" style="margin-top:10px"><b>De dónde sale cada trozo (igual en todas las opciones):</b> si es una categoría, sus tres primeras letras sin tildes (Bombas → BOM, Mecanismos → MEC); si el nombre tiene varias palabras, sus iniciales (Mano de obra → MO). Si es un artículo fijo, el prefijo de su código (VAL-010 → VAL, MO-002 → MO). Si dos conjuntos salieran iguales, se añade «-2».</p>
+
+<section data-choice="A">
+  <div class="lbl"><span>Opción A</span><button class="pick" data-choice="A">Me quedo con esta</button></div>
+  <p class="variant">A · Principal + número correlativo</p>
+  <div class="rule">Prefijo del principal + número: <b>BOM-01</b>, <b>BOM-02</b>… Del contenido solo dice el principal; el resto lo cuenta la descripción.</div>
+  <table><thead><tr><th>#</th><th>Nombre</th><th>Símbolo</th><th>Descripción</th></tr></thead><tbody data-ex="A"></tbody></table>
+  <p><span class="pro">✓ Corto y estable: no cambia si añades materiales.</span> &nbsp; <span class="con">✗ BOM-01 y BOM-02 no dicen en qué se diferencian sin leer la descripción.</span></p>
+</section>
+
+<section data-choice="B">
+  <div class="lbl"><span>Opción B</span><button class="pick" data-choice="B">Me quedo con esta</button></div>
+  <p class="variant">B · Principal + todo lo que lleva</p>
+  <div class="rule">Prefijos de todos los elementos, en orden: <b>BOM-MAN-VAL-CUA-MO</b>. A partir del cuarto se resume con «+N».</div>
+  <table><thead><tr><th>#</th><th>Nombre</th><th>Símbolo</th><th>Descripción</th></tr></thead><tbody data-ex="B"></tbody></table>
+  <p><span class="pro">✓ Se explica solo: lees el nombre y sabes lo que lleva.</span> &nbsp; <span class="con">✗ Más largo, y cambia si añades o quitas materiales.</span></p>
+</section>
+
+<section data-choice="C">
+  <div class="lbl"><span>Opción C</span><button class="pick" data-choice="C">Me quedo con esta</button></div>
+  <p class="variant">C · Principal + primer material + nº de elementos</p>
+  <div class="rule">Prefijo del principal + el del primer material + cuántos materiales lleva: <b>BOM-MAN-4</b>.</div>
+  <table><thead><tr><th>#</th><th>Nombre</th><th>Símbolo</th><th>Descripción</th></tr></thead><tbody data-ex="C"></tbody></table>
+  <p><span class="pro">✓ Término medio: dice lo principal y cuánto lleva, sin alargarse.</span> &nbsp; <span class="con">✗ El número obliga a mirar el símbolo o la descripción para saber qué es.</span></p>
+</section>
+
+<section data-choice="D">
+  <div class="lbl"><span>Opción D</span><button class="pick" data-choice="D">Me quedo con esta</button></div>
+  <p class="variant">D · Principal + lo más característico, elegido por ti</p>
+  <div class="rule">Se genera como en B, pero puedes marcar qué materiales entran en el nombre (por defecto, el primero): <b>BOM-MAN</b>, <b>BOM-MAN-CUA</b>… El cuadradito sigue siendo «BO».</div>
+  <table><thead><tr><th>#</th><th>Nombre</th><th>Símbolo</th><th>Descripción</th></tr></thead><tbody data-ex="D"></tbody></table>
+  <p><span class="pro">✓ Corto y explicativo a la vez; tú decides qué lo distingue.</span> &nbsp; <span class="con">✗ Un paso más al crearlo (marcar qué entra en el nombre).</span></p>
+</section>
+
+<label class="field" style="margin-top:28px">Comentarios para Claude
+  <textarea id="notes" rows="3" placeholder="Por ejemplo: la B, pero sin el «+N»"></textarea>
+</label>
+<div id="picks">Elegida → <b id="p">—</b></div>
+
+<script>
+const kits = [
+  { main: "BOM", parts: ["MAN", "VAL", "CUA", "MO"], desc: "Bomba sumergible con montaje completo", seq: "01", d: ["MAN", "CUA"] },
+  { main: "BOM", parts: ["MAN"], desc: "Solo bomba y manguera", seq: "02", d: ["MAN"] },
+  { main: "MEC", parts: ["CAJ", "MAR", "CAB"], desc: "Toma de corriente empotrada", seq: "01", d: ["MAR"] },
+  { main: "LUM", parts: ["CAJ", "CAB", "INT"], desc: "Punto de luz con interruptor", seq: "01", d: ["INT"] },
+];
+const names = {
+  A: (k) => `${k.main}-${k.seq}`,
+  B: (k) => [k.main, ...k.parts.slice(0, 3)].join("-") + (k.parts.length > 3 ? `+${k.parts.length - 3}` : ""),
+  C: (k) => `${k.main}-${k.parts[0]}-${k.parts.length}`,
+  D: (k) => [k.main, ...k.d].join("-"),
+};
+const glyph = (k) => `<span class="mini" aria-hidden><i>${k.main.slice(0, 2)}</i>${k.parts.map(() => "<s></s>").join("")}</span>`;
+document.querySelectorAll("tbody[data-ex]").forEach((tb) => {
+  const f = names[tb.dataset.ex];
+  tb.innerHTML = kits.map((k, i) => `<tr><td>${i + 1}</td><td class="nm">${f(k)}</td><td>${glyph(k)}</td><td class="cnt">${k.desc}</td></tr>`).join("");
+});
+window.picks = { name: null, notes: "" };
+document.querySelectorAll(".pick").forEach((b) => b.addEventListener("click", () => {
+  window.picks.name = b.dataset.choice;
+  document.querySelectorAll(".pick").forEach((x) => x.setAttribute("aria-pressed", x === b));
+  document.querySelectorAll("section[data-choice]").forEach((s) => s.classList.toggle("chosen", s.dataset.choice === b.dataset.choice));
+  document.getElementById("p").textContent = b.dataset.choice;
+}));
+document.getElementById("notes").addEventListener("input", (e) => { window.picks.notes = e.target.value; });
+</script>
+</body>
+</html>
