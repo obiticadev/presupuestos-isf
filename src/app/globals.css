@@ -599,6 +599,7 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .cb .clr:hover{color:var(--ink);background:var(--band)}
 .cb:not(.filled) .clr{display:none}
 .cb ul{position:absolute;z-index:20;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(640px,calc(100vw - 32px));margin:0;padding:0;list-style:none;border:1.5px solid var(--ink);background:var(--sheet);max-height:300px;overflow:auto}
+.cb ul.up{top:auto;bottom:calc(100% + 4px)}
 .cb li{display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:12px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);letter-spacing:0}
 .cb ul.cols li{grid-template-columns:7.5rem minmax(0,1fr) 6.5rem}
 .cb li:last-child{border-bottom:0}
@@ -616,7 +617,7 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .kq-r>*{padding:5px 0}
 .kq-n{position:relative;display:flex;flex-direction:column;justify-content:flex-start;padding-left:34px}
 /* Eje común: nombre, artículo y medida centrados a 25 px del borde superior de la fila, aunque «opcional» la alargue */
-.kq-r>.kq-a,.kq-r>.kq-m{align-self:start}
+.kq-r>.kq-a,.kq-r .kq-m{align-self:start}
 .kq-n b{font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center;min-height:40px}
 .kq-n em{font-style:normal;font-size:11px;color:var(--mut);margin-top:-8px;padding-left:50px}
 .kq-r.kq-main .kq-n{padding-left:0}
@@ -658,7 +659,8 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
   .kq-r .kq-n em{padding-left:50px}
   .kq-n::before,.kq-n::after{display:none!important}
   .kq-r.kq-main{padding-left:0}
-  .kq-r.kq-main>.kq-a,.kq-r.kq-main>.kq-m{margin-left:34px}
+  /* .kq-m va dentro del <span> de SubmitOnBlur: selector descendiente, no «>» */
+  .kq-r.kq-main>.kq-a,.kq-r.kq-main .kq-m{margin-left:34px}
   .kq-r.kq-main::after{content:"";position:absolute;left:21px;top:33px;bottom:0;border-left:1.5px solid var(--ink)}
   .kq-r:not(.kq-main)::before{content:"";position:absolute;left:21px;top:0;bottom:0;border-left:1.5px solid var(--ink)}
   .kq-r:not(.kq-main):not(.kq-wn)::after{content:"";position:absolute;left:21px;top:22px;width:13px;border-top:1.5px solid var(--ink)}

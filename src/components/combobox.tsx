@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
+import { useId, useLayoutEffect, useRef, useState } from "react";
 import { markParts, matchItems, type ComboItem } from "@/lib/combo-match";
 
 const textOf = (i: ComboItem | undefined) => (i ? `${i.code} · ${i.description}` : "");
@@ -32,6 +32,18 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
   const id = useId();
   const list = matchItems(items, query);
   const columns = items.some((i) => i.extra);
+  const listbox = useRef<HTMLUListElement>(null);
+  // Fit the open list inside the window before it paints: shift it left if it sticks out on the right, open it
+  // upwards if it does not fit below (user, 2026-11-24: no scrollbars, no layout jump)
+  useLayoutEffect(() => {
+    const ul = listbox.current;
+    if (!ul) return;
+    ul.style.left = ""; ul.classList.remove("up");
+    const r = ul.getBoundingClientRect(), vw = document.documentElement.clientWidth, gap = 8;
+    if (r.right > vw - gap) ul.style.left = `${Math.max(vw - gap - r.right, gap - r.left)}px`;
+    const top = ul.parentElement!.getBoundingClientRect().top;
+    if (r.bottom > window.innerHeight - gap && top - r.height - 4 > gap) ul.classList.add("up");
+  }, [open, query]);
 
   const pick = (item: ComboItem | undefined) => {
     const next = item?.id ?? "";
@@ -73,7 +85,7 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
       {/* controlled: a hidden field's value is its attribute, which a parent re-render would reset */}
       {name && <input ref={hidden} type="hidden" name={name} value={current} />}
       {open && (
-        <ul role="listbox" id={`${id}-l`} className={columns ? "cols" : undefined}>
+        <ul ref={listbox} role="listbox" id={`${id}-l`} className={columns ? "cols" : undefined}>
           {query.trim() && <li className="hint" aria-hidden>{list.length} de {items.length}</li>}
           {list.length ? list.map((i, k) => (
             <li key={i.id} id={`${id}-${k}`} role="option" aria-selected={k === active}
