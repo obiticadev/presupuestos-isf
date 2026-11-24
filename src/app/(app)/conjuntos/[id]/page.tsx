@@ -9,7 +9,9 @@ import { listConceptOptions } from "@/modules/catalog/service";
 import { ActionForm, ConfirmButton } from "@/components/action-form";
 import { removeKitAction } from "@/modules/kits/actions";
 import { getKit, kitIssues, kitUses, listKits, type Kit } from "@/modules/kits/service";
+import { getKitHistory } from "@/modules/kits/history";
 import { KitActiveToggle, KitForm } from "../forms";
+import { KitHistory } from "../kit-history";
 
 export const metadata: Metadata = { title: "Conjunto · ISF Presupuestos" };
 
@@ -29,6 +31,7 @@ export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id
   }
   const issues = kit ? await kitIssues(prisma, kit) : [];
   const uses = kit ? await kitUses(kit.id) : 0;
+  const history = kit ? await getKitHistory(kit.id) : [];
   const [concepts, categories, kits] = await Promise.all([listConceptOptions(), listCategories({ includeInactive: true }), listKits({ includeInactive: true })]);
   const conceptOptions = concepts.map((c) => ({ id: c.id, code: c.code, description: c.description, unitName: c.unitName, active: c.active }));
   const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name, active: c.active }));
@@ -51,6 +54,7 @@ export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id
       ) : (
         <p className="mut" style={{ marginTop: 12, fontSize: 12 }}>Se usa en {uses} presupuesto{uses === 1 ? "" : "s"}: no se puede eliminar, solo desactivar.</p>
       ))}
+      {history.length > 0 && <KitHistory versions={history} />}
     </>
   );
 }

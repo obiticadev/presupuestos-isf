@@ -86,7 +86,7 @@ export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
       const row = before ? await tx.kitTemplate.update({ where: { id: before.id }, data }) : await tx.kitTemplate.create({ data });
       await logAction(tx, {
         userId: actor.id, entity: "kit", entityId: row.id, action: before ? "update" : "create",
-        summary: before ? `Conjunto ${row.name} modificado` : `Alta del conjunto ${row.name}`, data: definition,
+        summary: before ? `Conjunto ${row.name} modificado` : `Alta del conjunto ${row.name}`, data: { name, description: input.description, definition },
       });
       return toKit(row);
     });
