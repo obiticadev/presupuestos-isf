@@ -17,7 +17,7 @@ const num = (s: string | undefined) => {
 };
 
 /**
- * Main line (slot "main", quantity N) plus one line per component: FIXED k, PER_QTY k × N, PER_QTY_AND_PARAM k × N × data.
+ * Main line (slot "main", quantity N) plus one line per component: FIXED k, PER_QTY k × N, PER_QTY_AND_PARAM k × N × data, PARAM k × data.
  * Anything missing leaves the whole kit unvalued (lines = []): a pump is never priced without its hose.
  * `descriptive` (a global-price subsection): the lines carry no price, so a concept without sale price is valid.
  */
@@ -71,7 +71,7 @@ export function expandKit(def: KitDefinition, input: KitInput, concepts: Map<str
     else {
       const v = values.get(c.formula.param);
       if (!v) continue; // an optional datum left empty: the component does not apply
-      q = k.mul(n).mul(v);
+      q = c.formula.type === "PARAM" ? k.mul(v) : k.mul(n).mul(v);
     }
     if (q.gt(0)) lines.push({ slot: c.slot, conceptId: id, quantity: q });
   }

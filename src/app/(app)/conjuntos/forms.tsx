@@ -12,7 +12,7 @@ type RefKind = "conceptId" | "categoryId";
 // Form state: refs as {kind, id} and k as typed text; turned into a KitDefinition on submit.
 type FormRef = { kind: RefKind; id: string };
 type FormParam = { key: string; label: string; unit: string; required: boolean };
-type FormComponent = { slot: string; label: string; ref: FormRef; required: boolean; type: "FIXED" | "PER_QTY" | "PER_QTY_AND_PARAM"; k: string; param: string };
+type FormComponent = { slot: string; label: string; ref: FormRef; required: boolean; type: KitDefinition["components"][number]["formula"]["type"]; k: string; param: string };
 
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
 const Err = ({ msg }: { msg?: string }) => (msg ? <span className="msg" role="alert">{msg}</span> : null);

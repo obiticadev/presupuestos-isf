@@ -1,5 +1,6 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { KitDefinition } from "@/modules/kits/definition";
+import { kitDefinition as kitDefinitionSchema } from "@/modules/kits/definition";
 import { expandKit, type ConceptForKit } from "@/modules/kits/formulas";
 import { calculateQuote } from "@/modules/quotes/calculation";
 
@@ -75,4 +76,36 @@ test("«1,5» se lee exacto y «1.500» es ambiguo; N debe ser mayor que cero", 
   expect(amb.missing).toEqual(["Distancia al cuadro no es un número válido"]);
   const zero = expandKit(BOMBA_DEF, { quantity: "0", params: { distancia: "1" }, choices: { main: "bomba", c1: "manguera" } }, CONCEPTS);
   expect(zero.missing).toEqual(["La cantidad debe ser mayor que cero"]);
+});
+
+const PARAM_DEF = (required: boolean): KitDefinition => ({
+  main: { conceptId: "cuadro", label: "Cuadro" },
+  params: [{ key: "q_c1", label: "Manguera: cantidad", unit: "m", required }],
+  components: [{ slot: "c1", label: "Manguera", ref: { conceptId: "manguera" }, required, formula: { type: "PARAM", param: "q_c1", k: "1" } }],
+});
+
+test("PARAM: cantidad = k × dato, sin depender de N", () => {
+  const x = expandKit(PARAM_DEF(true), { quantity: "3", params: { q_c1: "25" }, choices: {} }, CONCEPTS);
+  expect(x.missing).toEqual([]);
+  expect(x.lines.map((l) => [l.slot, l.quantity.toFixed(0)])).toEqual([["main", "3"], ["c1", "25"]]);
+});
+
+test("PARAM opcional con el dato vacío no añade línea; obligatorio deja el conjunto incompleto", () => {
+  const opt = expandKit(PARAM_DEF(false), { quantity: "1", params: {}, choices: {} }, CONCEPTS);
+  expect(opt.lines.map((l) => l.slot)).toEqual(["main"]);
+  const req = expandKit(PARAM_DEF(true), { quantity: "1", params: {}, choices: {} }, CONCEPTS);
+  expect(req.lines).toEqual([]);
+  expect(req.missing).toEqual(["Falta el dato Manguera: cantidad"]);
+});
+
+test("PARAM con un dato que no existe se rechaza", () => {
+  const bad = { ...PARAM_DEF(true), params: [] };
+  expect(kitDefinitionSchema.safeParse(bad).success).toBe(false);
+});
+
+test("definiciones antiguas siguen siendo válidas y se admiten etiquetas de 300", () => {
+  expect(kitDefinitionSchema.parse(BOMBA_DEF)).toEqual(BOMBA_DEF);
+  const withLabel = (n: number) => ({ ...BOMBA_DEF, main: { categoryId: "cat-bombas", label: "x".repeat(n) } });
+  expect(kitDefinitionSchema.safeParse(withLabel(300)).success).toBe(true);
+  expect(kitDefinitionSchema.safeParse(withLabel(301)).success).toBe(false);
 });
