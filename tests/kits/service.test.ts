@@ -58,3 +58,34 @@ test("un presupuestador guarda y desactiva un conjunto", async () => {
   await setKitActive(p, k.id, false);
   expect((await getKit(k.id)).active).toBe(false);
 });
+
+const seedDef = (): KitDefinition => {
+  const d = BOMBA_SEED();
+  return { ...d, components: d.components.map((c, i) => ({ ...c, inName: i === 0 })) };
+};
+const BOMBA_SEED = (): KitDefinition => ({
+  main: { categoryId: "cat-bombas", label: "Bombas" },
+  params: [{ key: "q_c1", label: "Mangueras: cantidad", unit: "", required: true }],
+  components: [{ slot: "c1", label: "Mangueras", ref: { categoryId: "cat-mangueras" }, required: true, formula: { type: "PER_QTY_AND_PARAM", param: "q_c1", k: "1" } }],
+});
+
+test("sin nombre, saveKit pone el automático y su símbolo; si se repite, -2", async () => {
+  const p = await makeUser("presupuestador");
+  const a = await saveKit(p, { description: "", definition: seedDef() });
+  expect(a.name).toBe("BOM-MAN");
+  expect(a.definition.main.symbol).toBe("BO");
+  expect((await saveKit(p, { description: "", definition: seedDef() })).name).toBe("BOM-MAN-2");
+});
+
+test("editar un conjunto con nombre automático no lo renombra a -2", async () => {
+  const p = await makeUser("presupuestador");
+  const a = await saveKit(p, { description: "", definition: seedDef() });
+  expect((await saveKit(p, { id: a.id, description: "x", definition: seedDef() })).name).toBe("BOM-MAN");
+});
+
+test("un artículo fijo da el prefijo de su código", async () => {
+  const p = await makeUser("presupuestador");
+  const d = def();
+  const k = await saveKit(p, { description: "", definition: { ...d, components: d.components.map((c) => ({ ...c, inName: true })) } });
+  expect(k.name).toBe("SER-MAN");
+});

@@ -7,7 +7,7 @@ import * as kits from "./service";
 
 export type SaveKitResult = ActionResult & { id?: string };
 
-/** The form sends the definition as JSON in a hidden field; the service validates it with Zod. */
+/** The form sends the definition as JSON in a hidden field; the service validates it with Zod and names the kit. */
 export async function saveKitAction(_prev: SaveKitResult | null, form: FormData): Promise<SaveKitResult> {
   const actor = await requireUser();
   let definition: unknown;
@@ -20,7 +20,7 @@ export async function saveKitAction(_prev: SaveKitResult | null, form: FormData)
   const result = await toActionResult(async () => {
     id = (await kits.saveKit(actor, {
       id: String(form.get("id") ?? "") || undefined,
-      name: String(form.get("name") ?? ""), description: String(form.get("description") ?? ""),
+      description: String(form.get("description") ?? ""),
       definition: definition as kits.KitInput["definition"],
     })).id;
   });
