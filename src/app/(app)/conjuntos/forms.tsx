@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Combobox } from "@/components/combobox";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import type { ActionResult } from "@/lib/action-result";
 import { saveKitAction, setKitActiveAction, type SaveKitResult } from "@/modules/kits/actions";
@@ -8,7 +9,7 @@ import { fromDefinition, isLegacyDefinition, legacyDescription, materialSummary,
 import { categoryPrefix, codePrefix, kitBaseName, uniqueName } from "@/modules/kits/naming";
 import type { Kit } from "@/modules/kits/service";
 
-type ConceptOption = { id: string; code: string; description: string; unitName: string; active: boolean };
+type ConceptOption = { id: string; code: string; description: string; unitName: string; active: boolean; categoryId: string };
 type CategoryOption = { id: string; name: string; active: boolean };
 
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
@@ -20,15 +21,16 @@ const nextSlot = (used: string[]) => {
   return `c${n}`;
 };
 
-/** «Se elige al presupuestar» (a category) or «Siempre el mismo» (an article, found with a native datalist). */
+/** «Se elige al presupuestar» (a category) or «Siempre el mismo» (an article, found with the Combobox). */
 function RefPicker({ value, onChange, categories, concepts, error }: {
   value: FormRef; onChange: (r: FormRef) => void; categories: CategoryOption[]; concepts: ConceptOption[]; error?: string;
 }) {
-  const current = concepts.find((c) => c.id === value.id);
-  const [text, setText] = useState(value.kind === "conceptId" && current ? conceptText(current) : "");
-  const [left, setLeft] = useState(false);
-  const unknown = left && value.kind === "conceptId" && text.trim() !== "" && !value.id;
-  const pick = (kind: FormRef["kind"]) => { if (kind !== value.kind) { setText(""); onChange({ kind, id: "" }); } };
+  const pick = (kind: FormRef["kind"]) => { if (kind !== value.kind) onChange({ kind, id: "" }); };
+  // The active articles plus the one already named, even if deactivated; the category goes in the third column.
+  const items = concepts.filter((c) => c.active || c.id === value.id).map((c) => ({
+    id: c.id, code: c.code, description: c.description,
+    extra: `${categories.find((k) => k.id === c.categoryId)?.name ?? ""}${c.active ? "" : " (desactivado)"}`,
+  }));
   return (
     <>
       <div className="kt-seg" role="group" aria-label="Cómo se elige">
@@ -45,19 +47,9 @@ function RefPicker({ value, onChange, categories, concepts, error }: {
         </label>
       ) : (
         <label className="kt-fl">Artículo del catálogo
-          <input className="kt-in" list="kt-articulos" value={text} placeholder="Escribe el código o la descripción" aria-invalid={unknown || !!error}
-            onBlur={() => {
-              setLeft(true);
-              // An exact code typed by hand counts too; resolved on leaving so a longer code can still be typed.
-              const hit = !value.id && concepts.find((c) => c.active && c.code.toUpperCase() === text.trim().toUpperCase());
-              if (hit) { setText(conceptText(hit)); onChange({ kind: "conceptId", id: hit.id }); }
-            }}
-            onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
-            onChange={(e) => {
-              setText(e.target.value);
-              onChange({ kind: "conceptId", id: concepts.find((c) => conceptText(c) === e.target.value)?.id ?? "" });
-            }} />
-          <Err msg={unknown ? "Elige un artículo de la lista" : error} />
+          <Combobox items={items} value={value.id} onPick={(id) => onChange({ kind: "conceptId", id })} invalid={!!error}
+            placeholder="Escribe el código, la descripción o la categoría" label="Artículo del catálogo" />
+          <Err msg={error} />
         </label>
       )}
     </>
@@ -101,9 +93,6 @@ export function KitForm({ kit, concepts, categories, taken }: { kit: Kit | null;
     setSel(materials.length);
   };
   const remove = (i: number) => { setMaterials(materials.filter((_, j) => j !== i)); setSel(Math.max(0, Math.min(sel, materials.length - 2))); };
-  // Concepts in the datalist: the active ones plus any the kit already names, even if deactivated.
-  const named = new Set([main, ...materials.map((m) => m.ref)].filter((r) => r.kind === "conceptId").map((r) => r.id));
-  const listed = concepts.filter((c) => c.active || named.has(c.id));
 
   return (
     <form
@@ -112,7 +101,6 @@ export function KitForm({ kit, concepts, categories, taken }: { kit: Kit | null;
     >
       {kit && <input type="hidden" name="id" value={kit.id} />}
       <input type="hidden" name="definition" value={JSON.stringify(toDefinition(main, materials, info))} />
-      <datalist id="kt-articulos">{listed.map((c) => <option key={c.id} value={conceptText(c)}>{c.active ? "" : "desactivado"}</option>)}</datalist>
 
       <div className="kt-id">
         <h1 className="kt-name"><u>{name.slice(0, 2)}</u>{name.slice(2)}</h1>

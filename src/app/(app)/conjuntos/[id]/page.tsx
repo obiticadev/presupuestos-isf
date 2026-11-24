@@ -33,7 +33,7 @@ export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id
   const uses = kit ? await kitUses(kit.id) : 0;
   const history = kit ? await getKitHistory(kit.id) : [];
   const [concepts, categories, kits] = await Promise.all([listConceptOptions(), listCategories({ includeInactive: true }), listKits({ includeInactive: true })]);
-  const conceptOptions = concepts.map((c) => ({ id: c.id, code: c.code, description: c.description, unitName: c.unitName, active: c.active }));
+  const conceptOptions = concepts.map((c) => ({ id: c.id, code: c.code, description: c.description, unitName: c.unitName, active: c.active, categoryId: c.categoryId }));
   const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name, active: c.active }));
   const taken = kits.filter((k) => k.id !== kit?.id).map((k) => k.name);
 
