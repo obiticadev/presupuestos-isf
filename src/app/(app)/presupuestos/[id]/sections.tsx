@@ -282,6 +282,15 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
     const cat = refCategoryId(ref);
     return ctx.allConcepts.filter((c) => c.categoryId === cat && ((c.active && (global || c.salePrice !== null)) || c.id === current));
   };
+  // Closed, the select shows the chosen concept's name too; an empty category says so instead of a bare «Elige…».
+  const choiceOptions = (ref: { conceptId: string } | { categoryId: string }, current: string | undefined, none: string) => {
+    const list = options(ref, current);
+    return [
+      <option key="" value="">{list.length ? none : `No hay conceptos${global ? "" : " con precio"} en esta categoría`}</option>,
+      ...list.map((o) => <option key={o.id} value={o.id}>{o.code} · {o.description}{o.active ? "" : " (desactivado)"}</option>),
+    ];
+  };
+  const description = ctx.kits.find((k) => k.id === kit.templateId)?.description;
 
   return (
     <details id={`conjunto-${kit.id}`} className={`kit${missing.length ? " inc" : ""}`}>
@@ -292,6 +301,7 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
         <span className="sum mut">{summary}</span>
         {missing.length ? <span className="badge amber">Incompleto</span> : !global && <b>{money(amount)}</b>}
       </summary>
+      {description && <p className="kitsum mut">{description}</p>}
       {missing.length > 0 && <p className="kitsum"><span className="amber">{global ? "Falta completar" : "Sin valorar hasta completar"}: {missing.join(" · ")}</span></p>}
       {!missing.length && !global && (
         <p className="kitsum">{lines.map((l) => `${qty(l.quantity)} ${l.unitName} × ${price(l.unitPrice)}`).join(" + ")} = <b>{money(amount)}</b></p>
@@ -301,30 +311,29 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
       {ctx.editable && (
         <>
           <Panel id={`editar-conjunto-${kit.id}`}>
-            <ActionForm action={updateKitAction} close className="kitform">
+            {/* Saved on each change, without closing: the circles and the summary follow what is chosen. */}
+            <ActionForm action={updateKitAction} className="kitform">
               <input type="hidden" name="id" value={kit.id} />
-              <label className="field">{def.main.label}: cantidad (N)<input name="quantity" defaultValue={n} inputMode="decimal" required /></label>
+              <SubmitOnBlur><label className="field">Cantidad<input name="quantity" defaultValue={n} inputMode="decimal" required /></label></SubmitOnBlur>
               {refCategoryId(def.main) && (
-                <label className="field">{def.main.label}
+                <SubmitOnChange><label className="field">{def.main.label}
                   {/* key: a select keeps its first default on form.reset(); remount it with the saved choice */}
                   <select key={choices.main ?? ""} name="choice.main" defaultValue={choices.main ?? ""}>
-                    <option value="">Elige…</option>
-                    {options(def.main, choices.main).map((c) => <option key={c.id} value={c.id} data-d={`${c.description}${c.active ? "" : " (desactivado)"}`}>{c.code}</option>)}
+                    {choiceOptions(def.main, choices.main, "Elige…")}
                   </select>
-                </label>
+                </label></SubmitOnChange>
               )}
               {def.params.map((p) => (
-                <label key={p.key} className="field">{p.label}{p.unit ? ` (${p.unit})` : ""}{p.required ? "" : " · opcional"}
+                <SubmitOnBlur key={p.key}><label className="field">{p.label}{p.unit ? ` (${p.unit})` : ""}{p.required ? "" : " · opcional"}
                   <input name={`param.${p.key}`} defaultValue={params[p.key] ?? ""} inputMode="decimal" />
-                </label>
+                </label></SubmitOnBlur>
               ))}
               {def.components.filter((c) => refCategoryId(c.ref)).map((c) => (
-                <label key={c.slot} className="field">{c.label}{c.required ? "" : " · opcional"}
+                <SubmitOnChange key={c.slot}><label className="field">{c.label}{c.required ? "" : " · opcional"}
                   <select key={choices[c.slot] ?? ""} name={`choice.${c.slot}`} defaultValue={choices[c.slot] ?? ""}>
-                    <option value="">{c.required ? "Elige…" : "Ninguno"}</option>
-                    {options(c.ref, choices[c.slot]).map((o) => <option key={o.id} value={o.id} data-d={`${o.description}${o.active ? "" : " (desactivado)"}`}>{o.code}</option>)}
+                    {choiceOptions(c.ref, choices[c.slot], c.required ? "Elige…" : "Ninguno")}
                   </select>
-                </label>
+                </label></SubmitOnChange>
               ))}
               <span className="kitformacts"><button className="btn pri">Recalcular</button><CloseButton /></span>
             </ActionForm>
@@ -400,7 +409,7 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
               <option value="" disabled>Elige un conjunto…</option>
               {ctx.kits.map((k) => <option key={k.id} value={k.id} data-d={k.description || undefined}>{k.name}</option>)}
             </select>
-            <input name="quantity" placeholder="Cantidad (N)" inputMode="decimal" required aria-label="Cantidad" className="num" />
+            <input name="quantity" placeholder="Cantidad" inputMode="decimal" required aria-label="Cantidad" className="num" />
             <button className="btn pri">Añadir</button>
             <CloseButton />
           </ActionForm>

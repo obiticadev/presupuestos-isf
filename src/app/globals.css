@@ -243,7 +243,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .kitfoot{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--rule)}
 .kbtns{display:flex;gap:10px}
 .kitfoot .done{margin-left:auto;flex:none;min-width:40px;justify-content:center;font-size:18px;padding:6px 12px}
-.kitform{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;padding:10px 12px;border-top:1px solid var(--rule);align-items:end}
+.kitform{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px;padding:10px 12px;border-top:1px solid var(--rule);align-items:end}
 .kitformacts{display:flex;gap:8px;align-items:center}
 .tot h3,.panel h3{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);font-weight:700;margin-bottom:6px}
 .tot>div{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--rule);font-size:15px;font-variant-numeric:tabular-nums}
