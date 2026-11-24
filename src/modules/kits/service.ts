@@ -107,3 +107,18 @@ export async function setKitActive(actor: CurrentUser, id: string, active: boole
     });
   });
 }
+
+/** How many quotes' kit instances came from this kit (copies keep working if it is deleted: templateId is set to null). */
+export const kitUses = (id: string) => prisma.kitInstance.count({ where: { templateId: id } });
+
+/** Deletes a kit no quote has used; a used one can only be deactivated. */
+export async function removeKit(actor: CurrentUser, id: string): Promise<void> {
+  await prisma.$transaction(async (tx) => {
+    const row = await tx.kitTemplate.findUnique({ where: { id } });
+    if (!row) throw new NotFoundError("Conjunto no encontrado");
+    const uses = await tx.kitInstance.count({ where: { templateId: id } });
+    if (uses) throw new ValidationError({ _: `Se usa en ${uses} presupuesto${uses === 1 ? "" : "s"}: desactívalo en su lugar` });
+    await tx.kitTemplate.delete({ where: { id } });
+    await logAction(tx, { userId: actor.id, entity: "kit", entityId: id, action: "delete", summary: `Baja del conjunto ${row.name}` });
+  });
+}

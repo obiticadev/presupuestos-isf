@@ -2,7 +2,9 @@ import { ValidationError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { setConceptActive } from "@/modules/catalog/service";
 import type { KitDefinition } from "@/modules/kits/definition";
-import { getKit, listKits, saveKit, setKitActive } from "@/modules/kits/service";
+import { getKit, kitUses, listKits, removeKit, saveKit, setKitActive } from "@/modules/kits/service";
+import { addKitInstance } from "@/modules/quotes/kit-instances";
+import { makeDraft } from "../helpers/quotes";
 import { makeUser } from "../helpers/users";
 
 const def = (over: Partial<KitDefinition> = {}): KitDefinition => ({
@@ -88,4 +90,21 @@ test("un artículo fijo da el prefijo de su código", async () => {
   const d = def();
   const k = await saveKit(p, { description: "", definition: { ...d, components: d.components.map((c) => ({ ...c, inName: true })) } });
   expect(k.name).toBe("SER-MAN");
+});
+
+test("un conjunto sin usar se elimina y queda en el historial", async () => {
+  const p = await makeUser("presupuestador");
+  const k = await saveKit(p, { name: "Para borrar", description: "", definition: def() });
+  expect(await kitUses(k.id)).toBe(0);
+  await removeKit(p, k.id);
+  await expect(getKit(k.id)).rejects.toThrow("Conjunto no encontrado");
+  expect(await prisma.auditLog.count({ where: { entity: "kit", entityId: k.id, action: "delete" } })).toBe(1);
+});
+
+test("un conjunto usado en un presupuesto no se elimina", async () => {
+  const { actor, sub } = await makeDraft();
+  await addKitInstance(actor, sub.id, { templateId: "kit-bomba", quantity: "1", params: {}, choices: {} });
+  expect(await kitUses("kit-bomba")).toBe(1);
+  await expect(removeKit(actor, "kit-bomba")).rejects.toThrow("Se usa en 1 presupuesto: desactívalo en su lugar");
+  expect((await getKit("kit-bomba")).active).toBe(true);
 });

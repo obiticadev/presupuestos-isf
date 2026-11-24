@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
 import * as kits from "./service";
@@ -34,4 +35,12 @@ export async function setKitActiveAction(_prev: ActionResult | null, form: FormD
   const result = await toActionResult(() => kits.setKitActive(actor, String(form.get("id")), form.get("active") === "1"));
   if (result.ok) revalidatePath("/conjuntos");
   return result;
+}
+
+export async function removeKitAction(_prev: ActionResult | null, form: FormData): Promise<ActionResult> {
+  const actor = await requireUser();
+  const result = await toActionResult(() => kits.removeKit(actor, String(form.get("id"))));
+  if (!result.ok) return result;
+  revalidatePath("/conjuntos");
+  redirect("/conjuntos");
 }

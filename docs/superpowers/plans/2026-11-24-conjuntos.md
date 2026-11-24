@@ -156,7 +156,39 @@
   - abrir un presupuesto que ya tenga «Instalación de bomba» y comprobar que se ve igual que antes.
 - [ ] **Step 3:** `1.9.5`. Commit `feat(conjuntos): símbolo y descripción del conjunto en el editor; 1.9.5` y push.
 
-### Task 7: cierre
+### Task 7: eliminar un conjunto que no se ha usado (1.9.6). Petición del usuario del 2026-11-24
+
+**Files:** Modify: `src/modules/kits/service.ts`, `src/modules/kits/actions.ts`, `src/app/(app)/conjuntos/[id]/page.tsx`, `src/app/(app)/conjuntos/forms.tsx`. Test: `tests/kits/service.test.ts` (añadir).
+
+**Interfaces:**
+- `kitUses(id: string): Promise<number>` devuelve cuántas `KitInstance` tienen `templateId = id`.
+- `removeKit(actor, id): Promise<void>` borra el conjunto y deja la entrada `delete` en el historial. Si el conjunto se usa, lanza `ValidationError({ _: "Se usa en N presupuestos: desactívalo en su lugar" })`.
+- `removeKitAction`: elimina el conjunto y lleva a `/conjuntos`.
+
+- [ ] Pruebas que fallan:
+  - `test("un conjunto sin usar se elimina y queda en el historial")`;
+  - `test("un conjunto usado en un presupuesto no se elimina")`, con `addKitInstance` sobre `kit-bomba`.
+- [ ] Implementar. El botón «Eliminar», con `ConfirmButton`, solo aparece si `kitUses` es 0. Si no, la nota dice «Se usa en N presupuestos: no se puede eliminar, solo desactivar».
+- [ ] Comprobarlo en Chrome, commit y push.
+
+### Task 8: historial de versiones del conjunto (1.9.7). Petición del usuario del 2026-11-24
+
+**Files:** Create: `src/modules/kits/history.ts` y `src/app/(app)/conjuntos/kit-history.tsx`. Modify: `src/modules/kits/service.ts`, que guarda `data = { name, description, definition }` en altas y cambios. Test: `tests/kits/history.test.ts`.
+
+**Interfaces:**
+- `kitLines(s: { name?: string; description?: string; definition: KitDefinition }): string[]` da el conjunto en frases: «Nombre: …», «Descripción: …», «Principal: …» y «{material}: {resumen}».
+- `kitChanges(after, before): { added: string[]; removed: string[] }`. Nombre y descripción solo se comparan si las dos versiones los tienen, porque las entradas antiguas guardan solo la definición.
+- `getKitHistory(id): Promise<KitVersion[]>`, con `{ id, at, userName, summary, snapshot | null }` de la más nueva a la más antigua.
+- La página del conjunto muestra `<details>` «Historial (N)»: fecha, hora, usuario y resumen, y lo que cambió (+ y −).
+
+- [ ] Pruebas que fallan:
+  - `kitLines` de la semilla;
+  - `kitChanges` al cambiar un material y al quitarlo;
+  - entrada antigua sin nombre: no aparece «Nombre» en los cambios;
+  - `getKitHistory` tras alta, cambio y desactivación da 3 versiones.
+- [ ] Implementar, comprobarlo en Chrome, commit y push.
+
+### Task 9: cierre
 
 - [ ] Actualizar `docs/superpowers/progreso.md` y la sección «Estado actual» de `AGENTS.md` (CRLF): el trabajo de Conjuntos queda en `features`, pendiente de la revisión del usuario.
 - [ ] Commit `docs: conjuntos en features, pendiente de revisión` y push. Sin subir versión.
