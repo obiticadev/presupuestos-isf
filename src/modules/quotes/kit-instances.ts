@@ -102,6 +102,48 @@ export async function updateKitInstance(actor: CurrentUser, instanceId: string, 
   });
 }
 
+const refKey = (r: { conceptId: string } | { categoryId: string }) => ("conceptId" in r ? `concept:${r.conceptId}` : `category:${r.categoryId}`);
+
+/**
+ * What survives a change of kit (spec 4): the main choice if both mains have the same reference; for each new material, what
+ * was chosen, typed or measured on the first unused old material with the same reference (typed amounts and own measures only
+ * with the same kind of formula); data with the same key.
+ */
+function carryOver(from: KitDefinition, to: KitDefinition, params: Record<string, string>, choices: Record<string, string>) {
+  const out = { params: {} as Record<string, string>, choices: {} as Record<string, string> };
+  if (refKey(from.main) === refKey(to.main) && choices.main) out.choices.main = choices.main;
+  for (const p of to.params) if (params[p.key] !== undefined) out.params[p.key] = params[p.key];
+  const used = new Set<string>();
+  for (const c of to.components) {
+    const o = from.components.find((x) => !used.has(x.slot) && refKey(x.ref) === refKey(c.ref));
+    if (!o) continue;
+    used.add(o.slot);
+    if (choices[o.slot]) out.choices[c.slot] = choices[o.slot];
+    if (o.formula.type !== c.formula.type) continue;
+    if ("param" in o.formula && "param" in c.formula && params[o.formula.param] !== undefined) out.params[c.formula.param] = params[o.formula.param];
+    if (params[overrideKey(o.slot)]) out.params[overrideKey(c.slot)] = params[overrideKey(o.slot)];
+  }
+  return out;
+}
+
+export async function changeKitInstance(actor: CurrentUser, instanceId: string, templateId: string): Promise<void> {
+  const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
+  if (!found) throw new NotFoundError("El conjunto no existe");
+  const template = await prisma.kitTemplate.findUnique({ where: { id: templateId } });
+  if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
+  const from = kitDefinition.parse(found.definition);
+  const to = kitDefinition.parse(template.definition);
+  const kept = carryOver(from, to, found.params as Record<string, string>, found.choices as Record<string, string>);
+  await withDraft(actor, found.section.quoteId, async (tx) => {
+    const instance = await tx.kitInstance.update({
+      where: { id: instanceId },
+      data: { templateId: template.id, name: template.name, definition: to as Prisma.InputJsonValue, ...clean(to, kept) },
+    });
+    await regenerate(tx, actor, found.section.quoteId, instance);
+    await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto cambiado: ${found.name} → ${template.name}`);
+  });
+}
+
 export async function removeKitInstance(actor: CurrentUser, instanceId: string): Promise<void> {
   const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
   if (!found) throw new NotFoundError("El conjunto no existe");
