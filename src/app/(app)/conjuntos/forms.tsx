@@ -4,164 +4,216 @@ import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import type { ActionResult } from "@/lib/action-result";
 import { saveKitAction, setKitActiveAction, type SaveKitResult } from "@/modules/kits/actions";
-import { describeFormula, type KitDefinition } from "@/modules/kits/definition";
+import { fromDefinition, legacyDescription, materialSummary, showsRequired, toDefinition, type FormMaterial, type FormRef, type RefInfo } from "@/modules/kits/form";
+import { categoryPrefix, codePrefix, kitBaseName, uniqueName } from "@/modules/kits/naming";
 import type { Kit } from "@/modules/kits/service";
 
-type Option = { id: string; name: string; active: boolean };
-type RefKind = "conceptId" | "categoryId";
-// Form state: refs as {kind, id} and k as typed text; turned into a KitDefinition on submit.
-type FormRef = { kind: RefKind; id: string };
-type FormParam = { key: string; label: string; unit: string; required: boolean };
-type FormComponent = { slot: string; label: string; ref: FormRef; required: boolean; type: KitDefinition["components"][number]["formula"]["type"]; k: string; param: string };
+type ConceptOption = { id: string; code: string; description: string; unitName: string; active: boolean };
+type CategoryOption = { id: string; name: string; active: boolean };
 
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
-const Err = ({ msg }: { msg?: string }) => (msg ? <span className="msg" role="alert">{msg}</span> : null);
-const toRef = (r: { conceptId: string } | { categoryId: string }): FormRef =>
-  "conceptId" in r ? { kind: "conceptId", id: r.conceptId } : { kind: "categoryId", id: r.categoryId };
-const fromRef = (r: FormRef) => (r.kind === "conceptId" ? { conceptId: r.id } : { categoryId: r.id });
-const comma = (k: string) => k.replace(".", ",");
-const nextId = (prefix: string, used: string[]) => {
+const Err = ({ msg }: { msg?: string }) => (msg ? <span className="kt-err" role="alert">{msg}</span> : null);
+const conceptText = (c: ConceptOption) => `${c.code} · ${c.description}`;
+const nextSlot = (used: string[]) => {
   let n = 1;
-  while (used.includes(`${prefix}${n}`)) n++;
-  return `${prefix}${n}`;
+  while (used.includes(`c${n}`)) n++;
+  return `c${n}`;
 };
 
-function RefPicker({ value, onChange, concepts, categories, error }: {
-  value: FormRef; onChange: (r: FormRef) => void; concepts: Option[]; categories: Option[]; error?: string;
+/** «Se elige al presupuestar» (a category) or «Siempre el mismo» (an article, found with a native datalist). */
+function RefPicker({ value, onChange, categories, concepts, error }: {
+  value: FormRef; onChange: (r: FormRef) => void; categories: CategoryOption[]; concepts: ConceptOption[]; error?: string;
 }) {
-  const options = (value.kind === "conceptId" ? concepts : categories).filter((o) => o.active || o.id === value.id);
+  const current = concepts.find((c) => c.id === value.id);
+  const [text, setText] = useState(value.kind === "conceptId" && current ? conceptText(current) : "");
+  const [left, setLeft] = useState(false);
+  const unknown = left && value.kind === "conceptId" && text.trim() !== "" && !value.id;
+  const pick = (kind: FormRef["kind"]) => { if (kind !== value.kind) { setText(""); onChange({ kind, id: "" }); } };
   return (
-    <div className="pair">
-      <label className="field">Qué se usa
-        <select value={value.kind} onChange={(e) => onChange({ kind: e.target.value as RefKind, id: "" })}>
-          <option value="categoryId">Elegir de una categoría al presupuestar</option>
-          <option value="conceptId">Un concepto fijo</option>
-        </select>
-      </label>
-      <label className="field">{value.kind === "conceptId" ? "Concepto" : "Categoría"}
-        <select value={value.id} onChange={(e) => onChange({ ...value, id: e.target.value })} required>
-          <option value="" disabled>Elige…</option>
-          {options.map((o) => <option key={o.id} value={o.id}>{o.name}{o.active ? "" : " (desactivado)"}</option>)}
-        </select>
-        <Err msg={error} />
-      </label>
-    </div>
+    <>
+      <div className="kt-seg" role="group" aria-label="Cómo se elige">
+        <button type="button" aria-pressed={value.kind === "categoryId"} onClick={() => pick("categoryId")}>Se elige al presupuestar</button>
+        <button type="button" aria-pressed={value.kind === "conceptId"} onClick={() => pick("conceptId")}>Siempre el mismo</button>
+      </div>
+      {value.kind === "categoryId" ? (
+        <label className="kt-fl">De la categoría
+          <select className="kt-in" value={value.id} onChange={(e) => onChange({ kind: "categoryId", id: e.target.value })} aria-invalid={!!error}>
+            <option value="" disabled>Elige…</option>
+            {categories.filter((c) => c.active || c.id === value.id).map((c) => <option key={c.id} value={c.id}>{c.name}{c.active ? "" : " (desactivada)"}</option>)}
+          </select>
+          <Err msg={error} />
+        </label>
+      ) : (
+        <label className="kt-fl">Artículo del catálogo
+          <input className="kt-in" list="kt-articulos" value={text} placeholder="Escribe el código o la descripción" aria-invalid={unknown || !!error}
+            onBlur={() => {
+              setLeft(true);
+              // An exact code typed by hand counts too; resolved on leaving so a longer code can still be typed.
+              const hit = !value.id && concepts.find((c) => c.active && c.code.toUpperCase() === text.trim().toUpperCase());
+              if (hit) { setText(conceptText(hit)); onChange({ kind: "conceptId", id: hit.id }); }
+            }}
+            onKeyDown={(e) => { if (e.key === "Enter") e.preventDefault(); }}
+            onChange={(e) => {
+              setText(e.target.value);
+              onChange({ kind: "conceptId", id: concepts.find((c) => conceptText(c) === e.target.value)?.id ?? "" });
+            }} />
+          <Err msg={unknown ? "Elige un artículo de la lista" : error} />
+        </label>
+      )}
+    </>
   );
 }
 
-export function KitForm({ kit, concepts, categories }: { kit: Kit | null; concepts: Option[]; categories: Option[] }) {
+export function KitForm({ kit, concepts, categories, taken }: { kit: Kit | null; concepts: ConceptOption[]; categories: CategoryOption[]; taken: string[] }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<SaveKitResult | null, FormData>(saveKitAction, null);
   const e = errorsOf(state);
-  const def = kit?.definition;
-  const [mainLabel, setMainLabel] = useState(def?.main.label ?? "");
-  const [mainRef, setMainRef] = useState<FormRef>(def ? toRef(def.main) : { kind: "categoryId", id: "" });
-  const [params, setParams] = useState<FormParam[]>(def?.params ?? []);
-  const [components, setComponents] = useState<FormComponent[]>(
-    def?.components.map((c) => ({
-      slot: c.slot, label: c.label, ref: toRef(c.ref), required: c.required, type: c.formula.type,
-      k: comma(c.formula.k), param: c.formula.type === "PER_QTY_AND_PARAM" ? c.formula.param : "",
-    })) ?? [],
-  );
+  const errAt = (prefix: string) => Object.entries(e).find(([k]) => k.startsWith(prefix))?.[1];
+
+  const info: RefInfo = (r) => {
+    if (r.kind === "categoryId") {
+      const c = categories.find((x) => x.id === r.id);
+      return { label: c?.name ?? "Sin elegir", unit: "", prefix: c ? categoryPrefix(c.name) : "" };
+    }
+    const c = concepts.find((x) => x.id === r.id);
+    return { label: c?.description ?? "Sin elegir", unit: c?.unitName ?? "", prefix: c ? codePrefix(c.code) : "" };
+  };
+  const baseOf = (main: FormRef, materials: FormMaterial[]) => kitBaseName(info(main).prefix, materials.filter((m) => m.inName).map((m) => info(m.ref).prefix));
+
+  const [initial] = useState(() => (kit ? fromDefinition(kit.definition) : { main: { kind: "categoryId" as const, id: "" }, materials: [] }));
+  const [main, setMain] = useState<FormRef>(initial.main);
+  const [materials, setMaterials] = useState<FormMaterial[]>(initial.materials);
+  const [sel, setSel] = useState(0);
+  const [description] = useState(() => (kit ? legacyDescription(kit.name, baseOf(initial.main, initial.materials), kit.description) : ""));
 
   useEffect(() => {
     if (state?.ok && state.id && state.id !== kit?.id) router.replace(`/conjuntos/${state.id}`);
   }, [state, kit?.id, router]);
 
-  const definition = {
-    main: { ...fromRef(mainRef), label: mainLabel },
-    params,
-    components: components.map((c) => ({
-      slot: c.slot, label: c.label, ref: fromRef(c.ref), required: c.required,
-      formula: c.type === "PER_QTY_AND_PARAM" ? { type: c.type, param: c.param, k: c.k } : { type: c.type, k: c.k },
-    })),
+  const base = baseOf(main, materials);
+  const name = uniqueName(base, taken);
+  const clash = taken.includes(base);
+  const nextUnmarked = materials.findIndex((m) => !m.inName && info(m.ref).prefix);
+  const cur = materials[sel];
+  const set = (i: number, p: Partial<FormMaterial>) => setMaterials(materials.map((m, j) => (j === i ? { ...m, ...p } : m)));
+  const add = () => {
+    setMaterials([...materials, { slot: nextSlot(materials.map((m) => m.slot)), ref: { kind: "categoryId", id: "" }, qty: "1", mult: true, ask: false, required: true, inName: materials.length === 0 }]);
+    setSel(materials.length);
   };
-  const setParam = (i: number, p: Partial<FormParam>) => setParams(params.map((x, j) => (j === i ? { ...x, ...p } : x)));
-  const setComp = (i: number, p: Partial<FormComponent>) => setComponents(components.map((x, j) => (j === i ? { ...x, ...p } : x)));
-  const words = (c: FormComponent) =>
-    c.k ? describeFormula(
-      (c.type === "PER_QTY_AND_PARAM" ? { type: c.type, param: c.param, k: c.k } : { type: c.type, k: c.k }) as KitDefinition["components"][number]["formula"],
-      params,
-    ) : "…";
+  const remove = (i: number) => { setMaterials(materials.filter((_, j) => j !== i)); setSel(Math.max(0, Math.min(sel, materials.length - 2))); };
+  // Concepts in the datalist: the active ones plus any the kit already names, even if deactivated.
+  const named = new Set([main, ...materials.map((m) => m.ref)].filter((r) => r.kind === "conceptId").map((r) => r.id));
+  const listed = concepts.filter((c) => c.active || named.has(c.id));
 
   return (
     <form
       onSubmit={(ev) => { ev.preventDefault(); const data = new FormData(ev.currentTarget); startTransition(() => action(data)); }}
-      style={{ display: "grid", gap: 16, marginTop: 18, maxWidth: 820 }}
+      style={{ marginTop: 4 }}
     >
       {kit && <input type="hidden" name="id" value={kit.id} />}
-      <input type="hidden" name="definition" value={JSON.stringify(definition)} />
-      <label className="field">Nombre<input name="name" defaultValue={kit?.name} required maxLength={100} /><Err msg={e.name} /></label>
-      <label className="field">Descripción<textarea name="description" defaultValue={kit?.description} rows={2} /><Err msg={e.description} /></label>
+      <input type="hidden" name="definition" value={JSON.stringify(toDefinition(main, materials, info))} />
+      <datalist id="kt-articulos">{listed.map((c) => <option key={c.id} value={conceptText(c)}>{c.active ? "" : "desactivado"}</option>)}</datalist>
 
-      <fieldset className="sheet" style={{ display: "grid", gap: 10 }}>
-        <legend style={{ fontWeight: 700 }}>Principal: su cantidad es N</legend>
-        <label className="field">Nombre en el presupuesto<input value={mainLabel} onChange={(ev) => setMainLabel(ev.target.value)} placeholder="Bomba" required /><Err msg={e["definition.main.label"]} /></label>
-        <RefPicker value={mainRef} onChange={setMainRef} concepts={concepts} categories={categories} error={e["definition.main"]} />
-      </fieldset>
+      <div className="kt-id">
+        <h1 className="kt-name"><u>{name.slice(0, 2)}</u>{name.slice(2)}</h1>
+        <span className="mini" aria-hidden><i>{name.slice(0, 2)}</i>{materials.map((m) => <s key={m.slot} />)}</span>
+      </div>
+      <p className="kt-note">Nombre automático: prefijo del principal + los materiales marcados «en el nombre». Las 2 letras subrayadas van en el símbolo.</p>
+      {clash && (
+        <div className="kt-clash" role="status">
+          Ya existe un conjunto {base}.
+          {nextUnmarked >= 0 && (
+            <><button type="button" onClick={() => set(nextUnmarked, { inName: true })}>
+              Añadir {info(materials[nextUnmarked].ref).prefix} al nombre → {kitBaseName(base, [info(materials[nextUnmarked].ref).prefix])}
+            </button> o</>
+          )}
+          se guardará como <b>{name}</b>.
+        </div>
+      )}
 
-      <fieldset className="sheet" style={{ display: "grid", gap: 10 }}>
-        <legend style={{ fontWeight: 700 }}>Datos que se piden al presupuestar</legend>
-        {params.map((p, i) => (
-          <div key={p.key} className="flexrow">
-            <label className="field grow">Dato<input value={p.label} onChange={(ev) => setParam(i, { label: ev.target.value })} placeholder="Distancia al cuadro" required /><Err msg={e[`definition.params.${i}.label`]} /></label>
-            <label className="field">Unidad<input value={p.unit} onChange={(ev) => setParam(i, { unit: ev.target.value })} placeholder="m" size={6} /></label>
-            <label className="check"><input type="checkbox" checked={p.required} onChange={(ev) => setParam(i, { required: ev.target.checked })} />Obligatorio</label>
-            <button type="button" className="btn" onClick={() => setParams(params.filter((_, j) => j !== i))}>Quitar</button>
-          </div>
-        ))}
-        <button type="button" className="btn" style={{ justifySelf: "start" }}
-          onClick={() => setParams([...params, { key: nextId("d", params.map((p) => p.key)), label: "", unit: "", required: true }])}>
-          Añadir dato
-        </button>
-      </fieldset>
+      <label className="kt-fl" style={{ maxWidth: 720, marginTop: 12 }}>Descripción
+        <textarea className="kt-in" name="description" defaultValue={description} rows={2} maxLength={2000} />
+        <Err msg={e.description} />
+      </label>
 
-      <fieldset className="sheet" style={{ display: "grid", gap: 14 }}>
-        <legend style={{ fontWeight: 700 }}>Componentes</legend>
-        {components.map((c, i) => {
-          const at = (f: string) => e[`definition.components.${i}.${f}`];
-          return (
-            <div key={c.slot} style={{ display: "grid", gap: 8, paddingBottom: 12, borderBottom: "1px solid var(--rule)" }}>
-              <div className="flexrow">
-                <label className="field grow">Nombre<input value={c.label} onChange={(ev) => setComp(i, { label: ev.target.value })} placeholder="Manguera" required /><Err msg={at("label")} /></label>
-                <label className="check"><input type="checkbox" checked={c.required} onChange={(ev) => setComp(i, { required: ev.target.checked })} />Obligatorio</label>
-                <button type="button" className="btn" onClick={() => setComponents(components.filter((_, j) => j !== i))}>Quitar</button>
+      <div className="kt-layout">
+        <div>
+          <div className="kt-root">
+            <span className="t">Principal</span>
+            <div className="kt-rgrid">
+              <div style={{ display: "grid", gap: 10 }}>
+                <RefPicker key={`main-${main.kind}`} value={main} onChange={setMain} categories={categories} concepts={concepts} error={errAt("definition.main")} />
               </div>
-              <RefPicker value={c.ref} onChange={(ref) => setComp(i, { ref })} concepts={concepts} categories={categories} error={at("ref")} />
-              <div className="flexrow">
-                <label className="field">Cantidad
-                  <select value={c.type} onChange={(ev) => setComp(i, { type: ev.target.value as FormComponent["type"] })}>
-                    <option value="FIXED">Fija: k</option>
-                    <option value="PER_QTY">Por cantidad: k × N</option>
-                    <option value="PER_QTY_AND_PARAM">Por cantidad y dato: k × N × dato</option>
-                  </select>
-                </label>
-                <label className="field">k<input value={c.k} onChange={(ev) => setComp(i, { k: ev.target.value })} inputMode="decimal" size={6} required /><Err msg={at("formula.k")} /></label>
-                {c.type === "PER_QTY_AND_PARAM" && (
-                  <label className="field">Dato
-                    <select value={c.param} onChange={(ev) => setComp(i, { param: ev.target.value })} required>
-                      <option value="" disabled>Elige…</option>
-                      {params.map((p) => <option key={p.key} value={p.key}>{p.label || "(sin nombre)"}</option>)}
-                    </select>
-                    <Err msg={at("formula.param")} />
-                  </label>
-                )}
-              </div>
-              <p className="mut" style={{ fontSize: 13 }}>{c.label || "Componente"}: {words(c)}</p>
+              <div className="kt-fl">Cantidad<div className="kt-fixed">Se pide al presupuestar</div></div>
             </div>
-          );
-        })}
-        <button type="button" className="btn" style={{ justifySelf: "start" }}
-          onClick={() => setComponents([...components, { slot: nextId("c", components.map((c) => c.slot)), label: "", ref: { kind: "categoryId", id: "" }, required: true, type: "PER_QTY", k: "1", param: "" }])}>
-          Añadir componente
-        </button>
-      </fieldset>
+          </div>
+          <div className="kt-bus">
+            {materials.map((m, i) => {
+              const it = info(m.ref);
+              const bad = !!errAt(`definition.components.${i}.`);
+              return (
+                <div className="kt-row" key={m.slot}>
+                  <button type="button" className={`kt-dep${bad ? " bad" : ""}`} aria-pressed={i === sel} onClick={() => setSel(i)}>
+                    <span>
+                      {it.prefix && <span className={`kt-pf${m.inName ? "" : " off"}`}>{it.prefix}</span>}
+                      <b className={m.ref.id ? undefined : "mut"}>{it.label}</b>
+                      <small>
+                        {m.ref.kind === "categoryId" ? (m.ref.id ? `se elige de «${it.label}» al presupuestar` : "categoría sin elegir")
+                          : m.ref.id ? conceptText(concepts.find((c) => c.id === m.ref.id)!) : "artículo sin elegir"}
+                        {showsRequired(m) && !m.required ? " · opcional" : ""}
+                      </small>
+                    </span>
+                    <span className="kt-sum">{materialSummary(m, it.unit)}</span>
+                    <span className="kt-chev" aria-hidden>{i === sel ? "⌄" : "›"}</span>
+                  </button>
+                </div>
+              );
+            })}
+            <div className="kt-row"><button type="button" className="kt-add" onClick={add}>+ Añadir material</button></div>
+          </div>
+        </div>
 
-      <p className="mut" style={{ fontSize: 13 }}>Cambiar el conjunto no altera los presupuestos donde ya se usó: cada uno guarda su copia.</p>
-      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="kt-panel">
+          {!cur ? <p className="mut">Añade un material para editarlo.</p> : (
+            <>
+              <h3>Material: {info(cur.ref).label}</h3>
+              <div style={{ display: "grid", gap: 10 }}>
+                <RefPicker key={`${cur.slot}-${cur.ref.kind}`} value={cur.ref} onChange={(ref) => set(sel, { ref })} categories={categories} concepts={concepts} error={errAt(`definition.components.${sel}.ref`)} />
+              </div>
+              <label className="kt-erow"><span>Cantidad</span>
+                <span className="kt-qty">
+                  <input className="kt-in num" inputMode="decimal" value={cur.ask ? "" : cur.qty} disabled={cur.ask} placeholder={cur.ask ? "—" : undefined}
+                    aria-invalid={!!errAt(`definition.components.${sel}.formula`)} onChange={(ev) => set(sel, { qty: ev.target.value })} />
+                  <span className="kt-unit">{info(cur.ref).unit}</span>
+                </span>
+              </label>
+              <Err msg={errAt(`definition.components.${sel}.formula`)} />
+              <label className="kt-erow"><span>Se pone al presupuestar</span>
+                <span><input type="checkbox" className="kt-ck" checked={cur.ask} onChange={(ev) => set(sel, { ask: ev.target.checked })} /></span>
+              </label>
+              <label className="kt-erow"><span>× cantidad del principal</span>
+                <span><input type="checkbox" role="switch" className="kt-sw" checked={cur.mult} onChange={(ev) => set(sel, { mult: ev.target.checked })} /></span>
+              </label>
+              <p className="kt-hint">{cur.mult ? "Si el principal lleva 2, esto se multiplica por 2." : "Va una sola vez, lleve el principal lo que lleve."}</p>
+              {showsRequired(cur) && (
+                <label className="kt-erow"><span>Obligatorio</span>
+                  <span><input type="checkbox" className="kt-ck" checked={cur.required} onChange={(ev) => set(sel, { required: ev.target.checked })} /></span>
+                </label>
+              )}
+              <label className="kt-erow"><span>En el nombre{info(cur.ref).prefix ? ` (${info(cur.ref).prefix})` : ""}</span>
+                <span><input type="checkbox" className="kt-ck" checked={cur.inName} onChange={(ev) => set(sel, { inName: ev.target.checked })} /></span>
+              </label>
+              <button type="button" className="btn" style={{ justifySelf: "start" }} onClick={() => remove(sel)}>Quitar material</button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="kt-foot">
         <button className="btn pri" disabled={pending}>Guardar</button>
+        <span className="mut" style={{ fontSize: 12 }}>Cambiar el conjunto no altera los presupuestos donde ya se usó.</span>
         {state?.ok && <span className="mut" role="status">Guardado</span>}
-        {Object.keys(e).length > 0 && <span className="err" role="alert">{e._ ?? "Revisa los campos marcados"}</span>}
+        {Object.keys(e).length > 0 && <span className="err" role="alert">{e._ ?? e.name ?? "Revisa los campos marcados"}</span>}
       </div>
     </form>
   );
