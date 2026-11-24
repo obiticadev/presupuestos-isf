@@ -93,6 +93,14 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 
 ## Pendiente
 
+### Conjuntos genéricos (rama `features`) — terminado el 2026-11-24, pendiente de revisión
+
+- Pantalla de árbol con panel (interfaz 1), nombre automático (opción D) con aviso de repetidos, descripción a mano, buscador de artículos con `datalist`, lista con «Principal → lo que lleva», eliminar si no se ha usado e historial de versiones (lista con + / −, no la vista de 3 modos del catálogo).
+- Formato de `kitDefinition` intacto más la fórmula `PARAM` y los opcionales `main.symbol` y `components[].inName`; etiquetas hasta 300. Sin migración: los conjuntos antiguos se traducen al abrirlos.
+- Pruebas: 403/403 en verde. Revisión final de la rama hecha y sus importantes corregidos (1.9.8).
+- Aplazado (menores): claves repetidas en el historial si dos materiales dan la misma frase; descripción entera en el desplegable «Añadir conjunto»; un nombre antiguo como «BOM-MAN-2024» se toma por automático.
+- Siguiente paso: revisión del usuario; después, decidir si `:3101` pasa a `features` o se fusiona en `master`.
+
 ### Mejoras tras el uso real (rama `mejoras-uso-real`) — en curso
 
 - **Forma de trabajo (usuario):** un plan por bloque (`superpowers:writing-plans`), ejecución, revisión en Chrome, commit y push a `mejoras-uso-real`. No se borran pruebas: solo se añaden. `master` y Dokploy no se tocan hasta que el usuario dé el visto bueno a la rama entera.
