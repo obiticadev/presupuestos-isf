@@ -22,7 +22,7 @@ export type EditorContext = {
   concepts: ConceptOption[];
   /** Every concept, to name the current choice of a kit even if it was deactivated. */
   allConcepts: ConceptOption[];
-  kits: { id: string; name: string; description: string }[];
+  kits: { id: string; name: string; description: string; dynamic?: boolean }[];
   /** Category names by id, for the third column of the concept search. */
   categories: Record<string, string>;
 };
@@ -304,7 +304,8 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
             <span className="ttl">Añadir conjunto</span>
             <input type="hidden" name="subsectionId" value={sub.id} />
             <Combobox name="templateId" value="" label="Conjunto" placeholder="Escribe el nombre o la descripción del conjunto"
-              items={ctx.kits.map((k) => ({ id: k.id, code: k.name, description: k.description, text: k.name }))} />
+              items={[...ctx.kits].sort((a, b) => Number(!!a.dynamic) - Number(!!b.dynamic))
+                .map((k) => ({ id: k.id, code: k.name, description: k.description, text: k.name, extra: k.dynamic ? "Conjunto dinámico" : "" }))} />
             <input name="quantity" placeholder="Cantidad" inputMode="decimal" required aria-label="Cantidad" className="num" />
             <button className="btn pri">Añadir</button>
             <CloseButton />

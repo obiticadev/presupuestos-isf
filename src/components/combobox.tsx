@@ -16,9 +16,11 @@ function Marked({ text, q }: { text: string; q: string }) {
  * exact code typed by hand counts as chosen; leaving it empty clears the choice. With `name` the choice travels in a hidden
  * field; with `submit` the form is sent after each choice. Remount it (key) to show a value changed from outside.
  */
-export function Combobox({ items, value, onPick, name, placeholder, submit, invalid, label, autoFocus }: {
+export function Combobox({ items, value, onPick, name, form, placeholder, submit, invalid, label, autoFocus }: {
   items: ComboItem[]; value: string; onPick?: (id: string) => void; name?: string; placeholder?: string;
   submit?: boolean; invalid?: boolean; label?: string; autoFocus?: boolean;
+  /** The id of a form elsewhere in the page that the choice belongs to (forms cannot nest). */
+  form?: string;
 }) {
   const [text, setText] = useState(() => textOf(items.find((i) => i.id === value)));
   const [query, setQuery] = useState("");
@@ -70,7 +72,7 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
       <input
         ref={field} role="combobox" aria-expanded={open} aria-controls={`${id}-l`} aria-autocomplete="list" aria-label={label}
         aria-activedescendant={open && list[active] ? `${id}-${active}` : undefined} aria-invalid={invalid || undefined}
-        autoComplete="off" value={text} placeholder={placeholder} autoFocus={autoFocus}
+        autoComplete="off" value={text} placeholder={placeholder} autoFocus={autoFocus} form={form}
         onFocus={(e) => { e.currentTarget.select(); reopen(); }}
         onChange={(e) => { setText(e.target.value); setQuery(e.target.value); setActive(0); setOpen(true); }}
         onBlur={() => {
@@ -92,7 +94,7 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
       <button type="button" className="clr" aria-label="Borrar" tabIndex={-1}
         onMouseDown={(e) => { e.preventDefault(); setText(""); reopen(); field.current?.focus(); }}>✕</button>
       {/* controlled: a hidden field's value is its attribute, which a parent re-render would reset */}
-      {name && <input ref={hidden} type="hidden" name={name} value={current} />}
+      {name && <input ref={hidden} type="hidden" name={name} form={form} value={current} />}
       {open && (
         <ul ref={listbox} role="listbox" id={`${id}-l`} className={columns ? "cols" : undefined}>
           {query.trim() && <li className="hint" aria-hidden>{list.length} de {items.length}</li>}

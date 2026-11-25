@@ -6,7 +6,8 @@ import { CloseButton, CollapseKitButton, OpenButton, OpenIfIncomplete } from "@/
 import { Comment, CommentButton } from "./comment";
 import { FixedMeasure, KitSwap } from "./kit-fields";
 import { formatDecimalEs, parseDecimalEs } from "@/lib/decimal";
-import { kitDefinition, refCategoryId, refConceptId } from "@/modules/kits/definition";
+import { kitDefinition, kitSlotList, refCategoryId, refConceptId } from "@/modules/kits/definition";
+import { DynamicBranch, dynamicTag, KitSideForms, OwnSlots, slotCount } from "./kit-dynamic";
 import { overrideKey } from "@/modules/kits/formulas";
 import { categoryPrefix, codePrefix } from "@/modules/kits/naming";
 import { removeKitAction, updateKitAction } from "@/modules/quotes/actions";
@@ -14,11 +15,12 @@ import type { KitInstanceDetail, LineDetail } from "@/modules/quotes/service";
 import { LineRow, money, Panel, price, qty, type EditorContext } from "./sections";
 
 /** The kit's outline in miniature: its first element's two letters and a circle per element to fill in, dashed when missing. */
-function Silhouette({ main, parts }: { main: string; parts: { label: string; missing: boolean }[] }) {
+/** A dynamic inside the kit is a ■ ("sq"); a standalone dynamic ends in its dashed slot mark ("dy"). */
+function Silhouette({ main, parts }: { main: string; parts: { label: string; missing: boolean; shape?: "sq" | "dy" }[] }) {
   return (
     <span className="mini" title={[main, ...parts.map((p) => p.label)].join(" → ")} aria-hidden>
       <i>{main.slice(0, 2).toUpperCase()}</i>
-      {parts.map((p, k) => <s key={k} className={p.missing ? "miss" : undefined} />)}
+      {parts.map((p, k) => <s key={k} className={p.missing ? "miss" : p.shape} />)}
     </span>
   );
 }
@@ -28,6 +30,11 @@ export function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit:
   const params = kit.params as Record<string, string>;
   const choices = kit.choices as Record<string, string>;
   const missing = kit.missing as string[];
+  const slots = kitSlotList.parse(kit.slots);
+  const dynamics = def.dynamics ?? [];
+  const placed = dynamics.filter((d) => d.copies?.[choices[d.slot]]);
+  // shortcut: the slot to focus is the last one added while still empty; good enough until addKitSlot's id reaches the page.
+  const focusId = slots.at(-1)?.conceptId === null ? slots.at(-1)!.id : undefined;
   const n = qty(kit.quantity);
   const name = (id: string | undefined) => ctx.allConcepts.find((c) => c.id === id)?.description;
   const amounts = lines.map((l) => ctx.totals.lines[l.id]).filter((a): a is NonNullable<typeof a> => !!a);
@@ -35,6 +42,8 @@ export function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit:
   const summary = [
     ...(def.main ? [`${n} × ${name(refConceptId(def.main) ?? choices.main) ?? def.main.label}`] : []),
     ...def.params.filter((p) => params[p.key]).map((p) => `${p.label.toLowerCase()} ${params[p.key]} ${p.unit}`.trim()),
+    ...placed.map((d) => `${d.label.toLowerCase()} con ${slotCount(slots.filter((x) => x.group === d.slot))}`),
+    ...(def.kind === "dynamic" ? [slotCount(slots.filter((x) => x.group === "self"))] : []),
   ].join(" · ");
   const validDatum = (raw: string | undefined) => { const v = parseDecimalEs(raw ?? ""); return v !== null && !v.startsWith("-"); };
   // The datum a material typed in when quoting (q_…) gets: it is drawn in that material's circle, not in its own.
@@ -55,6 +64,10 @@ export function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit:
         const q = askedOf(c);
         return q && !part.missing && !validDatum(params[q]) ? { label: `Falta ${c.label.toLowerCase()}: cantidad`, missing: true } : part;
       }),
+    // An optional dynamic taken out is not drawn.
+    ...dynamics.filter((d) => !d.optional || placed.includes(d)).map((d) => (placed.includes(d)
+      ? { label: d.label, missing: false, shape: "sq" as const } : { label: `Falta ${d.label.toLowerCase()}`, missing: true })),
+    ...(def.kind === "dynamic" ? [{ label: "slots", missing: false, shape: "dy" as const }] : []),
   ];
   const options = (ref: { conceptId: string } | { categoryId: string }, current: string | undefined) => {
     const cat = refCategoryId(ref);
@@ -82,7 +95,8 @@ export function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit:
     return <span className="kq-ro" title={c ? `${c.code} · ${c.description}` : label}>{c ? `${c.code} · ${c.description}` : label}</span>;
   };
   const dataParams = def.params.filter((p) => !p.key.startsWith("q_"));
-  const lastRow = def.components.length ? def.components.at(-1)!.slot : dataParams.at(-1)?.key;
+  // Dynamics and «Añadir slot» go after the materials: then no material closes the tree.
+  const lastRow = dynamics.length || def.kind === "dynamic" ? undefined : def.components.length ? def.components.at(-1)!.slot : dataParams.at(-1)?.key;
   const description = ctx.kits.find((k) => k.id === kit.templateId)?.description;
 
   return (
@@ -96,10 +110,16 @@ export function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit:
       </summary>
       {description && <p className="kitsum mut">{description}</p>}
       {missing.length > 0 && <p className="kitsum"><span className="amber">{global ? "Falta completar" : "Sin valorar hasta completar"}: {missing.join(" · ")}</span></p>}
-      {!missing.length && !global && (
+      {!missing.length && !global && lines.length > 0 && (
         <p className="kitsum">{lines.map((l) => `${qty(l.quantity)} ${l.unitName} × ${price(l.unitPrice)}`).join(" + ")} = <b>{money(amount)}</b></p>
       )}
-      {lines.map((l) => <LineRow key={l.id} ctx={ctx} line={l} global={global} inKit />)}
+      {lines.filter((l) => !dynamics.some((d) => l.kitSlot?.startsWith(`${d.slot}/`))).map((l) => <LineRow key={l.id} ctx={ctx} line={l} global={global} inKit />)}
+      {placed.filter((d) => lines.some((l) => l.kitSlot?.startsWith(`${d.slot}/`))).map((d) => (
+        <div key={d.slot} className="kdg">
+          <div className="kdg-t"><span className="kq-tag kq-pe">{dynamicTag(d.copies![choices[d.slot]].name)}</span>{d.label}</div>
+          {lines.filter((l) => l.kitSlot?.startsWith(`${d.slot}/`)).map((l) => <LineRow key={l.id} ctx={ctx} line={l} global={global} inKit />)}
+        </div>
+      ))}
       <Comment kind="kit" id={kit.id} text={kit.comment} editable={ctx.editable} variant="ck" />
       {ctx.editable && (
         <>
@@ -155,9 +175,15 @@ export function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit:
                     </div>
                   );
                 })}
+                {def.kind === "dynamic" && <OwnSlots ctx={ctx} kitId={kit.id} def={def} slots={slots} global={global} focusId={focusId} />}
+                {dynamics.map((d, i) => (
+                  <DynamicBranch key={d.slot} ctx={ctx} kitId={kit.id} d={d} choices={choices} slots={slots} global={global} last={i === dynamics.length - 1}
+                    tools={{ article, tagOf, unitOf }} focusId={focusId} />
+                ))}
               </div>
               <div className="kq-acts"><CloseButton /></div>
             </ActionForm>
+            {(def.kind === "dynamic" || dynamics.length > 0) && <KitSideForms kitId={kit.id} def={def} slots={slots} />}
           </Panel>
           <div className="kitfoot">
             <div className="kbtns">

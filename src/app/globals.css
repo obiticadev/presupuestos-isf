@@ -1,5 +1,5 @@
 /* Tokens y base de la dirección «Esquema unifilar» (docs/diseno/maquetas/isf.css). */
-:root{--ink:#0f1f1d;--paper:#f6f7f4;--sheet:#fff;--rule:#d5dbd6;--band:#eceeea;--green:#004742;--green-deep:#00332f;--green-ink:#cfe0db;--amber:#8f5600;--amber-line:#b86e00;--amber-bg:#fff3dc;--ok:#1d7a4a;--red:#a3261e;--mut:#56645f}
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--sheet:#fff;--rule:#d5dbd6;--band:#eceeea;--green:#004742;--green-deep:#00332f;--green-ink:#cfe0db;--amber:#8f5600;--amber-line:#b86e00;--amber-bg:#fff3dc;--ok:#1d7a4a;--red:#a3261e;--mut:#56645f;--tint:#f1f7f5}
 *{box-sizing:border-box;margin:0;padding:0}
 ::selection{background:#004742;color:#fff}
 body{font-family:var(--font-archivo),sans-serif;color:var(--ink);background:var(--paper);font-variant-numeric:tabular-nums;font-size:14px;line-height:1.4}
@@ -626,6 +626,8 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .kq-n{position:relative;display:flex;flex-direction:column;justify-content:flex-start;padding-left:34px}
 /* Eje común: nombre, artículo y medida centrados a 25 px del borde superior de la fila, aunque «opcional» la alargue */
 .kq-r>.kq-a,.kq-r .kq-m{align-self:start}
+/* .kq-m can sit inside SubmitOnBlur's display:contents span, out of reach of «.kq-r>*»: same padding so it lines up with .kq-a */
+.kq-r .kq-m{padding:5px 0}
 .kq-n b{font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center;min-height:40px}
 .kq-n em{font-style:normal;font-size:11px;color:var(--mut);margin-top:-8px;padding-left:50px}
 .kq-r.kq-main .kq-n{padding-left:0}
@@ -662,7 +664,7 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 @container (max-width:560px){
   .kq-tree{display:block;padding:12px}
   .kq-r{display:block;position:relative;padding:0 0 12px 34px}
-  .kq-r>*{padding:3px 0}
+  .kq-r>*,.kq-r .kq-m{padding:3px 0}
   .kq-r .kq-n{min-height:0;padding-left:0}
   .kq-r .kq-n em{padding-left:50px}
   .kq-n::before,.kq-n::after{display:none!important}
@@ -681,6 +683,34 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 
 @container (max-width:560px){.kq-r .kq-r.kq-wn{padding:0;margin:0}.kq-r .kq-r.kq-wn::before,.kq-r .kq-r.kq-wn::after{display:none}}
 .kq-l{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Dynamic kits (spec 2026-11-25 §4): a second level whose elbow hangs from the dynamic's tag; .kq-v carries a vertical past a row. */
+.kq-v{position:absolute;left:21px;top:0;bottom:0;border-left:1.5px solid var(--ink)}
+.kq-v.kq-v2{left:55px;top:35px}
+.kq-r.kq-r2>.kq-n{padding-left:68px}
+.kq-r.kq-r2>.kq-n::before,.kq-r.kq-r2>.kq-n::after{left:55px}
+.kq-r.kq-dy>*{background:var(--tint)}
+.kq-r.kq-dy>:not(:last-child){box-shadow:12px 0 var(--tint)}
+.kq-tag.kq-pe{background:var(--green);border-color:var(--green);color:#fff}
+.kq-tag.kq-red{border-color:var(--red);color:var(--red)}
+.kq-tag.kq-off{border-style:dashed}
+.kq-addlab{margin-top:13px;font-size:13px;font-weight:600;color:var(--mut);line-height:17px}
+.kq-add{grid-column:2/4;display:flex;flex-wrap:wrap;gap:6px;align-self:start;padding-top:9px}
+.kq-add button{border:1.5px dashed var(--green);background:var(--sheet);color:var(--green);font:700 12px var(--font-archivo),sans-serif;padding:0 10px;height:32px;cursor:pointer}
+.kq-add button.kq-red{border-color:var(--red);color:var(--red)}
+.kq-add button:hover{background:var(--tint)}
+.kq-addpe{grid-column:2/4;align-self:start;margin-top:6px;border:1.5px dashed var(--ink);background:transparent;color:var(--ink);font:700 13px var(--font-archivo),sans-serif;height:38px;cursor:pointer}
+.kq-side:empty{display:none}
+.kdg{border-left:3px solid var(--green);margin:4px 0 4px 12px}
+.kdg-t{display:flex;gap:8px;align-items:center;padding:6px 12px;font-size:13px;font-weight:700}
+@container (max-width:560px){
+  .kq-r .kq-n{position:static}
+  .kq-r.kq-r2{padding-left:68px}
+  .kq-r.kq-r2>.kq-n{padding-left:0}
+  .kq-r.kq-r2::before,.kq-r.kq-r2::after{left:55px!important}
+  .kq-v.kq-v2{top:33px}
+  .kq-r.kq-dy{background:var(--tint)}
+  .kq-r.kq-dy>*{background:none;box-shadow:none}
+}
 .kq-acts{display:flex;justify-content:flex-end;padding:0 16px 12px}
 .kq-m input[aria-invalid]{border-color:var(--red)}
 /* Cambiar conjunto */

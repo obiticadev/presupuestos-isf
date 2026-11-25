@@ -16,7 +16,7 @@ export const overrideKey = (slot: string) => `k_${slot}`;
 
 const ONE = new Prisma.Decimal(1);
 
-export const isVariant = (t: SlotType, c: ConceptForKit): boolean =>
+export const isVariant = (t: SlotType, c: Pick<ConceptForKit, "id" | "categoryId">): boolean =>
   "conceptIds" in t.variants ? t.variants.conceptIds.includes(c.id) : c.categoryId === t.variants.categoryId;
 
 /** A slot's type: the kit's own ("self") or the one in the copy of the dynamic chosen for `group`. */
