@@ -182,10 +182,11 @@ export async function duplicateQuote(actor: CurrentUser, id: string): Promise<{ 
   });
 }
 
+/** Catalog lines the refresh can touch: global-price subsections (their lines carry no price) are left out, so the warning and the button agree. */
 async function catalogLines(tx: Tx, quoteId: string) {
   return tx.quoteLine.findMany({
-    where: { section: { quoteId }, conceptId: { not: null }, unitPrice: { not: null } },
-    include: { concept: { include: { unit: true, tax: true } }, adjustments: true, section: true },
+    where: { section: { quoteId, mode: "SUM" }, conceptId: { not: null }, unitPrice: { not: null } },
+    include: { concept: { include: { unit: true, tax: true } }, adjustments: true },
     orderBy: [{ section: { position: "asc" } }, { position: "asc" }],
   });
 }
@@ -210,12 +211,12 @@ export async function refreshPricesFromCatalog(actor: CurrentUser, id: string): 
   });
 }
 
-/** Re-copies price, description, unit and tax from active catalog concepts into a quote's lines, leaving adjusted and global-price lines alone. */
+/** Re-copies price, description, unit and tax from active catalog concepts into a quote's lines, leaving adjusted lines alone. */
 async function refreshLines(tx: Tx, quoteId: string): Promise<number> {
   let n = 0;
   for (const l of await catalogLines(tx, quoteId)) {
     const c = l.concept!;
-    if (!c.active || !c.salePrice || l.adjustments.length || l.section.mode === "GLOBAL") continue;
+    if (!c.active || !c.salePrice || l.adjustments.length) continue;
     if (c.salePrice.equals(l.unitPrice!) && c.description === l.description && c.unit.name === l.unitName
       && c.tax.name === l.taxName && c.tax.ratePct.equals(l.taxRatePct ?? -1)) continue;
     await tx.quoteLine.update({ where: { id: l.id }, data: { unitPrice: c.salePrice, description: c.description, unitName: c.unit.name, taxName: c.tax.name, taxRatePct: c.tax.ratePct } });

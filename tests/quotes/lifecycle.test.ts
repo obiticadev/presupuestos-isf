@@ -1,8 +1,8 @@
 import { prisma } from "@/lib/db";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { issueQuote } from "@/modules/quotes/issue";
-import { createExtension, createRevision, duplicateQuote, expireQuotes, validityRunOut, listQuoteHistory, listQuotes, listRevisions, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
-import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateHeader, updateLine } from "@/modules/quotes/service";
+import { createExtension, createRevision, duplicateQuote, expireQuotes, validityRunOut, listQuoteHistory, listQuotes, listRevisions, priceWarnings, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
+import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateHeader, updateLine, updateSection } from "@/modules/quotes/service";
 import { ValidationError } from "@/lib/errors";
 import { conceptFields, completeDraft, makeClient, quoteType } from "../helpers/quotes";
 
@@ -309,4 +309,17 @@ test("nueva ampliación y revisión de la A01 a la vez: la revisión siempre sal
     expect(rev.status).toBe("fulfilled");
     if (ext.status === "rejected") expect(String(ext.reason)).toContain("Hay un borrador pendiente");
   }
+});
+
+test("no avisa de líneas que refrescar no toca: subpartida en precio global", async () => {
+  const { actor, admin, quote, sub } = await completeDraft();
+  await addCatalogLine(actor, sub.id, { conceptId: "concept-man-4x25", quantity: "1" });
+  const c = await getConcept("concept-man-4x25");
+  await updateConcept(admin, c.id, { ...conceptFields(c), salePrice: "12", validated: true });
+  await updateSection(actor, sub.id, { mode: "GLOBAL" });
+  expect((await priceWarnings(prisma, quote.id)).some((w) => w.startsWith("MAN-4X25"))).toBe(false);
+  await updateSection(actor, sub.id, { mode: "SUM" });
+  expect(await priceWarnings(prisma, quote.id)).toContain("MAN-4X25: catálogo 12,00, presupuesto 10,00");
+  expect(await refreshPricesFromCatalog(actor, quote.id)).toBe(1);
+  expect(await priceWarnings(prisma, quote.id)).toEqual([]);
 });
