@@ -683,3 +683,16 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .kbtns{flex-wrap:wrap}
 .kswap{order:10;flex-basis:100%;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center}
 .kswap p{grid-column:1/-1;font-size:12px;color:var(--mut);margin:0}
+/* Lista de conjuntos: pestañas normales / dinámicos, chips de dinámicos y tipos de slot. */
+.ltabs{display:flex;flex-wrap:wrap;margin-top:16px}
+.ltabs a{border:1.5px solid var(--ink);border-bottom:0;padding:7px 14px;font-weight:700;font-size:13px;margin-right:-1.5px;background:var(--sheet);color:var(--ink);text-decoration:none}
+.ltabs a[aria-current=page]{background:var(--ink);color:#fff}
+.ltabs small{font-weight:600;opacity:.75;margin-left:4px}
+.ltabs+table{border-top:1.5px solid var(--ink)}
+.dyn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--green);padding:2px 8px 2px 2px;font-weight:600;font-size:12px;color:var(--green);background:var(--band)}
+.dyn.opt{border-style:dashed}
+.dyn .mini i{width:18px;height:18px;font-size:8px;background:var(--green);color:#fff;border-color:var(--green)}
+.tt{font-size:10px;font-weight:800;letter-spacing:.06em;border:1.5px solid var(--green);color:var(--green);padding:2px 4px;text-decoration:none;background:var(--sheet)}
+.tt.red{border-color:var(--red);color:var(--red)}
+td .chips{margin:0}
+@media (max-width:900px){.klist thead{display:none}.klist tr,.klist td{display:block}.klist tr{border-bottom:1px solid var(--rule);padding:6px 0}.klist td{border:0;padding:4px 12px;text-align:left}.klist td[data-l]::before{content:attr(data-l);display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}}
