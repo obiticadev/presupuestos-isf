@@ -18,10 +18,10 @@ export const showsRequired = (m: FormMaterial) => m.ref.kind === "categoryId" ||
 export const isLegacyDefinition = (def: KitDefinition) => def.components.every((c) => c.inName === undefined);
 
 // Old definitions: a k other than 1 in PER_QTY_AND_PARAM and data shared by several components are lost (none in production).
-export function fromDefinition(def: KitDefinition): { main: FormRef; materials: FormMaterial[] } {
+export function fromDefinition(def: KitDefinition): { main: FormRef | null; materials: FormMaterial[] } {
   const legacy = isLegacyDefinition(def);
   return {
-    main: toRef(def.main),
+    main: def.main ? toRef(def.main) : null,
     materials: def.components.map((c, i) => {
       const ask = c.formula.type === "PER_QTY_AND_PARAM" || c.formula.type === "PARAM";
       return {
@@ -34,9 +34,9 @@ export function fromDefinition(def: KitDefinition): { main: FormRef; materials: 
 }
 
 /** Labels come from the catalogue; each material typed in when quoting gets its own datum `q_<slot>`. */
-export function toDefinition(main: FormRef, materials: FormMaterial[], info: RefInfo): KitDefinition {
+export function toDefinition(main: FormRef | null, materials: FormMaterial[], info: RefInfo): KitDefinition {
   return {
-    main: { ...fromRef(main), label: info(main).label },
+    main: main ? { ...fromRef(main), label: info(main).label } : undefined,
     params: materials.filter((m) => m.ask).map((m) => {
       const { label, unit } = info(m.ref);
       // Within kitDefinition's limits: a long description or unit name must not block saving with an error no field shows.

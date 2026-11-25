@@ -14,7 +14,7 @@ export function kitLines(s: KitSnapshot): string[] {
   const { materials } = fromDefinition(s.definition);
   return [
     ...(s.name === undefined ? [] : [`Nombre: ${s.name}`, `Descripción: ${s.description || "—"}`]),
-    `Principal: ${s.definition.main.label}${asked(s.definition.main)}`,
+    s.definition.main ? `Principal: ${s.definition.main.label}${asked(s.definition.main)}` : "Principal: —",
     ...s.definition.components.map((c, i) => {
       const m = materials[i];
       return `${c.label}${asked(c.ref)}: ${materialSummary(m, "")}${showsRequired(m) && !m.required ? " · opcional" : ""}`;

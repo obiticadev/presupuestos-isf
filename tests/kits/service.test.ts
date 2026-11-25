@@ -75,7 +75,7 @@ test("sin nombre, saveKit pone el automático y su símbolo; si se repite, -2", 
   const p = await makeUser("presupuestador");
   const a = await saveKit(p, { description: "", definition: seedDef() });
   expect(a.name).toBe("BOM-MAN");
-  expect(a.definition.main.symbol).toBe("BO");
+  expect(a.definition.main?.symbol).toBe("BO");
   expect((await saveKit(p, { description: "", definition: seedDef() })).name).toBe("BOM-MAN-2");
 });
 
@@ -122,5 +122,20 @@ test("el símbolo no lleva guiones aunque el prefijo del principal sea de una le
   await prisma.category.create({ data: { id: "cat-x", name: "X" } });
   const k = await saveKit(p, { description: "", definition: { ...d, main: { categoryId: "cat-x", label: "X" }, components: d.components.map((c) => ({ ...c, inName: true })) } });
   expect(k.name).toBe("X-MAN");
-  expect(k.definition.main.symbol).toBe("XM");
+  expect(k.definition.main?.symbol).toBe("XM");
+});
+
+test("un dinámico sin principal se nombra con las abreviaturas de sus tres primeros tipos", async () => {
+  const p = await makeUser("presupuestador");
+  const type = (key: string, abbr: string) => ({ key, label: abbr, abbr, red: false, variants: { categoryId: "cat-x" } });
+  const k = await saveKit(p, { description: "", definition: { kind: "dynamic", params: [], components: [], slotTypes: [type("t1", "ED"), type("t2", "SD"), type("t3", "F"), type("t4", "AI")] } });
+  expect(k.name).toBe("ED-SD-F");
+  expect(k.definition.main).toBeUndefined();
+});
+
+test("un dinámico marcado «en el nombre» añade las dos primeras letras de su plantilla", async () => {
+  const p = await makeUser("presupuestador");
+  const dyn = await saveKit(p, { name: "ET200SP", description: "", definition: { kind: "dynamic", params: [], components: [], slotTypes: [{ key: "t1", label: "ED", abbr: "ED", red: false, variants: { categoryId: "cat-x" } }] } });
+  const k = await saveKit(p, { description: "", definition: def({ params: [], components: [], dynamics: [{ slot: "d1", label: "Periferia", choice: { templateId: dyn.id }, optional: false, inName: true }] }) });
+  expect(k.name).toMatch(/-ET$/);
 });

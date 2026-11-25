@@ -277,7 +277,7 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
   const amounts = lines.map((l) => ctx.totals.lines[l.id]).filter((a): a is NonNullable<typeof a> => !!a);
   const amount = amounts.length ? amounts.reduce((a, b) => a.plus(b)) : null;
   const summary = [
-    `${n} × ${name(refConceptId(def.main) ?? choices.main) ?? def.main.label}`,
+    ...(def.main ? [`${n} × ${name(refConceptId(def.main) ?? choices.main) ?? def.main.label}`] : []),
     ...def.params.filter((p) => params[p.key]).map((p) => `${p.label.toLowerCase()} ${params[p.key]} ${p.unit}`.trim()),
   ].join(" · ");
   const validDatum = (raw: string | undefined) => { const v = parseDecimalEs(raw ?? ""); return v !== null && !v.startsWith("-"); };
@@ -288,7 +288,7 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
   const usable = (id: string | undefined) => ctx.allConcepts.some((c) => c.id === id && c.active && (global || c.salePrice !== null));
   const choice = (label: string, id: string | undefined) => ({ label: usable(id) ? (name(id) ?? label) : `Falta ${label.toLowerCase()}`, missing: !usable(id) });
   const parts = [
-    choice(def.main.label, refConceptId(def.main) ?? choices.main),
+    ...(def.main ? [choice(def.main.label, refConceptId(def.main) ?? choices.main)] : []),
     ...def.params.filter((p) => !p.key.startsWith("q_") && (p.required || params[p.key])).map((p) => {
       const ok = validDatum(params[p.key]);
       return { label: ok ? `${p.label} ${params[p.key]} ${p.unit}`.trim() : `Falta ${p.label.toLowerCase()}`, missing: !ok };
@@ -333,7 +333,7 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
     <details id={`conjunto-${kit.id}`} className={`kit${missing.length ? " inc" : ""}`}>
       <OpenIfIncomplete incomplete={missing.length > 0} />
       <summary>
-        <Silhouette main={def.main.symbol ?? def.main.label} parts={parts} />
+        <Silhouette main={def.main ? def.main.symbol ?? def.main.label : kit.name.slice(0, 2)} parts={parts} />
         <b>Conjunto · {kit.name}</b>
         <span className="sum mut">{summary}</span>
         {missing.length ? <span className="badge amber">Incompleto</span> : !global && <b>{money(amount)}</b>}
@@ -352,14 +352,15 @@ function KitBlock({ ctx, kit, lines, global }: { ctx: EditorContext; kit: KitIns
             <ActionForm action={updateKitAction} className="kq">
               <input type="hidden" name="id" value={kit.id} />
               <div className="kq-tree">
-                <div className="kq-r kq-main">
+                {/* A dynamic without a main counts as one unit: no main row (plan 2026-11-25, task 2). */}
+                {!def.main ? <input type="hidden" name="quantity" value="1" /> : <div className="kq-r kq-main">
                   <div className="kq-n"><b><span className={`kq-tag${refCategoryId(def.main) ? " kq-el" : ""}`}>{tagOf(def.main, def.main.label)}</span>Principal</b></div>
                   <div className="kq-a">{article("main", def.main, def.main.label, true)}</div>
                   <SubmitOnBlur><div className="kq-m">
                     <input name="quantity" defaultValue={n} inputMode="decimal" required aria-label="Cantidad" />
                     <small>{unitOf(refConceptId(def.main) ?? choices.main)}</small>
                   </div></SubmitOnBlur>
-                </div>
+                </div>}
                 {dataParams.map((p) => (
                   <div key={p.key} className={`kq-r${p.key === lastRow ? " kq-last" : ""}`}>
                     <div className="kq-n"><b><span className="kq-tag">Dato</span><span className="kq-l" title={p.label}>{p.label}</span></b>{!p.required && <em>opcional</em>}</div>

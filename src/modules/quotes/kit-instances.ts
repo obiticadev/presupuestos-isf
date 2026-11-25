@@ -111,7 +111,7 @@ const refKey = (r: { conceptId: string } | { categoryId: string }) => ("conceptI
  */
 function carryOver(from: KitDefinition, to: KitDefinition, params: Record<string, string>, choices: Record<string, string>) {
   const out = { params: {} as Record<string, string>, choices: {} as Record<string, string> };
-  if (refKey(from.main) === refKey(to.main) && choices.main) out.choices.main = choices.main;
+  if (from.main && to.main && refKey(from.main) === refKey(to.main) && choices.main) out.choices.main = choices.main;
   for (const p of to.params) if (params[p.key] !== undefined) out.params[p.key] = params[p.key];
   const used = new Set<string>();
   for (const c of to.components) {

@@ -2,7 +2,7 @@
 import { Prisma } from "@/generated/prisma/browser";
 import type { Decimal } from "@/lib/decimal";
 import { parseDecimalEs } from "@/lib/decimal";
-import { refCategoryId, refConceptId, type KitDefinition } from "./definition";
+import { refCategoryId, refConceptId, type KitDefinition, type KitRef } from "./definition";
 
 export type ConceptForKit = {
   id: string; categoryId: string; description: string; unitName: string; salePrice: Decimal | null;
@@ -42,7 +42,7 @@ export function expandKit(def: KitDefinition, input: KitInput, concepts: Map<str
   }
 
   const lines: KitExpansion["lines"] = [];
-  const resolve = (slot: string, ref: KitDefinition["main"] | KitDefinition["components"][number]["ref"], label: string, required: boolean): string | null => {
+  const resolve = (slot: string, ref: KitRef | KitDefinition["components"][number]["ref"], label: string, required: boolean): string | null => {
     const id = refConceptId(ref) ?? input.choices[slot];
     if (!id) {
       if (required) missing.push(`Falta elegir ${label}`);
@@ -61,7 +61,7 @@ export function expandKit(def: KitDefinition, input: KitInput, concepts: Map<str
     return id;
   };
 
-  const mainId = resolve("main", def.main, def.main.label, true);
+  const mainId = def.main ? resolve("main", def.main, def.main.label, true) : null;
   if (mainId && n) lines.push({ slot: "main", conceptId: mainId, quantity: n });
 
   for (const c of def.components) {

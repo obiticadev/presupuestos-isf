@@ -72,7 +72,11 @@ export function KitForm({ kit, concepts, categories, taken }: { kit: Kit | null;
   };
   const baseOf = (main: FormRef, materials: FormMaterial[]) => kitBaseName(info(main).prefix, materials.filter((m) => m.inName).map((m) => info(m.ref).prefix));
 
-  const [initial] = useState(() => (kit ? fromDefinition(kit.definition) : { main: { kind: "categoryId" as const, id: "" }, materials: [] }));
+  const [initial] = useState(() => {
+    const blank: FormRef = { kind: "categoryId", id: "" };
+    const d = kit ? fromDefinition(kit.definition) : { main: blank, materials: [] };
+    return { ...d, main: d.main ?? blank };
+  });
   const [main, setMain] = useState<FormRef>(initial.main);
   const [materials, setMaterials] = useState<FormMaterial[]>(initial.materials);
   const [sel, setSel] = useState(0);

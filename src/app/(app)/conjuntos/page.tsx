@@ -29,7 +29,7 @@ export default async function ConjuntosPage() {
                 <Link className="code" href={`/conjuntos/${k.id}`}>{k.name}</Link>
                 {k.description && <div className="mut" style={{ fontSize: 12 }}>{k.description}</div>}
               </td>
-              <td><b>{k.definition.main.label}</b>{k.definition.components.length > 0 && <> → {k.definition.components.map((c) => c.label).join(", ")}</>}</td>
+              <td><b>{k.definition.main?.label ?? "—"}</b>{k.definition.components.length > 0 && <> → {k.definition.components.map((c) => c.label).join(", ")}</>}</td>
               <td className="n">{k.definition.components.length}</td>
               <td>{k.active ? "Activo" : <span className="badge off">Desactivado</span>}{incomplete[i] && <> <span className="badge amber">Incompleto</span></>}</td>
             </tr>
