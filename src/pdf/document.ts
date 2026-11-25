@@ -11,8 +11,9 @@ export type SnapshotQuote = {
   sections: {
     id: string; title: string; comment?: string;
     children: {
-      id: string; title: string; mode: "SUM" | "GLOBAL"; comment?: string; kits?: { id: string; comment?: string }[];
-      lines: { description: string; quantity: string; unitName: string; visible: boolean; kitInstanceId?: string | null; comment?: string }[];
+      // showTotal and showQuantity arrived on 2026-11-25: older snapshots lack them and show everything.
+      id: string; title: string; mode: "SUM" | "GLOBAL"; comment?: string; kits?: { id: string; comment?: string }[]; showTotal?: boolean;
+      lines: { description: string; quantity: string; unitName: string; visible: boolean; kitInstanceId?: string | null; comment?: string; showQuantity?: boolean }[];
     }[];
   }[];
   totals: {
@@ -69,13 +70,13 @@ export function buildDocument({ company, quote: q, signer }: PdfSource, opts: { 
   q.sections.forEach((s, i) => {
     rows.push({ kind: "part", number: `${i + 1}`, title: s.title.trim() || "Sin título", total: money(q.totals.sections[s.id] ?? "0") });
     s.children.forEach((c, j) => {
-      rows.push({ kind: "sub", number: `${i + 1}.${j + 1}`, title: c.title.trim() || "Sin título", total: money(q.totals.subsections[c.id] ?? "0") });
+      rows.push({ kind: "sub", number: `${i + 1}.${j + 1}`, title: c.title.trim() || "Sin título", total: c.showTotal === false ? "" : money(q.totals.subsections[c.id] ?? "0") });
       const visible = c.lines.filter((x) => x.visible);
       visible.forEach((l, k) => {
         const qty = formatDecimalEs(l.quantity, { min: 0, max: 4 });
         const kitComment = l.kitInstanceId ? c.kits?.find((x) => x.id === l.kitInstanceId)?.comment : undefined;
         const kit = !!kitComment?.trim();
-        rows.push({ kind: "line", text: l.description, quantity: l.unitName ? `${qty} ${l.unitName}` : qty, ...(kit && { kit: true as const }) });
+        rows.push({ kind: "line", text: l.description, quantity: l.showQuantity === false ? "" : l.unitName ? `${qty} ${l.unitName}` : qty, ...(kit && { kit: true as const }) });
         note(rows, "line", l.comment, kit);
         // A kit's comment follows the last of its visible lines.
         if (l.kitInstanceId && visible[k + 1]?.kitInstanceId !== l.kitInstanceId) note(rows, "kit", kitComment, kit);

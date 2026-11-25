@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Se trabaja en la rama `mejoras-uso-real`, en el worktree sin `#` (`D:\dev\presupuestos-isf`). Cada tarea hace commit y push a esa rama, que se despliega sola en `:3101`. Fusionar en `master` o desplegar producción exige el visto bueno explícito del usuario.
-- Cada tarea sube el parche de `version` en `package.json`. Hoy es 1.9.15: la tarea 1 → 1.9.16, la 2 → 1.9.17 y así hasta la 9 → 1.9.24.
+- Cada tarea sube el parche de `version` en `package.json`. Hoy es 1.9.19 (tras los ajustes del borrador, plan `2026-11-25-ajustes-borrador.md`): la tarea 1 → 1.9.20, la 2 → 1.9.21 y así hasta la 9 → 1.9.28.
 - Código en inglés; interfaz y textos en español. Importes y cantidades como `Decimal` o cadenas normalizadas, nunca `float`.
 - Los permisos se comprueban en el servidor. Toda escritura de un borrador pasa por `withDraft()`. Lo emitido no se modifica.
 - No se borran ni se reescriben pruebas existentes: solo se añaden.
@@ -37,7 +37,7 @@
 
 ---
 
-### Task 1: Definición con dinámicos, tipos de slot y principal opcional (1.9.16)
+### Task 1: Definición con dinámicos, tipos de slot y principal opcional (1.9.20)
 
 **Files:**
 - Modify: `src/modules/kits/definition.ts`
@@ -83,11 +83,11 @@
 
 - [ ] **Step 5: Run:** `pnpm exec vitest run tests/kits` and `pnpm exec tsc --noEmit -p .`. Expected: both pass; existing kit tests stay green.
 
-- [ ] **Step 6: Bump to 1.9.16, commit `feat(conjuntos): definición con dinámicos, tipos de slot y principal opcional; 1.9.16`, push.**
+- [ ] **Step 6: Bump to 1.9.20, commit `feat(conjuntos): definición con dinámicos, tipos de slot y principal opcional; 1.9.20`, push.**
 
 ---
 
-### Task 2: Expansión pura con dinámicos y slots (1.9.17)
+### Task 2: Expansión pura con dinámicos y slots (1.9.21)
 
 **Files:**
 - Modify: `src/modules/kits/formulas.ts`
@@ -132,11 +132,11 @@
 - [ ] **Step 2: Run** `pnpm exec vitest run tests/kits/formulas.test.ts`. Expected: FAIL.
 - [ ] **Step 3: Implement.** Extract today's loop into a local `expandPart(def, prefix, n, …)` and call it for the kit itself and for each placed dynamic. Pure, with no I/O.
 - [ ] **Step 4: Run** the same tests and `pnpm exec vitest run tests/kits`. Expected: PASS.
-- [ ] **Step 5: Bump to 1.9.17, commit `feat(conjuntos): expansión con dinámicos y slots; 1.9.17`, push.**
+- [ ] **Step 5: Bump to 1.9.21, commit `feat(conjuntos): expansión con dinámicos y slots; 1.9.21`, push.**
 
 ---
 
-### Task 3: Slots en el presupuesto: migración y servicio (1.9.18)
+### Task 3: Slots en el presupuesto: migración y servicio (1.9.22)
 
 **Files:**
 - Modify: `prisma/schema.prisma` (`KitInstance.slots Json @default("[]")`), migration `kit_slots` via `pnpm exec prisma migrate dev --name kit_slots`.
@@ -174,11 +174,11 @@
 - [ ] **Step 3: Migration, then** `pnpm exec prisma generate`.
 - [ ] **Step 4: Implement** the functions and actions above.
 - [ ] **Step 5: Run** the two files, then the whole suite. Expected: PASS.
-- [ ] **Step 6: Bump to 1.9.18, commit `feat(conjuntos): slots en el presupuesto (migración kit_slots y servicio); 1.9.18`, push.**
+- [ ] **Step 6: Bump to 1.9.22, commit `feat(conjuntos): slots en el presupuesto (migración kit_slots y servicio); 1.9.22`, push.**
 
 ---
 
-### Task 4: Plantillas: guardar, validar, usos e historial (1.9.19)
+### Task 4: Plantillas: guardar, validar, usos e historial (1.9.23)
 
 **Files:**
 - Modify: `src/modules/kits/service.ts`, `src/modules/kits/history.ts`
@@ -199,11 +199,11 @@
   - `"desactivar un dinámico avisa en el conjunto que lo usa"`.
   - `"el historial lista los tipos de slot y los dinámicos"`.
 - [ ] **Step 2: Run, and expect FAIL.** **Step 3: Implement.** **Step 4: Run** `pnpm exec vitest run tests/kits` and expect PASS.
-- [ ] **Step 5: Bump to 1.9.19, commit `feat(conjuntos): validación, usos e historial de dinámicos; 1.9.19`, push.**
+- [ ] **Step 5: Bump to 1.9.23, commit `feat(conjuntos): validación, usos e historial de dinámicos; 1.9.23`, push.**
 
 ---
 
-### Task 5: Lista de Conjuntos con dos pestañas (1.9.20)
+### Task 5: Lista de Conjuntos con dos pestañas (1.9.24)
 
 **Files:**
 - Modify: `src/app/(app)/conjuntos/page.tsx`, `src/app/globals.css`
@@ -219,11 +219,11 @@
   - Estado.
 - [ ] **Step 1: Implement**, reusing the current table markup.
 - [ ] **Step 2: Check** with `pnpm dev` and Claude in Chrome at 1440 and 390 px: both tabs, counts, chips and red boxes. No horizontal scroll at 390.
-- [ ] **Step 3: Bump to 1.9.20, commit `feat(conjuntos): pestaña de conjuntos dinámicos en la lista; 1.9.20`, push.**
+- [ ] **Step 3: Bump to 1.9.24, commit `feat(conjuntos): pestaña de conjuntos dinámicos en la lista; 1.9.24`, push.**
 
 ---
 
-### Task 6: Editor de conjunto dinámico (1.9.21)
+### Task 6: Editor de conjunto dinámico (1.9.25)
 
 **Files:**
 - Modify: `src/modules/kits/form.ts`, `src/app/(app)/conjuntos/forms.tsx`, `src/app/(app)/conjuntos/[id]/page.tsx` (`id = "nuevo"`; read `?tipo=dinamico` there and pass the kind to `KitForm`), `src/app/globals.css`
@@ -257,11 +257,11 @@
   - add variants by typing «di 4» + Tab;
   - mark one type red and save;
   - reopen it and the data is still there.
-- [ ] **Step 4: Bump to 1.9.21, commit `feat(conjuntos): editor de conjunto dinámico; 1.9.21`, push.**
+- [ ] **Step 4: Bump to 1.9.25, commit `feat(conjuntos): editor de conjunto dinámico; 1.9.25`, push.**
 
 ---
 
-### Task 7: Conjunto normal con dinámicos en el editor (1.9.22)
+### Task 7: Conjunto normal con dinámicos en el editor (1.9.26)
 
 **Files:**
 - Modify: `src/app/(app)/conjuntos/forms.tsx`, `src/modules/kits/form.ts`
@@ -275,11 +275,11 @@
 - The symbol is principal, ○ per material and ■ per dynamic.
 - [ ] **Step 1: Write the failing test** `"toDefinition con dinámicos: fijo y a elegir"`. **Run → FAIL, implement, run → PASS.**
 - [ ] **Step 2: Check in Chrome:** build `PLC-RA-IM` (CPU by category, two dynamics, one of them optional); the automatic name includes the prefixes of the dynamics marked «en el nombre».
-- [ ] **Step 3: Bump to 1.9.22, commit `feat(conjuntos): conjuntos dinámicos dentro de un conjunto; 1.9.22`, push.**
+- [ ] **Step 3: Bump to 1.9.26, commit `feat(conjuntos): conjuntos dinámicos dentro de un conjunto; 1.9.26`, push.**
 
 ---
 
-### Task 8: Borrador: ramas dinámicas, slots y vista cerrada (1.9.23)
+### Task 8: Borrador: ramas dinámicas, slots y vista cerrada (1.9.27)
 
 **Files:**
 - Create: `src/app/(app)/presupuestos/[id]/kit-block.tsx`. Move `KitBlock` and `Silhouette` here from `sections.tsx`, which has grown to 468 lines. The move is mechanical, in its own commit, and changes no behavior.
@@ -313,11 +313,11 @@
   - the closed view is grouped;
   - «Añadir slot» is aligned with its elbow;
   - no horizontal scroll at 390.
-- [ ] **Step 4: Full suite + `pnpm lint`. Bump to 1.9.23, commit `feat(conjuntos): slots y conjuntos dinámicos en el borrador; 1.9.23`, push.**
+- [ ] **Step 4: Full suite + `pnpm lint`. Bump to 1.9.27, commit `feat(conjuntos): slots y conjuntos dinámicos en el borrador; 1.9.27`, push.**
 
 ---
 
-### Task 9: PDF A1 (1.9.24)
+### Task 9: PDF A1 (1.9.28)
 
 **Files:**
 - Modify: `src/pdf/document.ts`, `src/pdf/templates/v1/index.ts`, `src/pdf/templates/v1/styles.ts`
@@ -339,13 +339,13 @@
   - In the template test: `"fila de grupo y líneas agrupadas en el HTML"`.
 - [ ] **Step 2: Run → FAIL; implement; run → PASS.**
 - [ ] **Step 3: Check the «Vista previa (PDF)» of the Task 8 draft** in Chrome; it matches the maqueta's tab 5.
-- [ ] **Step 4: Bump to 1.9.24, commit `feat(pdf): bloques de conjuntos dinámicos (A1); 1.9.24`, push.**
+- [ ] **Step 4: Bump to 1.9.28, commit `feat(pdf): bloques de conjuntos dinámicos (A1); 1.9.28`, push.**
 
 ---
 
 ### Task 10: Cierre
 
 - [ ] Full suite, `pnpm lint` (0 errors) and `pnpm build`. Record the counts.
-- [ ] Check in `:3101` once the push has deployed: version 1.9.24 in the side menu, and the PLC + extension flow working end to end. The migration runs on deploy; check that the `migrate` container ended OK.
-- [ ] Update `docs/superpowers/progreso.md` and the «Estado actual» of `AGENTS.md` (CRLF): what was done, decisions taken by the way and minor items left over. Commit `docs: conjuntos dinámicos terminados (1.9.24)`, push.
+- [ ] Check in `:3101` once the push has deployed: version 1.9.28 in the side menu, and the PLC + extension flow working end to end. The migration runs on deploy; check that the `migrate` container ended OK.
+- [ ] Update `docs/superpowers/progreso.md` and the «Estado actual» of `AGENTS.md` (CRLF): what was done, decisions taken by the way and minor items left over. Commit `docs: conjuntos dinámicos terminados (1.9.28)`, push.
 - [ ] Tell the user it is ready for review in `:3101`. Do not merge to `master` without their explicit approval: there is a migration (`kit_slots`) for production.

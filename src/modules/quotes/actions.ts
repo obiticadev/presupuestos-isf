@@ -54,7 +54,10 @@ export const updateHeaderAction: Action = action((actor, f) =>
 export const addSectionAction: Action = action((actor, f) =>
   quotes.addSection(actor, str(f, "quoteId"), { parentId: str(f, "parentId") || undefined, title: str(f, "title") }));
 export const updateSectionAction: Action = action((actor, f) =>
-  quotes.updateSection(actor, str(f, "id"), present(f, ["title", "mode", "globalQty", "globalPrice", "taxId"])));
+  quotes.updateSection(actor, str(f, "id"), {
+    ...present(f, ["title", "mode", "globalQty", "globalPrice", "taxId"]),
+    ...(f.has("showTotal") && { showTotal: str(f, "showTotal") === "1" }),
+  }));
 export const moveSectionAction: Action = action((actor, f) => quotes.moveSection(actor, str(f, "id"), dir(f)));
 export const removeSectionAction: Action = action((actor, f) => quotes.removeSection(actor, str(f, "id")));
 
@@ -69,6 +72,7 @@ export const updateLineAction: Action = action((actor, f) =>
   quotes.updateLine(actor, str(f, "id"), {
     ...present(f, ["description", "quantity"]),
     ...(f.has("visible") && { visible: str(f, "visible") === "1" }),
+    ...(f.has("showQuantity") && { showQuantity: str(f, "showQuantity") === "1" }),
   }));
 export const moveLineAction: Action = action((actor, f) => quotes.moveLine(actor, str(f, "id"), dir(f)));
 export const removeLineAction: Action = action((actor, f) => quotes.removeLine(actor, str(f, "id")));

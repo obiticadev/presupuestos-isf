@@ -52,6 +52,18 @@ describe("buildDocument", () => {
     expect(d.recipient.address).toEqual(["Calle Mayor 1", "28001 Madrid"]);
   });
 
+  it("hides a line's quantity and a subsection's total when told to", () => {
+    const s = src();
+    s.quote.sections[0].children[0].showTotal = false;
+    s.quote.sections[0].children[0].lines[0].showQuantity = false;
+    expect(buildDocument(s, { draft: false }).rows.slice(0, 4)).toEqual([
+      { kind: "part", number: "1", title: "Grupo de bombeo", total: "639,00 €" },
+      { kind: "sub", number: "1.1", title: "Equipos", total: "" },
+      { kind: "line", text: "Bomba", quantity: "" },
+      { kind: "line", text: "Manguera", quantity: "40 m" },
+    ]);
+  });
+
   it("formats quantities with and without unit", () => {
     const s = src();
     s.quote.sections[0].children[0].lines = [

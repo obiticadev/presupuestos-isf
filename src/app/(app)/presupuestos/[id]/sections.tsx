@@ -150,6 +150,16 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
         <span className="acts c-acts">
           {ctx.editable && (
             <>
+              <ActionForm action={updateSectionAction} className="vis">
+                <input type="hidden" name="id" value={sub.id} />
+                <SubmitOnChange>
+                  <label className="check small" title="Total visible en el documento">
+                    <input type="checkbox" name="showTotal" value="1" defaultChecked={sub.showTotal} key={String(sub.showTotal)} />
+                    <input type="hidden" name="showTotal" value="0" />
+                    Total
+                  </label>
+                </SubmitOnChange>
+              </ActionForm>
               <ActionForm action={removeSectionAction}><input type="hidden" name="id" value={sub.id} /><ConfirmButton label="Eliminar" className="icon" confirm="¿Eliminar la subpartida con sus líneas?" /></ActionForm>
               <Move action={moveSectionAction} id={sub.id} first={first} last={last} />
               <CommentButton id={sub.id} has={!!sub.comment} reserve label="Añadir comentario a la subpartida" className="icon bub last" />
@@ -211,6 +221,11 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
                   <input type="checkbox" name="visible" value="1" defaultChecked={line.visible} key={String(line.visible)} />
                   <input type="hidden" name="visible" value="0" />
                   Ver
+                </label>
+                <label className="check small" title="Cantidad visible en el documento">
+                  <input type="checkbox" name="showQuantity" value="1" defaultChecked={line.showQuantity} key={String(line.showQuantity)} />
+                  <input type="hidden" name="showQuantity" value="0" />
+                  Cant.
                 </label>
               </SubmitOnChange>
             </ActionForm>

@@ -150,7 +150,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 /* Filas del editor (maqueta docs/diseno/maquetas/editor-filas-v2.html): rejilla con áreas; la tabla es un contenedor
    y la fila pasa a dos pisos (≤ 980 px) o se apila (≤ 480 px) según su propio ancho, no el de la ventana. */
 .qtable{border-top:1.5px solid var(--ink);background:var(--sheet);container:ed/inline-size}
-.qrow{display:grid;grid-template-columns:84px minmax(0,1fr) 128px 84px 104px 214px;grid-template-areas:"code desc qty price amt acts";gap:4px 8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--rule);font-size:14px}
+.qrow{display:grid;grid-template-columns:84px minmax(0,1fr) 128px 84px 104px 262px;grid-template-areas:"code desc qty price amt acts";gap:4px 8px;align-items:center;padding:7px 8px;border-bottom:1px solid var(--rule);font-size:14px}
 .qrow .c-code{grid-area:code;min-width:0}.qrow .c-desc{grid-area:desc;min-width:0}.qrow .c-qty{grid-area:qty}.qrow .c-price{grid-area:price}.qrow .c-amt{grid-area:amt}.qrow .c-acts{grid-area:acts}
 .qrow .n{text-align:right;font-variant-numeric:tabular-nums}
 .qrow.line .c-code{font-size:12px;overflow-wrap:anywhere}
@@ -173,6 +173,7 @@ nav.rail .me{margin-top:8px;padding:12px 4px 4px}
 .qrow.part .c-code,.qrow.sub .c-code{align-self:start;padding-top:6px}/* el número, a la altura de la primera fila */
 .inline .unit{min-width:24px}
 .acts{display:flex;gap:4px;align-items:center;justify-content:flex-end}
+.c-acts .vis,.c-acts .vis>*{display:flex;gap:6px;align-items:center}
 
 .icon{font:600 14px var(--font-archivo),sans-serif;min-width:30px;min-height:30px;padding:0 6px;border:1px solid var(--rule);background:var(--sheet);color:var(--ink);cursor:pointer;display:inline-grid;place-items:center;list-style:none}
 .icon:hover{border-color:var(--ink)}.icon[disabled]{color:var(--mut);background:var(--band);border-color:var(--rule);cursor:default}

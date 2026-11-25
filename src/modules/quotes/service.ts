@@ -268,6 +268,7 @@ export async function updateSection(actor: CurrentUser, sectionId: string, raw: 
     if (input.title !== undefined) data.title = input.title;
     if (section.parentId) {
       if (input.mode) data.mode = input.mode;
+      if (input.showTotal !== undefined) data.showTotal = input.showTotal;
       // A missing field means "unchanged"; an empty one clears it.
       if (raw.globalQty !== undefined) data.globalQty = input.globalQty;
       if (raw.globalPrice !== undefined) data.globalPrice = input.globalPrice;
@@ -276,7 +277,7 @@ export async function updateSection(actor: CurrentUser, sectionId: string, raw: 
         data.taxName = tax?.name ?? null;
         data.taxRatePct = tax?.ratePct ?? null;
       }
-    } else if (input.mode || raw.globalQty !== undefined || raw.globalPrice !== undefined) {
+    } else if (input.mode || input.showTotal !== undefined || raw.globalQty !== undefined || raw.globalPrice !== undefined) {
       throw new ValidationError({ mode: "El precio global es de las subpartidas" });
     }
     await tx.quoteSection.update({ where: { id: sectionId }, data });
@@ -363,6 +364,7 @@ export async function updateLine(actor: CurrentUser, lineId: string, raw: LineUp
     if (input.description !== undefined) data.description = input.description;
     if (input.quantity !== null) data.quantity = input.quantity;
     if (input.visible !== undefined) data.visible = input.visible;
+    if (input.showQuantity !== undefined) data.showQuantity = input.showQuantity;
     await tx.quoteLine.update({ where: { id: lineId }, data });
     await logQuote(tx, actor, line.section.quoteId, "update", `Línea modificada: ${input.description ?? line.description}`);
   });

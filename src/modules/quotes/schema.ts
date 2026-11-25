@@ -34,6 +34,7 @@ export const sectionInput = z.object({
   globalQty: optionalDecimalField(),
   globalPrice: optionalDecimalField(),
   taxId: z.string().optional(),
+  showTotal: z.boolean().optional(),
 });
 export type SectionInput = z.input<typeof sectionInput>;
 
@@ -54,6 +55,7 @@ export const lineUpdateInput = z.object({
   // Empty or missing means "unchanged": a quantity cannot be cleared.
   quantity: optionalDecimalField(),
   visible: z.boolean().optional(),
+  showQuantity: z.boolean().optional(),
 });
 export type LineUpdateInput = z.input<typeof lineUpdateInput>;
 

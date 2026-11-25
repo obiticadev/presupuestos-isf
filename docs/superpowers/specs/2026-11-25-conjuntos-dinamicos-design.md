@@ -102,7 +102,7 @@ Es el árbol B1 de hoy (`docs/superpowers/specs/2026-11-24-conjunto-borrador-des
 
 - Importes con decimales exactos. Permisos en el servidor. Toda escritura de un borrador pasa por `withDraft()`. Lo emitido no se modifica.
 - **Cambiar un conjunto o un dinámico no altera los presupuestos que ya lo usan.** La instancia guarda una copia de la definición, igual que hoy `KitInstance.definition`, y esa copia incluye la de los dinámicos que contiene.
-- Formularios con `ActionForm`. No se borran pruebas existentes. Cada tarea sube el parche de la versión: hoy es 1.9.15, la primera tarea será 1.9.16 salvo que se decida abrir 1.10.0.
+- Formularios con `ActionForm`. No se borran pruebas existentes. Cada tarea sube el parche de la versión: tras los ajustes del borrador (1.9.16 → 1.9.19), la primera tarea será 1.9.20 salvo que se decida abrir 1.10.0.
 - Revisión de interfaz con Claude in Chrome en local (`pnpm dev`) y después en `:3101`. Fusionar en `master` y desplegar producción exige el visto bueno explícito del usuario.
 
 ## Cómo está hoy (para quien implemente)
