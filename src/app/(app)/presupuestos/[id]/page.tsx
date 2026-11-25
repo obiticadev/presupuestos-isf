@@ -9,6 +9,7 @@ import { getSignature } from "@/modules/account/service";
 import { requireUser } from "@/modules/auth/session";
 import { listConceptOptions } from "@/modules/catalog/service";
 import { listCategories } from "@/modules/catalog/lists";
+import { Combobox } from "@/components/combobox";
 import { installationLabel } from "@/modules/clients/labels";
 import { getClient, listClientOptions } from "@/modules/clients/service";
 import { listKits } from "@/modules/kits/service";
@@ -101,10 +102,9 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
                   <div className="field">Cliente<output className="box" tabIndex={0}>{q.client.legalName}</output></div>
                 ) : (
                   <label className="field">Cliente
-                    <select name="clientId" defaultValue={q.clientId}>
-                      {!clients.some((c) => c.id === q.clientId) && <option value={q.clientId}>{q.client.legalName} (desactivado)</option>}
-                      {clients.map((c) => <option key={c.id} value={c.id}>{c.legalName}</option>)}
-                    </select>
+                    <Combobox name="clientId" value={q.clientId} label="Cliente" placeholder="Razón social, CIF o nombre comercial"
+                      items={[...(clients.some((c) => c.id === q.clientId) ? [] : [{ ...q.client, legalName: `${q.client.legalName} (desactivado)` }]), ...clients]
+                        .map((c) => ({ id: c.id, code: c.legalName, description: c.taxId, extra: c.tradeName, text: c.legalName }))} />
                   </label>
                 )}
               </div>
@@ -116,15 +116,15 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
                 </>
               ) : (
                 <InstallationFields
-                  options={activeOrCurrent(client.locations, q.locationId).map((l) => ({ id: l.id, name: l.name, label: installationLabel(l) }))}
+                  options={activeOrCurrent(client.locations, q.locationId).map((l) => ({ id: l.id, name: l.name, label: installationLabel(l), installation: l.installation, address: l.address }))}
                   current={q.locationId}
                 />
               )}
               <label className="field">Contacto
-                <select name="contactId" defaultValue={q.contactId ?? ""}>
-                  <option value="">— Sin elegir —</option>
-                  {activeOrCurrent(client.contacts, q.contactId).map((c) => <option key={c.id} value={c.id}>{c.name}{c.role ? ` · ${c.role}` : ""}</option>)}
-                </select>
+                <Combobox name="contactId" value={q.contactId ?? ""} label="Contacto" placeholder="Nombre, cargo, email o teléfono"
+                  items={activeOrCurrent(client.contacts, q.contactId).map((c) => ({
+                    id: c.id, code: c.name, description: c.role, extra: [c.email, c.phone].filter(Boolean).join(" · "), text: c.name,
+                  }))} />
               </label>
               {/* Whoever manages the draft; issuing records the issuer. Read-only box, like «Instalación». */}
               <div className="field">Responsable<output className="box" tabIndex={0}>{me.name}</output></div>
