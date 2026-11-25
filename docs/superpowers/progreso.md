@@ -93,6 +93,15 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 
 ## Pendiente
 
+### Conjuntos dinámicos (rama `mejoras-uso-real`): diseño del 2026-11-25, faltan 3 decisiones antes del plan
+
+- **Para retomar en un chat nuevo:** leer `docs/superpowers/specs/2026-11-25-conjuntos-dinamicos-design.md` y abrir la maqueta `docs/diseno/maquetas/conjuntos-dinamicos.html` (v4; pestañas: lista, conjunto dinámico, conjunto PLC, borrador, PDF).
+- Siguiente paso: preguntar al usuario P1 (dinámico sin principal), P2 (variantes por categoría, elegidas o las dos) y P3 (dinámico fijo o a elegir). Después, plan con `superpowers:writing-plans` y ejecución.
+- Hecho el mismo día, en la versión 1.9.15 (commit `542ae86`):
+  - la razón social de Configuración admite varias líneas y en el PDF sale línea a línea;
+  - en el buscador (`Combobox`), los códigos largos ya no pisan la descripción (columnas compartidas con `subgrid`).
+- Siguen abiertos de conjuntos: las filas desalineadas del árbol en escritorio y una opción para borrar un conjunto desde el borrador.
+
 ### Conjuntos genéricos (rama `features`) — terminado el 2026-11-24, pendiente de revisión
 
 - Pantalla de árbol con panel (interfaz 1), nombre automático (opción D) con aviso de repetidos, descripción a mano, buscador de artículos con `datalist`, lista con «Principal → lo que lleva», eliminar si no se ha usado e historial de versiones (lista con + / −, no la vista de 3 modos del catálogo).
