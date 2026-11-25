@@ -102,11 +102,12 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 - 1.9.19: casillas «Cant.» por línea y «Total» por subpartida (`QuoteLine.showQuantity`, `QuoteSection.showTotal`, migración `ocultar_cantidad_total`). El PDF las respeta y las instantáneas antiguas lo muestran todo. La columna de acciones del editor pasa de 214 a 262 px.
 - Comprobado en Chrome a 390, 820 y escritorio. Falta la revisión del usuario.
 
-### Conjuntos dinámicos (rama `mejoras-uso-real`): diseño y plan del 2026-11-25, pendiente de ejecutar
+### Conjuntos dinámicos (rama `mejoras-uso-real`): diseño y plan del 2026-11-25, en ejecución (tareas 1-4 de 9 hechas)
 
 - **Para retomar en un chat nuevo:** leer `docs/superpowers/specs/2026-11-25-conjuntos-dinamicos-design.md` y abrir la maqueta `docs/diseno/maquetas/conjuntos-dinamicos.html` (v4; pestañas: lista, conjunto dinámico, conjunto PLC, borrador, PDF).
 - Decisiones del usuario: P1 dinámico sin principal (ampliaciones que parten de un presupuesto vacío), P2 variantes por categoría y elegidas, P3 dinámico fijo y a elegir.
 - Siguiente paso: ejecutar `docs/superpowers/plans/2026-11-25-conjuntos-dinamicos.md` (9 tareas, 1.9.20 → 1.9.28; lleva la migración `kit_slots`).
+- **Hecho el 2026-11-25, ejecución en línea:** tareas 1-4 (1.9.20 → 1.9.23), todas con commit y push: definición, expansión, slots en el presupuesto (migración `kit_slots`) y validación, usos e historial de las plantillas. Solo servidor: aún no hay interfaz. Pruebas 494/494. Las decisiones tomadas están en `.superpowers/sdd/2026-11-25-conjuntos-dinamicos/progress.md` (ignorado por Git). Siguiente: la tarea 5, la lista con dos pestañas.
 - Hecho el mismo día, en la versión 1.9.15 (commit `542ae86`):
   - la razón social de Configuración admite varias líneas y en el PDF sale línea a línea;
   - en el buscador (`Combobox`), los códigos largos ya no pisan la descripción (columnas compartidas con `subgrid`).
