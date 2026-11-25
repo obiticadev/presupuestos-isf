@@ -15,7 +15,7 @@ import { KitHistory } from "../kit-history";
 
 export const metadata: Metadata = { title: "Conjunto · ISF Presupuestos" };
 
-export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id]">) {
+export default async function ConjuntoPage({ params, searchParams }: PageProps<"/conjuntos/[id]">) {
   await requireUser();
   const { id } = await params;
   const creating = id === "nuevo";
@@ -29,6 +29,8 @@ export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id
       throw e;
     }
   }
+  // The kind is chosen when creating (?tipo=dinamico) and never changes afterwards.
+  const kind = (kit ? kit.definition.kind === "dynamic" : (await searchParams).tipo === "dinamico") ? "dynamic" : "normal";
   const issues = kit ? await kitIssues(prisma, kit) : [];
   const uses = kit ? await kitUses(kit.id) : 0;
   const history = kit ? await getKitHistory(kit.id) : [];
@@ -39,11 +41,11 @@ export default async function ConjuntoPage({ params }: PageProps<"/conjuntos/[id
 
   return (
     <>
-      <div className="crumb"><Link href="/conjuntos">Conjuntos</Link> / {kit?.name ?? "Nuevo"}</div>
+      <div className="crumb"><Link href="/conjuntos">Conjuntos</Link> / {kit?.name ?? (kind === "dynamic" ? "Nuevo conjunto dinámico" : "Nuevo")}</div>
       {kit && !kit.active && <span className="badge off">Desactivado</span>}
 
       {issues.map((m) => <p key={m} className="warnbox" style={{ marginBottom: 8 }}>{m}</p>)}
-      <KitForm kit={kit} concepts={conceptOptions} categories={categoryOptions} taken={taken} />
+      <KitForm kit={kit} kind={kind} concepts={conceptOptions} categories={categoryOptions} taken={taken} />
       {kit && <KitActiveToggle id={kit.id} active={kit.active} />}
       {kit && (uses === 0 ? (
         <ActionForm action={removeKitAction} style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center" }}>

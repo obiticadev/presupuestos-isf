@@ -5,11 +5,23 @@ import { matchesAutoName } from "./naming";
 export type FormRef = { kind: "categoryId" | "conceptId"; id: string };
 /** `qty` is the text typed the Spanish way; `ask` = the quantity is typed in when quoting; `mult` = × the main quantity. */
 export type FormMaterial = { slot: string; ref: FormRef; qty: string; mult: boolean; ask: boolean; required: boolean; inName: boolean };
+/** A dynamic kit's slot type: its variants are chosen articles or a whole category. */
+export type FormSlotType = { key: string; label: string; abbr: string; red: boolean; mode: "conceptIds" | "categoryId"; conceptIds: string[]; categoryId: string };
+/** A dynamic kit inside a normal one: always the same template («fixed») or one of several chosen in the draft. */
+export type FormDynamic = { slot: string; label: string; mode: "fixed" | "choose"; templateIds: string[]; optional: boolean; inName: boolean };
+export type FormExtras = { kind: "normal" | "dynamic"; slotTypes: FormSlotType[]; dynamics: FormDynamic[] };
 export type RefInfo = (ref: FormRef) => { label: string; unit: string; prefix: string };
 
 type StoredRef = { conceptId: string } | { categoryId: string };
 const toRef = (r: StoredRef): FormRef => ("conceptId" in r ? { kind: "conceptId", id: r.conceptId } : { kind: "categoryId", id: r.categoryId });
 const fromRef = (r: FormRef): StoredRef => (r.kind === "conceptId" ? { conceptId: r.id } : { categoryId: r.id });
+
+/** The first free key: t1, t2… for slot types, d1, d2… for dynamics, c1, c2… for materials. */
+export function nextKey(prefix: string, taken: string[]): string {
+  let n = 1;
+  while (taken.includes(`${prefix}${n}`)) n++;
+  return `${prefix}${n}`;
+}
 
 /** «Obligatorio» only matters when something is chosen or typed in when quoting: a fixed article always goes in. */
 export const showsRequired = (m: FormMaterial) => m.ref.kind === "categoryId" || m.ask;
@@ -33,8 +45,23 @@ export function fromDefinition(def: KitDefinition): { main: FormRef | null; mate
   };
 }
 
+export function extrasFromDefinition(def: KitDefinition): FormExtras {
+  return {
+    kind: def.kind === "dynamic" ? "dynamic" : "normal",
+    slotTypes: (def.slotTypes ?? []).map((t) => ({
+      key: t.key, label: t.label, abbr: t.abbr, red: t.red,
+      ...("conceptIds" in t.variants ? { mode: "conceptIds" as const, conceptIds: t.variants.conceptIds, categoryId: "" } : { mode: "categoryId" as const, conceptIds: [], categoryId: t.variants.categoryId }),
+    })),
+    dynamics: (def.dynamics ?? []).map((d) => ({
+      slot: d.slot, label: d.label, optional: d.optional, inName: !!d.inName,
+      ...("templateId" in d.choice ? { mode: "fixed" as const, templateIds: [d.choice.templateId] } : { mode: "choose" as const, templateIds: d.choice.templateIds }),
+    })),
+  };
+}
+
 /** Labels come from the catalogue; each material typed in when quoting gets its own datum `q_<slot>`. */
-export function toDefinition(main: FormRef | null, materials: FormMaterial[], info: RefInfo): KitDefinition {
+export function toDefinition(main: FormRef | null, materials: FormMaterial[], info: RefInfo, extras?: FormExtras): KitDefinition {
+  const dynamic = extras?.kind === "dynamic";
   return {
     main: main ? { ...fromRef(main), label: info(main).label } : undefined,
     params: materials.filter((m) => m.ask).map((m) => {
@@ -49,6 +76,19 @@ export function toDefinition(main: FormRef | null, materials: FormMaterial[], in
         ? m.mult ? { type: "PER_QTY_AND_PARAM", param, k: "1" } : { type: "PARAM", param, k: "1" }
         : m.mult ? { type: "PER_QTY", k } : { type: "FIXED", k };
       return { slot: m.slot, label: info(m.ref).label, ref: fromRef(m.ref), required: showsRequired(m) ? m.required : true, formula, inName: m.inName };
+    }),
+    ...(dynamic && {
+      kind: "dynamic" as const,
+      slotTypes: extras.slotTypes.map((t) => ({
+        key: t.key, label: t.label, abbr: t.abbr, red: t.red,
+        variants: t.mode === "conceptIds" ? { conceptIds: t.conceptIds } : { categoryId: t.categoryId },
+      })),
+    }),
+    ...(!dynamic && extras?.dynamics.length && {
+      dynamics: extras.dynamics.map((d) => ({
+        slot: d.slot, label: d.label, optional: d.optional, inName: d.inName,
+        choice: d.mode === "fixed" ? { templateId: d.templateIds[0] ?? "" } : { templateIds: d.templateIds },
+      })),
     }),
   };
 }

@@ -1,7 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import { kitDefinition, type KitDefinition } from "@/modules/kits/definition";
 import { expandKit, type ConceptForKit } from "@/modules/kits/formulas";
-import { fromDefinition, isLegacyDefinition, legacyDescription, materialSummary, showsRequired, toDefinition, type FormMaterial, type RefInfo } from "@/modules/kits/form";
+import { extrasFromDefinition, fromDefinition, isLegacyDefinition, nextKey, legacyDescription, materialSummary, showsRequired, toDefinition, type FormMaterial, type FormSlotType, type RefInfo } from "@/modules/kits/form";
 
 const concept = (id: string, categoryId: string): ConceptForKit => ({
   id, categoryId, description: id, unitName: "ud", salePrice: new Prisma.Decimal(10), taxName: "IVA 21 %", taxRatePct: new Prisma.Decimal(21), active: true,
@@ -100,4 +100,36 @@ test("los datos generados respetan los límites del esquema aunque la descripci�
   const long: RefInfo = () => ({ label: "d".repeat(300), unit: "u".repeat(50), prefix: "X" });
   const d = toDefinition(main, [mat({ ask: true })], long);
   expect(kitDefinition.safeParse(d).success).toBe(true);
+});
+
+const st = (over: Partial<FormSlotType>): FormSlotType => ({ key: "t1", label: "Entradas digitales", abbr: "ED", red: false, mode: "conceptIds", conceptIds: ["bomba"], categoryId: "", ...over });
+
+test("toDefinition de un dinámico sin principal", () => {
+  const def = toDefinition(null, [], info, { kind: "dynamic", slotTypes: [st({})], dynamics: [] });
+  expect(def.kind).toBe("dynamic");
+  expect(def.main).toBeUndefined();
+  expect(def.slotTypes).toEqual([{ key: "t1", label: "Entradas digitales", abbr: "ED", red: false, variants: { conceptIds: ["bomba"] } }]);
+  expect(def.dynamics).toBeUndefined();
+  expect(kitDefinition.safeParse(def).success).toBe(true);
+});
+
+test("extrasFromDefinition ↔ toDefinition ida y vuelta", () => {
+  const dyn = toDefinition(main, [], info, { kind: "dynamic", dynamics: [], slotTypes: [st({}), st({ key: "t2", abbr: "F", red: true, mode: "categoryId", conceptIds: [], categoryId: "cat-bombas" })] });
+  const back = extrasFromDefinition(dyn);
+  expect(back.kind).toBe("dynamic");
+  expect(back.slotTypes[1]).toMatchObject({ red: true, mode: "categoryId", categoryId: "cat-bombas", conceptIds: [] });
+  expect(toDefinition(main, [], info, back)).toEqual(dyn);
+  const normal = toDefinition(main, [], info, { kind: "normal", slotTypes: [], dynamics: [
+    { slot: "d1", label: "Tarjetas", mode: "fixed", templateIds: ["ra"], optional: false, inName: true },
+    { slot: "d2", label: "Periferia", mode: "choose", templateIds: ["im1", "im2"], optional: true, inName: false },
+  ] });
+  expect(normal.dynamics?.map((d) => d.choice)).toEqual([{ templateId: "ra" }, { templateIds: ["im1", "im2"] }]);
+  expect(toDefinition(main, [], info, extrasFromDefinition(normal))).toEqual(normal);
+  expect(extrasFromDefinition(BOMBA)).toEqual({ kind: "normal", slotTypes: [], dynamics: [] });
+});
+
+test("nextKey no repite claves", () => {
+  expect(nextKey("t", [])).toBe("t1");
+  expect(nextKey("t", ["t1", "t3"])).toBe("t2");
+  expect(nextKey("d", ["d1", "d2"])).toBe("d3");
 });
