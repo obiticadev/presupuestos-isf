@@ -3,21 +3,57 @@ import { NotFoundError, ValidationError } from "@/lib/errors";
 import { parseOrThrow } from "@/lib/validation";
 import type { KitInstance, Prisma } from "@/generated/prisma/client";
 import type { CurrentUser } from "@/modules/auth/session";
-import { kitDefinition, refConceptId, type KitDefinition } from "@/modules/kits/definition";
-import { expandKit, overrideKey, type ConceptForKit } from "@/modules/kits/formulas";
+import { Prisma as P } from "@/generated/prisma/browser";
+import { decimalField } from "@/lib/decimal-field";
+import { allowedTemplates, kitDefinition, kitSlotList, partKey, refConceptId, type KitDefinition, type KitSlot } from "@/modules/kits/definition";
+import { expandKit, overrideKey, slotTypeOf, type ConceptForKit } from "@/modules/kits/formulas";
 import { kitInstanceInput, type KitInstanceInput } from "./schema";
 import { logQuote, withDraft, type Tx } from "./service";
 
 /** Keeps only the data and choices the definition knows about, plus a draft's own measure of a fixed material (never empty). */
 function clean(def: KitDefinition, input: { params: Record<string, string>; choices: Record<string, string> }) {
   const params = Object.fromEntries(def.params.filter((p) => input.params[p.key] !== undefined).map((p) => [p.key, input.params[p.key].trim()]));
-  for (const c of def.components) {
-    const own = input.params[overrideKey(c.slot)]?.trim();
-    if (own && (c.formula.type === "FIXED" || c.formula.type === "PER_QTY")) params[overrideKey(c.slot)] = own;
+  // The kit parts, then those of each placed dynamic under its prefix (d1, d1/main, d1/c1...).
+  const parts: { key: string; formula?: KitDefinition["components"][number]["formula"] }[] = [{ key: "main" }, ...def.components.map((c) => ({ key: c.slot, formula: c.formula }))];
+  for (const d of def.dynamics ?? []) {
+    const copy = d.copies?.[input.choices[d.slot]]?.definition;
+    if (!copy) continue;
+    parts.push({ key: d.slot }, { key: partKey(d.slot, "main") }, ...copy.components.map((c) => ({ key: partKey(d.slot, c.slot), formula: c.formula })));
   }
-  const slots = ["main", ...def.components.map((c) => c.slot)];
-  const choices = Object.fromEntries(slots.filter((s) => input.choices[s]).map((s) => [s, input.choices[s]]));
+  for (const { key, formula } of parts) {
+    const own = input.params[overrideKey(key)]?.trim();
+    if (own && (formula?.type === "FIXED" || formula?.type === "PER_QTY")) params[overrideKey(key)] = own;
+  }
+  const choices = Object.fromEntries(parts.filter((x) => input.choices[x.key]).map((x) => [x.key, input.choices[x.key]]));
   return { params, choices };
+}
+
+/** Which dynamic each part holds: only setKitDynamic changes it, so a form that does not send it keeps it. */
+const placements = (def: KitDefinition, choices: Record<string, string>) =>
+  Object.fromEntries((def.dynamics ?? []).filter((d) => choices[d.slot]).map((d) => [d.slot, choices[d.slot]]));
+
+/** A fixed, required dynamic is placed from the start. */
+const fixedPlacements = (def: KitDefinition) =>
+  Object.fromEntries((def.dynamics ?? []).filter((d) => !d.optional && "templateId" in d.choice).map((d) => [d.slot, allowedTemplates(d)[0]]));
+
+/**
+ * The instance copy of the definition, with a copy of every allowed dynamic that is active and really dynamic:
+ * changing a template later does not alter quotes that already use it.
+ */
+export async function copyDynamics(tx: Tx, def: KitDefinition): Promise<KitDefinition> {
+  if (!def.dynamics?.length) return def;
+  const dynamics = [];
+  for (const d of def.dynamics) {
+    const copies: NonNullable<typeof d.copies> = {};
+    for (const id of allowedTemplates(d)) {
+      const t = await tx.kitTemplate.findUnique({ where: { id } });
+      if (!t?.active) continue;
+      const copy = kitDefinition.parse(t.definition);
+      if (copy.kind === "dynamic") copies[id] = { name: t.name, definition: copy };
+    }
+    dynamics.push({ ...d, copies });
+  }
+  return { ...def, dynamics };
 }
 
 /**
@@ -27,14 +63,17 @@ function clean(def: KitDefinition, input: { params: Record<string, string>; choi
 async function regenerate(tx: Tx, actor: CurrentUser, quoteId: string, instance: KitInstance): Promise<string[]> {
   const def = kitDefinition.parse(instance.definition);
   const choices = instance.choices as Record<string, string>;
-  const ids = [refConceptId(def.main), ...def.components.map((c) => refConceptId(c.ref)), ...Object.values(choices)].filter((x): x is string => !!x);
+  const slots = kitSlotList.parse(instance.slots);
+  const copies = (def.dynamics ?? []).flatMap((d) => Object.values(d.copies ?? {}).map((c) => c.definition));
+  const ids = [def, ...copies].flatMap((d) => [refConceptId(d.main), ...d.components.map((c) => refConceptId(c.ref))])
+    .concat(Object.values(choices), slots.map((x) => x.conceptId)).filter((x): x is string => !!x);
   const rows = await tx.concept.findMany({ where: { id: { in: ids } }, include: { unit: true, tax: true } });
   const concepts = new Map<string, ConceptForKit & { code: string; taxName: string }>(rows.map((c) => [c.id, {
     id: c.id, code: c.code, categoryId: c.categoryId, description: c.description, unitName: c.unit.name,
     salePrice: c.salePrice, taxName: c.tax.name, taxRatePct: c.tax.ratePct, active: c.active,
   }]));
   const section = await tx.quoteSection.findUniqueOrThrow({ where: { id: instance.sectionId }, select: { mode: true } });
-  const input = { quantity: instance.quantity.toString(), params: instance.params as Record<string, string>, choices };
+  const input = { quantity: instance.quantity.toString(), params: instance.params as Record<string, string>, choices, slots };
   const expansion = expandKit(def, input, concepts, section.mode === "GLOBAL");
 
   const existing = await tx.quoteLine.findMany({ where: { kitInstanceId: instance.id }, include: { adjustments: true } });
@@ -75,17 +114,19 @@ export async function addKitInstance(actor: CurrentUser, subsectionId: string, r
   if (!sub.parentId) throw new ValidationError({ _: "Los conjuntos van dentro de una subpartida" });
   const template = await prisma.kitTemplate.findUnique({ where: { id: raw.templateId } });
   if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
-  const def = kitDefinition.parse(template.definition);
   return withDraft(actor, sub.quoteId, async (tx) => {
+    const def = await copyDynamics(tx, kitDefinition.parse(template.definition));
+    // A dynamic without a main counts as one unit.
+    const quantity = def.main ? input.quantity : "1";
     const max = (await tx.kitInstance.aggregate({ where: { sectionId: sub.id }, _max: { position: true } }))._max.position ?? 0;
     const instance = await tx.kitInstance.create({
       data: {
         sectionId: sub.id, templateId: template.id, name: template.name, definition: def as Prisma.InputJsonValue,
-        quantity: input.quantity, ...clean(def, input), position: max + 1,
+        quantity, ...clean(def, { ...input, choices: { ...input.choices, ...fixedPlacements(def) } }), position: max + 1,
       },
     });
     const missing = await regenerate(tx, actor, sub.quoteId, instance);
-    await logQuote(tx, actor, sub.quoteId, "update", `Conjunto añadido: ${template.name} × ${input.quantity.replace(".", ",")}${missing.length ? " (incompleto)" : ""}`);
+    await logQuote(tx, actor, sub.quoteId, "update", `Conjunto añadido: ${template.name} × ${quantity.replace(".", ",")}${missing.length ? " (incompleto)" : ""}`);
     return instance;
   });
 }
@@ -96,7 +137,8 @@ export async function updateKitInstance(actor: CurrentUser, instanceId: string, 
   if (!found) throw new NotFoundError("El conjunto no existe");
   const def = kitDefinition.parse(found.definition);
   await withDraft(actor, found.section.quoteId, async (tx) => {
-    const instance = await tx.kitInstance.update({ where: { id: instanceId }, data: { quantity: input.quantity, ...clean(def, input) } });
+    const choices = { ...input.choices, ...placements(def, found.choices as Record<string, string>) };
+    const instance = await tx.kitInstance.update({ where: { id: instanceId }, data: { quantity: def.main ? input.quantity : "1", ...clean(def, { ...input, choices }) } });
     const missing = await regenerate(tx, actor, found.section.quoteId, instance);
     await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto modificado: ${found.name} × ${input.quantity.replace(".", ",")}${missing.length ? " (incompleto)" : ""}`);
   });
@@ -112,6 +154,12 @@ const refKey = (r: { conceptId: string } | { categoryId: string }) => ("conceptI
 function carryOver(from: KitDefinition, to: KitDefinition, params: Record<string, string>, choices: Record<string, string>) {
   const out = { params: {} as Record<string, string>, choices: {} as Record<string, string> };
   if (from.main && to.main && refKey(from.main) === refKey(to.main) && choices.main) out.choices.main = choices.main;
+  // A dynamic part keeps its choice (and those inside it) if the new kit has that part and allows the same dynamic.
+  for (const d of to.dynamics ?? []) {
+    const chosen = choices[d.slot];
+    if (!chosen || !d.copies?.[chosen] || !from.dynamics?.some((x) => x.slot === d.slot)) continue;
+    for (const [k, v] of Object.entries(choices)) if (k === d.slot || k.startsWith(`${d.slot}/`)) out.choices[k] = v;
+  }
   for (const p of to.params) if (params[p.key] !== undefined) out.params[p.key] = params[p.key];
   const used = new Set<string>();
   for (const c of to.components) {
@@ -132,12 +180,16 @@ export async function changeKitInstance(actor: CurrentUser, instanceId: string, 
   const template = await prisma.kitTemplate.findUnique({ where: { id: templateId } });
   if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
   const from = kitDefinition.parse(found.definition);
-  const to = kitDefinition.parse(template.definition);
-  const kept = carryOver(from, to, found.params as Record<string, string>, found.choices as Record<string, string>);
   await withDraft(actor, found.section.quoteId, async (tx) => {
+    const to = await copyDynamics(tx, kitDefinition.parse(template.definition));
+    const kept = carryOver(from, to, found.params as Record<string, string>, found.choices as Record<string, string>);
+    const cleaned = clean(to, { ...kept, choices: { ...fixedPlacements(to), ...kept.choices } });
+    // Slots survive when their part holds the same dynamic in both kits and their type still exists there.
+    const slots = kitSlotList.parse(found.slots).filter((x) =>
+      (x.group === "self" || cleaned.choices[x.group] === (found.choices as Record<string, string>)[x.group]) && slotTypeOf(to, cleaned.choices, x.group, x.type));
     const instance = await tx.kitInstance.update({
       where: { id: instanceId },
-      data: { templateId: template.id, name: template.name, definition: to as Prisma.InputJsonValue, ...clean(to, kept) },
+      data: { templateId: template.id, name: template.name, definition: to as Prisma.InputJsonValue, ...cleaned, slots, ...(to.main ? {} : { quantity: "1" }) },
     });
     await regenerate(tx, actor, found.section.quoteId, instance);
     await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto cambiado: ${found.name} → ${template.name}`);
@@ -151,4 +203,70 @@ export async function removeKitInstance(actor: CurrentUser, instanceId: string):
     await tx.kitInstance.delete({ where: { id: instanceId } });
     await logQuote(tx, actor, found.section.quoteId, "update", `Conjunto eliminado: ${found.name}`);
   });
+}
+
+async function loadInstance(instanceId: string) {
+  const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
+  if (!found) throw new NotFoundError("El conjunto no existe");
+  return { found, def: kitDefinition.parse(found.definition), choices: found.choices as Record<string, string>, slots: kitSlotList.parse(found.slots) };
+}
+
+/** Saves the slots (and choices) of an instance in a draft and brings its lines in line. */
+async function saveSlots(actor: CurrentUser, found: KitInstance & { section: { quoteId: string } }, data: { slots: KitSlot[]; choices?: Record<string, string> }, summary: string) {
+  await withDraft(actor, found.section.quoteId, async (tx) => {
+    const instance = await tx.kitInstance.update({ where: { id: found.id }, data: { slots: data.slots, ...(data.choices ? { choices: data.choices } : {}) } });
+    await regenerate(tx, actor, found.section.quoteId, instance);
+    await logQuote(tx, actor, found.section.quoteId, "update", summary);
+  });
+}
+
+/** A new empty slot (no variant, quantity 1) of `type` in `group` ("self" or a placed dynamic); returns its id. */
+export async function addKitSlot(actor: CurrentUser, instanceId: string, group: string, type: string): Promise<string> {
+  const { found, def, choices, slots } = await loadInstance(instanceId);
+  const t = slotTypeOf(def, choices, group, type);
+  if (!t) throw new ValidationError({ _: "Ese tipo de slot no existe" });
+  const id = crypto.randomUUID().slice(0, 8);
+  await saveSlots(actor, found, { slots: [...slots, { id, group, type, conceptId: null, quantity: "1" }] }, `Slot añadido en ${found.name}: ${t.label}`);
+  return id;
+}
+
+export async function updateKitSlot(actor: CurrentUser, instanceId: string, slotId: string, patch: { conceptId?: string | null; quantity?: string }): Promise<void> {
+  const { found, def, choices, slots } = await loadInstance(instanceId);
+  const slot = slots.find((x) => x.id === slotId);
+  if (!slot) throw new NotFoundError("El slot no existe");
+  let quantity = slot.quantity;
+  if (patch.quantity !== undefined) {
+    const parsed = decimalField().safeParse(patch.quantity);
+    if (!parsed.success || !new P.Decimal(parsed.data).gt(0)) throw new ValidationError({ quantity: "Escribe una cantidad mayor que cero" });
+    quantity = parsed.data;
+  }
+  const conceptId = patch.conceptId === undefined ? slot.conceptId : patch.conceptId || null;
+  const label = slotTypeOf(def, choices, slot.group, slot.type)?.label ?? "slot";
+  await saveSlots(actor, found, { slots: slots.map((x) => (x.id === slotId ? { ...x, conceptId, quantity } : x)) }, `Slot modificado en ${found.name}: ${label}`);
+}
+
+export async function removeKitSlot(actor: CurrentUser, instanceId: string, slotId: string): Promise<void> {
+  const { found, def, choices, slots } = await loadInstance(instanceId);
+  const slot = slots.find((x) => x.id === slotId);
+  if (!slot) throw new NotFoundError("El slot no existe");
+  const label = slotTypeOf(def, choices, slot.group, slot.type)?.label ?? "slot";
+  await saveSlots(actor, found, { slots: slots.filter((x) => x.id !== slotId) }, `Slot quitado en ${found.name}: ${label}`);
+}
+
+/**
+ * Places a dynamic in a part, or removes it (null, only if optional). Removing or changing it drops its slots and the choices
+ * made inside it: put back, it starts empty.
+ */
+export async function setKitDynamic(actor: CurrentUser, instanceId: string, group: string, templateId: string | null): Promise<void> {
+  const { found, def, choices, slots } = await loadInstance(instanceId);
+  const d = def.dynamics?.find((x) => x.slot === group);
+  if (!d) throw new ValidationError({ _: "Ese conjunto dinámico no existe" });
+  if (templateId === null && !d.optional) throw new ValidationError({ templateId: `${d.label} es obligatorio: no se puede quitar` });
+  if (templateId !== null && (!allowedTemplates(d).includes(templateId) || !d.copies?.[templateId])) throw new ValidationError({ templateId: "Elige un conjunto dinámico de la lista" });
+  if (choices[group] === (templateId ?? undefined)) return;
+  const rest = Object.fromEntries(Object.entries(choices).filter(([k]) => k !== group && !k.startsWith(`${group}/`)));
+  await saveSlots(actor, found, {
+    slots: slots.filter((x) => x.group !== group),
+    choices: templateId ? { ...rest, [group]: templateId } : rest,
+  }, templateId ? `${d.label} en ${found.name}: ${d.copies![templateId].name}` : `Se quita ${d.label} de ${found.name}`);
 }

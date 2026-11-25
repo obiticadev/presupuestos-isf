@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { toActionResult, type ActionResult } from "@/lib/action-result";
 import { requireUser } from "@/modules/auth/session";
-import { addKitInstance, changeKitInstance, removeKitInstance, updateKitInstance } from "./kit-instances";
+import { addKitInstance, addKitSlot, changeKitInstance, removeKitInstance, removeKitSlot, setKitDynamic, updateKitInstance, updateKitSlot } from "./kit-instances";
 import { addNote, deleteNote, editNote } from "./notes";
 import { deleteAllQuotes } from "./reset";
 import * as quotes from "./service";
@@ -92,6 +92,12 @@ export const addKitAction: Action = action((actor, f) =>
 export const updateKitAction: Action = action((actor, f) => updateKitInstance(actor, str(f, "id"), kitFields(f)));
 export const changeKitAction: Action = action((actor, f) => changeKitInstance(actor, str(f, "id"), str(f, "templateId")));
 export const removeKitAction: Action = action((actor, f) => removeKitInstance(actor, str(f, "id")));
+export const addKitSlotAction: Action = action((actor, f) => addKitSlot(actor, str(f, "id"), str(f, "group"), str(f, "type")));
+/** Only the fields the form sends change: a variant picker sends conceptId, a quantity box sends quantity. */
+export const updateKitSlotAction: Action = action((actor, f) => updateKitSlot(actor, str(f, "id"), str(f, "slotId"), present(f, ["conceptId", "quantity"])));
+export const removeKitSlotAction: Action = action((actor, f) => removeKitSlot(actor, str(f, "id"), str(f, "slotId")));
+/** An empty templateId removes an optional dynamic. */
+export const setKitDynamicAction: Action = action((actor, f) => setKitDynamic(actor, str(f, "id"), str(f, "group"), str(f, "templateId") || null));
 
 export const setWaiverAction: Action = action((actor, f) =>
   quotes.setWaiver(actor, str(f, "quoteId"), str(f, "conceptId"), f.get("clear") === "1" ? null : str(f, "reason")));

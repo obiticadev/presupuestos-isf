@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { getKit, saveKit, setKitActive } from "@/modules/kits/service";
-import { addKitInstance, changeKitInstance, removeKitInstance, updateKitInstance } from "@/modules/quotes/kit-instances";
+import { addKitInstance, addKitSlot, changeKitInstance, removeKitInstance, setKitDynamic, updateKitInstance, updateKitSlot } from "@/modules/quotes/kit-instances";
 import { issueQuote } from "@/modules/quotes/issue";
 import { LOCKED } from "@/modules/quotes/schema";
 import { addCatalogLine, adjustPrice, getQuote, removeLine, setComment, updateLine, updateSection } from "@/modules/quotes/service";
@@ -198,4 +198,106 @@ test("no se cambia a un conjunto desactivado ni en un presupuesto emitido", asyn
   await issueQuote(done.actor, done.quote.id);
   await setKitActive(admin, b.id, true);
   await expect(changeKitInstance(done.actor, k2.id, b.id)).rejects.toThrow(LOCKED);
+});
+
+// Conjuntos dinámicos en el presupuesto (plan 2026-11-25, tarea 3).
+const dynDef = () => ({
+  kind: "dynamic" as const, params: [], components: [],
+  slotTypes: [{ key: "t1", label: "Entradas digitales", abbr: "ED", red: false, variants: { conceptIds: ["concept-man-4x25", "concept-man-12x075"] } }],
+});
+async function plcKit(admin: Parameters<typeof saveKit>[0], optional = false) {
+  const dyn = await saveKit(admin, { name: "PERI", description: "", definition: dynDef() });
+  const plc = await saveKit(admin, { name: "PLC", description: "", definition: {
+    main: { conceptId: "concept-ser-prog", label: "CPU" }, params: [], components: [],
+    dynamics: [{ slot: "d1", label: "Periferia descentralizada", choice: { templateId: dyn.id }, optional }],
+  } });
+  return { dyn, plc };
+}
+const instance = (id: string) => prisma.kitInstance.findUniqueOrThrow({ where: { id } });
+const kitLinesOf = (id: string) => prisma.quoteLine.findMany({ where: { kitInstanceId: id }, orderBy: { position: "asc" } });
+
+test("añadir un slot crea su línea al elegir la variante y suma en el recuento", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  const s = await addKitSlot(actor, k.id, "d1", "t1");
+  expect((await instance(k.id)).missing).toEqual(["Falta elegir la variante en Entradas digitales"]);
+  await updateKitSlot(actor, k.id, s, { conceptId: "concept-man-4x25", quantity: "3" });
+  expect((await instance(k.id)).missing).toEqual([]);
+  expect((await kitLinesOf(k.id)).map((l) => [l.kitSlot, l.quantity.toFixed(0)])).toEqual([["main", "1"], [`d1/s:${s}`, "3"]]);
+});
+
+test("cantidad de slot no válida se rechaza sin guardar", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  const s = await addKitSlot(actor, k.id, "d1", "t1");
+  for (const bad of ["0", "", "abc", "-1"]) await expect(updateKitSlot(actor, k.id, s, { quantity: bad })).rejects.toThrow(ValidationError);
+  expect((await instance(k.id)).slots).toEqual([{ id: s, group: "d1", type: "t1", conceptId: null, quantity: "1" }]);
+  await updateKitSlot(actor, k.id, s, { quantity: "1,5" });
+  expect(((await instance(k.id)).slots as { quantity: string }[])[0].quantity).toBe("1.5");
+});
+
+test("quitar un dinámico opcional borra sus slots, elecciones y líneas; volver a ponerlo empieza vacío", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { dyn, plc } = await plcKit(admin, true);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  expect((await instance(k.id)).choices).toEqual({});
+  await setKitDynamic(actor, k.id, "d1", dyn.id);
+  const s = await addKitSlot(actor, k.id, "d1", "t1");
+  await updateKitSlot(actor, k.id, s, { conceptId: "concept-man-4x25" });
+  expect((await kitLinesOf(k.id)).length).toBe(2);
+  await setKitDynamic(actor, k.id, "d1", null);
+  let i = await instance(k.id);
+  expect([i.choices, i.slots, i.missing]).toEqual([{}, [], []]);
+  expect((await kitLinesOf(k.id)).map((l) => l.kitSlot)).toEqual(["main"]);
+  await setKitDynamic(actor, k.id, "d1", dyn.id);
+  i = await instance(k.id);
+  expect([i.choices, i.slots]).toEqual([{ d1: dyn.id }, []]);
+});
+
+test("no se quita un dinámico obligatorio", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  await expect(setKitDynamic(actor, k.id, "d1", null)).rejects.toThrow(ValidationError);
+});
+
+test("elegir un dinámico fuera de la lista se rechaza", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { plc } = await plcKit(admin, true);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  await expect(setKitDynamic(actor, k.id, "d1", plc.id)).rejects.toThrow(ValidationError);
+  await expect(addKitSlot(actor, k.id, "d1", "t1")).rejects.toThrow("Ese tipo de slot no existe");
+});
+
+test("un dinámico suelto sin principal se añade a una subpartida y se valora solo con sus slots", async () => {
+  const { actor, admin, quote, sub } = await makeDraft();
+  const { dyn } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: dyn.id, quantity: "5", params: {}, choices: {} });
+  expect((await instance(k.id)).quantity.toFixed(0)).toBe("1");
+  const s = await addKitSlot(actor, k.id, "self", "t1");
+  await updateKitSlot(actor, k.id, s, { conceptId: "concept-man-4x25", quantity: "2" });
+  expect((await kitLinesOf(k.id)).map((l) => l.kitSlot)).toEqual([`s:${s}`]);
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("20.00");
+});
+
+test("cambiar una plantilla dinámica no altera la instancia ya creada", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { dyn, plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  const s = await addKitSlot(actor, k.id, "d1", "t1");
+  await updateKitSlot(actor, k.id, s, { conceptId: "concept-man-4x25", quantity: "3" });
+  const before = (await kitLinesOf(k.id)).map((l) => [l.kitSlot, l.quantity.toFixed(0)]);
+  await saveKit(admin, { id: dyn.id, name: "PERI", description: "", definition: { ...dynDef(), slotTypes: [{ ...dynDef().slotTypes[0], key: "t2" }] } });
+  await updateKitInstance(actor, k.id, { quantity: "1", params: {}, choices: {} });
+  expect((await kitLinesOf(k.id)).map((l) => [l.kitSlot, l.quantity.toFixed(0)])).toEqual(before);
+});
+
+test("un presupuesto emitido no admite cambios de slots", async () => {
+  const { actor, admin, quote, sub } = await completeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  await issueQuote(actor, quote.id);
+  await expect(addKitSlot(actor, k.id, "d1", "t1")).rejects.toThrow(LOCKED);
 });

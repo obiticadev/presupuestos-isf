@@ -71,7 +71,7 @@ async function copyContent(tx: Tx, fromId: string, toId: string): Promise<void> 
       for (const k of kits) {
         const { id: kid, sectionId: _sid, ...kitData } = k;
         const nk = await tx.kitInstance.create({
-          data: { ...kitData, sectionId: nsub.id, definition: kitData.definition as Prisma.InputJsonValue, params: kitData.params as Prisma.InputJsonValue, choices: kitData.choices as Prisma.InputJsonValue, missing: kitData.missing as Prisma.InputJsonValue },
+          data: { ...kitData, sectionId: nsub.id, definition: kitData.definition as Prisma.InputJsonValue, params: kitData.params as Prisma.InputJsonValue, choices: kitData.choices as Prisma.InputJsonValue, missing: kitData.missing as Prisma.InputJsonValue, slots: kitData.slots as Prisma.InputJsonValue },
         });
         kitMap.set(kid, nk.id);
       }

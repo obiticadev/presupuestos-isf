@@ -4,6 +4,8 @@ import { issueQuote } from "@/modules/quotes/issue";
 import { createExtension, createRevision, duplicateQuote, expireQuotes, validityRunOut, listQuoteHistory, listQuotes, listRevisions, priceWarnings, refreshPricesFromCatalog, setStatus } from "@/modules/quotes/lifecycle";
 import { addCatalogLine, adjustPrice, deleteDraft, getQuote, updateHeader, updateLine, updateSection } from "@/modules/quotes/service";
 import { ValidationError } from "@/lib/errors";
+import { saveKit } from "@/modules/kits/service";
+import { addKitInstance, addKitSlot, updateKitSlot } from "@/modules/quotes/kit-instances";
 import { conceptFields, completeDraft, makeClient, quoteType } from "../helpers/quotes";
 
 test("revisar crea R01 en borrador; al emitirla, R00 queda sustituida y ya no cambia de estado", async () => {
@@ -322,4 +324,20 @@ test("no avisa de líneas que refrescar no toca: subpartida en precio global", a
   expect(await priceWarnings(prisma, quote.id)).toContain("MAN-4X25: catálogo 12,00, presupuesto 10,00");
   expect(await refreshPricesFromCatalog(actor, quote.id)).toBe(1);
   expect(await priceWarnings(prisma, quote.id)).toEqual([]);
+});
+
+test("la revisión conserva los slots y las líneas del conjunto", async () => {
+  const { actor, admin, quote, sub } = await completeDraft();
+  const dyn = await saveKit(admin, { name: "PERI", description: "", definition: {
+    kind: "dynamic", params: [], components: [],
+    slotTypes: [{ key: "t1", label: "Entradas digitales", abbr: "ED", red: false, variants: { conceptIds: ["concept-man-4x25"] } }],
+  } });
+  const k = await addKitInstance(actor, sub.id, { templateId: dyn.id, quantity: "1", params: {}, choices: {} });
+  const s = await addKitSlot(actor, k.id, "self", "t1");
+  await updateKitSlot(actor, k.id, s, { conceptId: "concept-man-4x25", quantity: "2" });
+  const r0 = await issueQuote(actor, quote.id);
+  const r1 = await createRevision(actor, r0.id);
+  const copy = await prisma.kitInstance.findFirstOrThrow({ where: { section: { quoteId: r1.id } }, include: { lines: true } });
+  expect(copy.slots).toEqual([{ id: s, group: "self", type: "t1", conceptId: "concept-man-4x25", quantity: "2" }]);
+  expect(copy.lines.map((l) => [l.kitSlot, l.quantity.toFixed(0)])).toEqual([[`s:${s}`, "2"]]);
 });

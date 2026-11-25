@@ -400,6 +400,8 @@ model KitInstance {
   choices    Json         @default("{}")
   /// Lo que falta para valorarlo (etiquetas de expandKit); vacío = completo.
   missing    Json         @default("[]")
+  /// Slots añadidos en el borrador a un conjunto dinámico: [{ id, group, type, conceptId, quantity }].
+  slots      Json         @default("[]")
   position   Int
   /// Comentario en cursiva del conjunto entero; "" = sin comentario.
   comment    String       @default("") @db.Text
