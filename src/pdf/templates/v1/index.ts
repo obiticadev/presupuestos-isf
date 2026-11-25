@@ -58,7 +58,7 @@ function body(d: PdfDocument): string {
   return html`<!doctype html><html lang="es"><head><meta charset="utf-8"><style>${safe(archivoFontFace() + STYLES)}</style></head><body>
 ${d.draft ? html`<div class="wm"><span>BORRADOR</span></div>` : safe("")}
 <section class="letter">
-  <div class="from"><b>${c.legalName}</b>${[...c.address.split(/\r?\n/).map((l) => l.trim()), joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
+  <div class="from"><b>${c.legalName.split(/\r?\n/).map((l, i) => (i ? html`<br>${l.trim()}` : html`${l.trim()}`))}</b>${[...c.address.split(/\r?\n/).map((l) => l.trim()), joinDot([c.taxId.trim() && `CIF ${c.taxId.trim()}`, c.phone, c.email])].filter((l) => l.trim()).map((l) => html`<br>${l}`)}</div>
   <div class="to"><b>${d.recipient.name}</b>${[...d.recipient.address, d.recipient.attention ?? ""].filter(Boolean).map((l) => html`<br>${l}`)}</div>
   <div class="place">${d.letter.place} a ${d.longDate}</div>
   <div class="subject">Asunto: ${d.reference}</div>

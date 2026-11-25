@@ -77,6 +77,12 @@ test("los datos de empresa vacíos no dejan rótulos ni separadores sueltos", ()
   expect(TEMPLATES.v1.footer({ ...d, company: { ...d.company, taxId: "B1" } })).toContain('<span style="flex:1;text-align:center">CIF B1</span>');
 });
 
+test("la razón social del emisor respeta sus saltos de línea", () => {
+  const d = doc();
+  d.company = { ...d.company, legalName: "ISF Instalaciones,\r\n Servicios y Formación, S.L. " };
+  expect(TEMPLATES.v1.body(d)).toContain("<b>ISF Instalaciones,<br>Servicios y Formación, S.L.</b>");
+});
+
 test("la dirección del emisor sale línea a línea y el pie del registro va centrado", () => {
   const d = doc();
   d.company = { ...d.company, address: "C/ Mayor 1\r\n  Madrid " };

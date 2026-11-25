@@ -598,13 +598,13 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .cb .clr{all:unset;position:absolute;right:5px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:grid;place-items:center;font-size:14px;color:var(--mut);cursor:pointer}
 .cb .clr:hover{color:var(--ink);background:var(--band)}
 .cb:not(.filled) .clr{display:none}
-.cb ul{position:absolute;z-index:20;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(640px,calc(100vw - 32px));margin:0;padding:0;list-style:none;border:1.5px solid var(--ink);background:var(--sheet);max-height:300px;overflow:auto}
+.cb ul{position:absolute;z-index:20;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(640px,calc(100vw - 32px));margin:0;padding:0;list-style:none;border:1.5px solid var(--ink);background:var(--sheet);max-height:300px;overflow:auto;display:grid;grid-template-columns:fit-content(17rem) minmax(0,1fr);align-content:start}
 .cb ul.up{top:auto;bottom:calc(100% + 4px)}
-.cb li{display:grid;grid-template-columns:7.5rem minmax(0,1fr);gap:12px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);letter-spacing:0}
-.cb ul.cols li{grid-template-columns:7.5rem minmax(0,1fr) 6.5rem}
+.cb li{grid-column:1/-1;display:grid;grid-template-columns:subgrid;gap:12px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);letter-spacing:0}
+.cb ul.cols{grid-template-columns:fit-content(17rem) minmax(0,1fr) auto}
 .cb li:last-child{border-bottom:0}
 .cb li[aria-selected=true]{background:var(--band)}
-.cb li b{font-weight:600}.cb li small{color:var(--mut);font-size:12px;text-align:right}
+.cb li b{font-weight:600;overflow-wrap:anywhere}.cb li small{color:var(--mut);font-size:12px;text-align:right}
 .cb li mark{background:var(--amber-bg);color:inherit}
 .cb li.none,.cb li.hint{display:block;color:var(--mut);cursor:default}
 .cb li.hint{font-size:12px;padding:6px 12px;background:var(--band)}
