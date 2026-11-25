@@ -5,12 +5,13 @@ import { Combobox } from "@/components/combobox";
 import { startTransition, useActionState, useEffect, useState } from "react";
 import type { ActionResult } from "@/lib/action-result";
 import { saveKitAction, setKitActiveAction, type SaveKitResult } from "@/modules/kits/actions";
-import { extrasFromDefinition, fromDefinition, isLegacyDefinition, legacyDescription, materialSummary, nextKey, showsRequired, toDefinition, type FormMaterial, type FormRef, type FormSlotType, type RefInfo } from "@/modules/kits/form";
+import { extrasFromDefinition, fromDefinition, isLegacyDefinition, legacyDescription, materialSummary, nextKey, showsRequired, toDefinition, type FormDynamic, type FormMaterial, type FormRef, type FormSlotType, type RefInfo } from "@/modules/kits/form";
 import { categoryPrefix, codePrefix, kitBaseName, uniqueName } from "@/modules/kits/naming";
 import type { Kit } from "@/modules/kits/service";
 
 type ConceptOption = { id: string; code: string; description: string; unitName: string; active: boolean; categoryId: string };
 type CategoryOption = { id: string; name: string; active: boolean };
+type DynamicOption = { id: string; name: string; description: string; active: boolean };
 
 const errorsOf = (s: ActionResult | null) => (s && !s.ok ? s.errors : {});
 const Err = ({ msg }: { msg?: string }) => (msg ? <span className="kt-err" role="alert">{msg}</span> : null);
@@ -52,7 +53,9 @@ function RefPicker({ value, onChange, onNone, categories, concepts, error }: {
   );
 }
 
-export function KitForm({ kit, kind, concepts, categories, taken }: { kit: Kit | null; kind: "normal" | "dynamic"; concepts: ConceptOption[]; categories: CategoryOption[]; taken: string[] }) {
+export function KitForm({ kit, kind, concepts, categories, dynamicKits, taken }: {
+  kit: Kit | null; kind: "normal" | "dynamic"; concepts: ConceptOption[]; categories: CategoryOption[]; dynamicKits: DynamicOption[]; taken: string[];
+}) {
   const router = useRouter();
   const [state, action, pending] = useActionState<SaveKitResult | null, FormData>(saveKitAction, null);
   const e = errorsOf(state);
@@ -68,9 +71,12 @@ export function KitForm({ kit, kind, concepts, categories, taken }: { kit: Kit |
   };
   const dynamic = kind === "dynamic";
   // Same rule as autoKitName: without a main, the first three slot types' abbreviations.
-  const baseOf = (main: FormRef | null, materials: FormMaterial[], types: FormSlotType[]) => kitBaseName(
+  // A dynamic «in the name» adds the first two letters of its first template's name, as in autoKitName.
+  const kitName = (id: string) => dynamicKits.find((k) => k.id === id)?.name ?? "";
+  const dynPrefix = (d: FormDynamic) => codePrefix(kitName(d.templateIds[0] ?? "")).slice(0, 2);
+  const baseOf = (main: FormRef | null, materials: FormMaterial[], types: FormSlotType[], dyns: FormDynamic[]) => kitBaseName(
     main ? info(main).prefix : types.slice(0, 3).map((t) => t.abbr.trim().toUpperCase()).join("-"),
-    materials.filter((m) => m.inName).map((m) => info(m.ref).prefix),
+    [...materials.filter((m) => m.inName).map((m) => info(m.ref).prefix), ...dyns.filter((d) => d.inName).map(dynPrefix)],
   );
 
   const [initial] = useState(() => {
@@ -82,21 +88,36 @@ export function KitForm({ kit, kind, concepts, categories, taken }: { kit: Kit |
   const [main, setMain] = useState<FormRef | null>(initial.main);
   const [materials, setMaterials] = useState<FormMaterial[]>(initial.materials);
   const [slotTypes, setSlotTypes] = useState<FormSlotType[]>(initial.slotTypes);
-  const [dynamics] = useState(initial.dynamics);
-  const [sel, setSel] = useState<{ k: "m" | "t"; i: number }>({ k: "m", i: 0 });
+  const [dynamics, setDynamics] = useState<FormDynamic[]>(initial.dynamics);
+  const [sel, setSel] = useState<{ k: "m" | "t" | "d"; i: number }>({ k: "m", i: 0 });
   const [pickKey, setPickKey] = useState(0); // remounts the variant search box empty after each pick
-  const [description] = useState(() => (kit ? legacyDescription(kit.name, baseOf(initial.main, initial.materials, initial.slotTypes), kit.description, isLegacyDefinition(kit.definition)) : ""));
+  const [description] = useState(() => (kit ? legacyDescription(kit.name, baseOf(initial.main, initial.materials, initial.slotTypes, initial.dynamics), kit.description, isLegacyDefinition(kit.definition)) : ""));
 
   useEffect(() => {
     if (state?.ok && state.id && state.id !== kit?.id) router.replace(`/conjuntos/${state.id}`);
   }, [state, kit?.id, router]);
 
-  const base = baseOf(main, materials, slotTypes);
+  const base = baseOf(main, materials, slotTypes, dynamics);
   const name = uniqueName(base, taken);
   const clash = taken.includes(base);
   const nextUnmarked = materials.findIndex((m) => !m.inName && info(m.ref).prefix);
   const cur = sel.k === "m" ? materials[sel.i] : undefined;
   const curT = sel.k === "t" ? slotTypes[sel.i] : undefined;
+  const curD = sel.k === "d" ? dynamics[sel.i] : undefined;
+  const setD = (i: number, p: Partial<FormDynamic>) => setDynamics(dynamics.map((d, j) => (j === i ? { ...d, ...p } : d)));
+  const addD = () => {
+    setDynamics([...dynamics, { slot: nextKey("d", dynamics.map((d) => d.slot)), label: "", mode: "fixed", templateIds: [], optional: false, inName: false }]);
+    setSel({ k: "d", i: dynamics.length });
+  };
+  const removeD = (i: number) => { setDynamics(dynamics.filter((_, j) => j !== i)); setSel({ k: "m", i: 0 }); };
+  // The active dynamics plus the ones already chosen, even if deactivated.
+  const dynItems = (d: FormDynamic, skip: string[]) => dynamicKits.filter((k) => (k.active || d.templateIds.includes(k.id)) && !skip.includes(k.id))
+    .map((k) => ({ id: k.id, code: k.name, description: k.description, extra: k.active ? "" : "(desactivado)" }));
+  // The first template picked names the part if it has no name yet.
+  const pickD = (i: number, d: FormDynamic, templateIds: string[]) => {
+    const k = dynamicKits.find((x) => x.id === templateIds[0]);
+    setD(i, { templateIds, label: d.label || (k?.description || k?.name || "").slice(0, 300) });
+  };
   const set = (i: number, p: Partial<FormMaterial>) => setMaterials(materials.map((m, j) => (j === i ? { ...m, ...p } : m)));
   const add = () => {
     setMaterials([...materials, { slot: nextKey("c", materials.map((m) => m.slot)), ref: { kind: "categoryId", id: "" }, qty: "1", mult: true, ask: false, required: true, inName: materials.length === 0 }]);
@@ -129,10 +150,11 @@ export function KitForm({ kit, kind, concepts, categories, taken }: { kit: Kit |
 
       <div className="kt-id">
         <h1 className="kt-name"><u>{name.slice(0, 2)}</u>{name.slice(2)}</h1>
-        <span className="mini" aria-hidden><i>{name.slice(0, 2)}</i>{materials.map((m) => <s key={m.slot} />)}{dynamic && <s className="dy" />}</span>
+        <span className="mini" aria-hidden><i>{name.slice(0, 2)}</i>{materials.map((m) => <s key={m.slot} />)}{dynamics.map((d) => <s key={d.slot} className="sq" />)}{dynamic && <s className="dy" />}</span>
       </div>
       <p className="kt-note">
-        Nombre automático: prefijo del principal{dynamic && " (sin principal, las abreviaturas de los slots)"} + los materiales marcados «en el nombre». Las 2 letras subrayadas van en el símbolo.
+        Nombre automático: prefijo del principal{dynamic && " (sin principal, las abreviaturas de los slots)"} + lo marcado «en el nombre». Las 2 letras subrayadas van en el símbolo.
+        {dynamics.length > 0 && " Cada ■ del símbolo es un conjunto dinámico."}
         {dynamic && " El □ del símbolo indica que lleva slots."}
       </p>
       {clash && (
@@ -186,7 +208,31 @@ export function KitForm({ kit, kind, concepts, categories, taken }: { kit: Kit |
                 </div>
               );
             })}
-            <div className="kt-row"><button type="button" className="kt-add" onClick={add}>{dynamic ? "+ Añadir material fijo" : "+ Añadir material"}</button></div>
+            {dynamics.map((d, i) => (
+              <div className="kt-row" key={d.slot}>
+                <button type="button" className={`kt-dep${errAt(`definition.dynamics.${i}.`) ? " bad" : ""}`} aria-pressed={sel.k === "d" && i === sel.i} onClick={() => setSel({ k: "d", i })}>
+                  <span>
+                    {dynPrefix(d) && <span className={`kt-pf${d.inName ? "" : " off"}`}>{dynPrefix(d)}</span>}
+                    <b className={d.label ? undefined : "mut"}>{d.label || "Sin nombre"}</b>
+                    <small>
+                      conjunto dinámico {d.templateIds.map(kitName).join(" / ") || "sin elegir"}
+                      {d.mode === "choose" ? " · se elige en el borrador" : ""} · {d.optional ? "opcional" : "obligatorio"}
+                    </small>
+                  </span>
+                  <span className="kt-sum">{d.optional ? "opcional" : "obligatorio"}</span>
+                  <span className="kt-chev" aria-hidden>{sel.k === "d" && i === sel.i ? "⌄" : "›"}</span>
+                </button>
+              </div>
+            ))}
+            <div className="kt-row">
+              {dynamic ? <button type="button" className="kt-add" onClick={add}>+ Añadir material fijo</button> : (
+                <div className="kt-add2">
+                  <button type="button" onClick={add}>+ Añadir material</button>
+                  {dynamics.length < 5 && <button type="button" className="g" onClick={addD}>+ Añadir conjunto dinámico</button>}
+                </div>
+              )}
+            </div>
+            <Err msg={e["definition.dynamics"]} />
           </div>
           {dynamic && (
             <div className="slotdef">
@@ -206,7 +252,52 @@ export function KitForm({ kit, kind, concepts, categories, taken }: { kit: Kit |
         </div>
 
         <div className="kt-panel">
-          {curT ? (
+          {curD ? (
+            <>
+              <h3>Conjunto dinámico: {curD.label || "sin nombre"}</h3>
+              <div className="kt-erow"><span>Cuál</span>
+                <div className="kt-seg" role="group" aria-label="Cuál">
+                  <button type="button" aria-pressed={curD.mode === "choose"} onClick={() => setD(sel.i, { mode: "choose" })}>Se elige al presupuestar</button>
+                  <button type="button" aria-pressed={curD.mode === "fixed"} onClick={() => setD(sel.i, { mode: "fixed", templateIds: curD.templateIds.slice(0, 1) })}>Siempre el mismo</button>
+                </div>
+              </div>
+              {curD.mode === "fixed" ? (
+                <label className="kt-fl">Conjunto dinámico
+                  <Combobox key={curD.slot} items={dynItems(curD, [])} value={curD.templateIds[0] ?? ""} invalid={!!errAt(`definition.dynamics.${sel.i}.choice`)}
+                    label="Conjunto dinámico" placeholder="Escribe el nombre o la descripción" onPick={(id) => pickD(sel.i, curD, [id])} />
+                </label>
+              ) : (
+                <div style={{ display: "grid", gap: 6 }}>
+                  {curD.templateIds.length > 0 && (
+                    <ul className="vlist">
+                      {curD.templateIds.map((id) => (
+                        <li key={id}><b>{kitName(id)}</b><span>{dynamicKits.find((k) => k.id === id)?.description}</span>
+                          <button type="button" aria-label={`Quitar ${kitName(id)}`} onClick={() => setD(sel.i, { templateIds: curD.templateIds.filter((x) => x !== id) })}>✕</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <Combobox key={`${curD.slot}-${pickKey}`} items={dynItems(curD, curD.templateIds)} value="" autoFocus={pickKey > 0} label="Añadir conjunto dinámico"
+                    invalid={!!errAt(`definition.dynamics.${sel.i}.choice`)} placeholder="Añadir: nombre o descripción"
+                    onPick={(id) => { pickD(sel.i, curD, [...curD.templateIds, id]); setPickKey(pickKey + 1); }} />
+                  <p className="kt-hint">En el borrador se elige uno de estos (al menos dos).</p>
+                </div>
+              )}
+              <Err msg={errAt(`definition.dynamics.${sel.i}.choice`)} />
+              <label className="kt-erow"><span>Nombre</span>
+                <input className="kt-in" value={curD.label} maxLength={300} aria-invalid={!!errAt(`definition.dynamics.${sel.i}.label`)} onChange={(ev) => setD(sel.i, { label: ev.target.value })} />
+              </label>
+              <Err msg={errAt(`definition.dynamics.${sel.i}.label`)} />
+              <label className="kt-erow"><span>Opcional</span>
+                <span><input type="checkbox" className="kt-ck" checked={curD.optional} onChange={(ev) => setD(sel.i, { optional: ev.target.checked })} /></span>
+              </label>
+              {curD.optional && <p className="kt-hint">En el borrador sale «+ Añadir {curD.label || "conjunto dinámico"}»; sin él el conjunto está completo.</p>}
+              <label className="kt-erow"><span>En el nombre{dynPrefix(curD) ? ` (${dynPrefix(curD)})` : ""}</span>
+                <span><input type="checkbox" className="kt-ck" checked={curD.inName} onChange={(ev) => setD(sel.i, { inName: ev.target.checked })} /></span>
+              </label>
+              <button type="button" className="btn" style={{ justifySelf: "start" }} onClick={() => removeD(sel.i)}>Quitar</button>
+            </>
+          ) : curT ? (
             <>
               <h3>Tipo de slot: {curT.label || "sin nombre"}</h3>
               <label className="kt-erow"><span>Nombre</span>

@@ -133,3 +133,18 @@ test("nextKey no repite claves", () => {
   expect(nextKey("t", ["t1", "t3"])).toBe("t2");
   expect(nextKey("d", ["d1", "d2"])).toBe("d3");
 });
+
+test("toDefinition con dinámicos: fijo y a elegir", () => {
+  const dynamics = [
+    { slot: "d1", label: "Tarjetas locales", mode: "fixed" as const, templateIds: ["ra"], optional: false, inName: true },
+    { slot: "d2", label: "Periferia", mode: "choose" as const, templateIds: ["im1", "im2"], optional: true, inName: false },
+  ];
+  const def = toDefinition(main, [], info, { kind: "normal", slotTypes: [], dynamics });
+  expect(def.kind).toBeUndefined();
+  expect(def.dynamics).toEqual([
+    { slot: "d1", label: "Tarjetas locales", optional: false, inName: true, choice: { templateId: "ra" } },
+    { slot: "d2", label: "Periferia", optional: true, inName: false, choice: { templateIds: ["im1", "im2"] } },
+  ]);
+  expect(kitDefinition.safeParse(def).success).toBe(true);
+  expect(extrasFromDefinition(def).dynamics).toEqual(dynamics);
+});

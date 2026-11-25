@@ -557,6 +557,10 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .kt-fixed{height:38px;display:flex;align-items:center;border:1.5px dashed var(--mut);padding:0 10px;font-size:13px;font-weight:600;color:var(--mut);background:var(--paper)}
 .kt-add{border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font:600 14px var(--font-archivo),sans-serif;height:42px;cursor:pointer;width:100%}
 .kt-add:hover{color:var(--ink);background:var(--sheet)}
+.kt-add2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kt-add2 button{border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font:600 14px var(--font-archivo),sans-serif;height:42px;cursor:pointer}
+.kt-add2 button:hover{color:var(--ink);background:var(--sheet)}
+.kt-add2 button.g{border-color:var(--green);color:var(--green)}
 .kt-root{border:2px solid var(--green);background:var(--sheet);padding:14px;display:grid;gap:10px}
 .kt-root>.t{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
 .kt-rgrid{display:grid;grid-template-columns:minmax(0,1fr) 11rem;gap:12px;align-items:end}
@@ -698,6 +702,7 @@ td .chips{margin:0}
 @media (max-width:900px){.klist thead{display:none}.klist tr,.klist td{display:block}.klist tr{border-bottom:1px solid var(--rule);padding:6px 0}.klist td{border:0;padding:4px 12px;text-align:left}.klist td[data-l]::before{content:attr(data-l);display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut)}}
 /* Editor de conjunto dinámico: tipos de slot y sus variantes; □ discontinuo del símbolo. */
 .mini s.dy::after{border-radius:0;border-style:dashed;border-color:var(--green);background:var(--band)}
+.mini s.sq::after{border-radius:0;width:13px;height:13px;top:-6.5px;background:var(--green);border-color:var(--green)}
 .slotdef{border:1.5px solid var(--ink);background:var(--sheet);margin-top:22px}
 .slotdef>header{display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:4px 12px;padding:10px 14px;border-bottom:1.5px solid var(--ink)}
 .slotdef>header h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;margin:0}

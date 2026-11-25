@@ -37,6 +37,7 @@ export default async function ConjuntoPage({ params, searchParams }: PageProps<"
   const [concepts, categories, kits] = await Promise.all([listConceptOptions(), listCategories({ includeInactive: true }), listKits({ includeInactive: true })]);
   const conceptOptions = concepts.map((c) => ({ id: c.id, code: c.code, description: c.description, unitName: c.unitName, active: c.active, categoryId: c.categoryId }));
   const categoryOptions = categories.map((c) => ({ id: c.id, name: c.name, active: c.active }));
+  const dynamicKits = kits.filter((k) => k.definition.kind === "dynamic").map((k) => ({ id: k.id, name: k.name, description: k.description, active: k.active }));
   const taken = kits.filter((k) => k.id !== kit?.id).map((k) => k.name);
 
   return (
@@ -45,7 +46,7 @@ export default async function ConjuntoPage({ params, searchParams }: PageProps<"
       {kit && !kit.active && <span className="badge off">Desactivado</span>}
 
       {issues.map((m) => <p key={m} className="warnbox" style={{ marginBottom: 8 }}>{m}</p>)}
-      <KitForm kit={kit} kind={kind} concepts={conceptOptions} categories={categoryOptions} taken={taken} />
+      <KitForm kit={kit} kind={kind} concepts={conceptOptions} categories={categoryOptions} dynamicKits={dynamicKits} taken={taken} />
       {kit && <KitActiveToggle id={kit.id} active={kit.active} />}
       {kit && (uses === 0 ? (
         <ActionForm action={removeKitAction} style={{ marginTop: 12, display: "flex", gap: 10, alignItems: "center" }}>
