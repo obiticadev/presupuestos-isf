@@ -102,6 +102,9 @@ export async function saveKit(actor: CurrentUser, raw: KitInput): Promise<Kit> {
       const data = { name, description: input.description, definition: definition as Prisma.InputJsonValue };
       const before = input.id ? await tx.kitTemplate.findUnique({ where: { id: input.id } }) : null;
       if (input.id && !before) throw new NotFoundError("Conjunto no encontrado");
+      if (before && (kitDefinition.parse(before.definition).kind ?? "normal") !== (input.definition.kind ?? "normal")) {
+        throw new ValidationError({ "definition.kind": "No se puede cambiar el tipo de un conjunto guardado" });
+      }
       const row = before ? await tx.kitTemplate.update({ where: { id: before.id }, data }) : await tx.kitTemplate.create({ data });
       await logAction(tx, {
         userId: actor.id, entity: "kit", entityId: row.id, action: before ? "update" : "create",
@@ -127,7 +130,6 @@ export async function setKitActive(actor: CurrentUser, id: string, active: boole
   });
 }
 
-/** How many quotes contain this kit (their copies keep working if it is deleted: templateId is set to null). */
 /** The kits whose dynamic parts can hold template `id`. */
 async function kitParents(db: Db, id: string): Promise<string[]> {
   // shortcut: reads every template definition; fine for tens of kits, use a JSON query if there are thousands.

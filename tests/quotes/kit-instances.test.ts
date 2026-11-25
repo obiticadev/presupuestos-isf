@@ -2,8 +2,9 @@ import { prisma } from "@/lib/db";
 import { ValidationError } from "@/lib/errors";
 import { getConcept, setConceptActive, updateConcept } from "@/modules/catalog/service";
 import { getKit, saveKit, setKitActive } from "@/modules/kits/service";
-import { addKitInstance, addKitSlot, changeKitInstance, removeKitInstance, setKitDynamic, updateKitInstance, updateKitSlot } from "@/modules/quotes/kit-instances";
+import { addKitInstance, addKitSlot, changeKitInstance, removeKitInstance, removeKitSlot, setKitDynamic, updateKitInstance, updateKitSlot } from "@/modules/quotes/kit-instances";
 import { issueQuote } from "@/modules/quotes/issue";
+import { duplicateQuote, priceWarnings } from "@/modules/quotes/lifecycle";
 import { LOCKED } from "@/modules/quotes/schema";
 import { addCatalogLine, adjustPrice, getQuote, removeLine, setComment, updateLine, updateSection } from "@/modules/quotes/service";
 import { completeDraft, conceptFields, makeDraft } from "../helpers/quotes";
@@ -300,4 +301,139 @@ test("un presupuesto emitido no admite cambios de slots", async () => {
   const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
   await issueQuote(actor, quote.id);
   await expect(addKitSlot(actor, k.id, "d1", "t1")).rejects.toThrow(LOCKED);
+});
+
+/** Both requests finish their initial lookup before either can lock the draft. */
+async function concurrent<T>(id: string, first: () => Promise<T>, second: () => Promise<T>) {
+  const find = prisma.kitInstance.findUnique.bind(prisma.kitInstance);
+  const gate = Promise.withResolvers<void>();
+  let reads = 0;
+  const spy = vi.spyOn(prisma.kitInstance, "findUnique").mockImplementation((args) => {
+    const query = find(args);
+    const then = query.then.bind(query);
+    query.then = (resolve, reject) => then(async (row) => {
+      if (args.where.id === id) {
+        if (++reads === 2) gate.resolve();
+        await gate.promise;
+      }
+      return row;
+    }).then(resolve, reject);
+    return query;
+  });
+  try {
+    return await Promise.all([first(), second()]);
+  } finally {
+    spy.mockRestore();
+  }
+}
+
+test("dos altas simultáneas conservan ambos slots", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  const ids = await concurrent(k.id,
+    () => addKitSlot(actor, k.id, "d1", "t1"),
+    () => addKitSlot(actor, k.id, "d1", "t1"));
+  expect(((await instance(k.id)).slots as { id: string }[]).map((s) => s.id).sort()).toEqual(ids.sort());
+});
+
+test("cambiar variante y cantidad a la vez conserva ambos cambios del slot", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  const id = await addKitSlot(actor, k.id, "d1", "t1");
+  await concurrent(k.id,
+    () => updateKitSlot(actor, k.id, id, { conceptId: "concept-man-4x25" }),
+    () => updateKitSlot(actor, k.id, id, { quantity: "3" }));
+  expect((await instance(k.id)).slots).toEqual([{ id, group: "d1", type: "t1", conceptId: "concept-man-4x25", quantity: "3" }]);
+});
+
+test("quitar un dinámico mientras se guarda la cantidad no restaura su colocación", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { dyn, plc } = await plcKit(admin, true);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  await setKitDynamic(actor, k.id, "d1", dyn.id);
+  await concurrent(k.id,
+    () => setKitDynamic(actor, k.id, "d1", null),
+    () => updateKitInstance(actor, k.id, { quantity: "2", params: {}, choices: {} }));
+  expect((await instance(k.id)).choices).toEqual({});
+  expect((await instance(k.id)).quantity.toFixed(0)).toBe("2");
+});
+
+test("cambiar de conjunto a la vez que se añade un slot compatible no lo pierde", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const other = await saveKit(admin, { name: "PLC 2", description: "", definition: plc.definition });
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  let id = "";
+  await concurrent(k.id,
+    async () => { id = await addKitSlot(actor, k.id, "d1", "t1"); },
+    () => changeKitInstance(actor, k.id, other.id));
+  expect((await instance(k.id)).slots).toEqual([{ id, group: "d1", type: "t1", conceptId: null, quantity: "1" }]);
+  expect((await instance(k.id)).templateId).toBe(other.id);
+});
+
+test("quitar o cambiar un dinámico limpia solo sus medidas propias", async () => {
+  const { actor, admin, sub } = await makeDraft();
+  const { dyn, plc } = await plcKit(admin, true);
+  const other = await saveKit(admin, { name: "PERI 2", description: "", definition: dynDef() });
+  const parent = await saveKit(admin, { name: "PLC con elección", description: "", definition: {
+    ...plc.definition, dynamics: [{ slot: "d1", label: "Periferia", choice: { templateIds: [dyn.id, other.id] }, optional: true }],
+  } });
+  const k = await addKitInstance(actor, sub.id, { templateId: parent.id, quantity: "1", params: {}, choices: {} });
+  await setKitDynamic(actor, k.id, "d1", dyn.id);
+  const params = { "k_d1/c1": "9", "k_d2/c1": "4", distancia: "10" };
+  await prisma.kitInstance.update({ where: { id: k.id }, data: { params } });
+  await setKitDynamic(actor, k.id, "d1", null);
+  expect((await instance(k.id)).params).toEqual({ "k_d2/c1": "4", distancia: "10" });
+  await setKitDynamic(actor, k.id, "d1", dyn.id);
+  await prisma.kitInstance.update({ where: { id: k.id }, data: { params } });
+  await setKitDynamic(actor, k.id, "d1", other.id);
+  expect((await instance(k.id)).params).toEqual({ "k_d2/c1": "4", distancia: "10" });
+});
+
+test.each(["completar", "cancelar"])("añadir un slot y %s conserva precios, ajustes, comentarios y visibilidad", async (next) => {
+  const { actor, admin, quote, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  const slot = await addKitSlot(actor, k.id, "d1", "t1");
+  await updateKitSlot(actor, k.id, slot, { conceptId: "concept-man-4x25" });
+  const main = (await kitLinesOf(k.id)).find((l) => l.kitSlot === "main")!;
+  await adjustPrice(actor, main.id, { newPrice: "40", reason: "Precio acordado" });
+  await setComment(actor, { kind: "line", id: main.id, comment: "Conservar comentario" });
+  await updateLine(actor, main.id, { visible: false, showQuantity: false });
+  const before = await prisma.quoteLine.findMany({ where: { kitInstanceId: k.id }, orderBy: { position: "asc" }, include: { adjustments: true } });
+  const concept = await getConcept("concept-man-4x25");
+  await updateConcept(admin, concept.id, { ...conceptFields(concept), salePrice: "12" });
+  const added = await addKitSlot(actor, k.id, "d1", "t1");
+  const incomplete = await getQuote(quote.id);
+  expect(incomplete.base.toFixed(2)).toBe("0.00");
+  expect(incomplete.sections[0].children[0].lines).toEqual([]);
+  expect(await priceWarnings(prisma, quote.id)).toEqual([]);
+  if (next === "completar") await updateKitSlot(actor, k.id, added, { conceptId: "concept-man-12x075" });
+  else await removeKitSlot(actor, k.id, added);
+  const after = await prisma.quoteLine.findMany({ where: { id: { in: before.map((l) => l.id) } }, orderBy: { position: "asc" }, include: { adjustments: true } });
+  expect(after).toEqual(before);
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe(next === "completar" ? "65.00" : "50.00"); // 40 acordado + 10 copiado + 15 del slot nuevo.
+});
+
+test("duplicar un borrador incompleto conserva los ajustes recuperables sin sumarlos", async () => {
+  const { actor, admin, quote, sub } = await makeDraft();
+  const { plc } = await plcKit(admin);
+  const k = await addKitInstance(actor, sub.id, { templateId: plc.id, quantity: "1", params: {}, choices: {} });
+  const main = (await kitLinesOf(k.id))[0];
+  await adjustPrice(actor, main.id, { newPrice: "40", reason: "Precio acordado" });
+  const slot = await addKitSlot(actor, k.id, "d1", "t1");
+  const { quote: copy } = await duplicateQuote(actor, quote.id);
+  const copied = await getQuote(copy.id);
+  expect(copied.base.toFixed(2)).toBe("0.00");
+  expect(copied.sections[0].children[0].lines).toEqual([]);
+  const kit = copied.sections[0].children[0].kits[0];
+  await removeKitSlot(actor, kit.id, slot);
+  const recovered = await getQuote(copy.id);
+  expect(recovered.base.toFixed(2)).toBe("40.00");
+  expect(recovered.sections[0].children[0].lines[0].adjustments).toHaveLength(1);
+  expect(recovered.sections[0].children[0].lines[0].adjustments[0].newPrice.toFixed(2)).toBe("40.00");
+  expect(recovered.sections[0].children[0].lines[0].adjustments[0].reason).toBe("Precio acordado");
+  expect((await getQuote(quote.id)).base.toFixed(2)).toBe("0.00");
 });

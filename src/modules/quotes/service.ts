@@ -24,9 +24,13 @@ const LINE_INCLUDE = {
   concept: { select: { code: true, active: true, validated: true, salePrice: true } },
   adjustments: { orderBy: { createdAt: "asc" } },
 } satisfies Prisma.QuoteLineInclude;
+// Incomplete kits retain their previous lines for recovery, but do not show or contribute to the quote.
+export const READY_LINES = {
+  OR: [{ kitInstanceId: null }, { kitInstance: { missing: { equals: [] } } }],
+} satisfies Prisma.QuoteLineWhereInput;
 const SUB_INCLUDE = {
   // Loose lines first, then each kit's lines, as the editor shows them (PostgreSQL would put the nulls last).
-  lines: { orderBy: [{ kitInstanceId: { sort: "asc", nulls: "first" } }, { position: "asc" }], include: LINE_INCLUDE },
+  lines: { where: READY_LINES, orderBy: [{ kitInstanceId: { sort: "asc", nulls: "first" } }, { position: "asc" }], include: LINE_INCLUDE },
   kits: { orderBy: { position: "asc" } },
 } satisfies Prisma.QuoteSectionInclude;
 const DETAIL = {
@@ -67,7 +71,7 @@ export function toCalc(sections: CalcShape[]): CalcSection[] {
 }
 
 export async function recalc(tx: Tx, quoteId: string, ownerId: string): Promise<void> {
-  const sections = await tx.quoteSection.findMany({ where: { quoteId, parentId: null }, include: { children: { include: { lines: true } } } });
+  const sections = await tx.quoteSection.findMany({ where: { quoteId, parentId: null }, include: { children: { include: { lines: { where: READY_LINES } } } } });
   const t = calculateQuote(toCalc(sections));
   await tx.quote.update({ where: { id: quoteId }, data: { base: t.base.toFixed(2), total: t.total.toFixed(2), ownerId } });
 }

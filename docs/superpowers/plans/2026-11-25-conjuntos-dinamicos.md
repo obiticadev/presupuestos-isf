@@ -345,7 +345,9 @@
 
 ### Task 10: Cierre
 
-- [ ] Full suite, `pnpm lint` (0 errors) and `pnpm build`. Record the counts.
+- [x] Full suite, `pnpm lint` (0 errors) and `pnpm build`. Record the counts. Cierre 1.9.29: 477/477 pruebas (45 archivos), lint 0 errores/20 avisos anteriores, build correcto.
 - [ ] Check in `:3101` once the push has deployed: version 1.9.28 in the side menu, and the PLC + extension flow working end to end. The migration runs on deploy; check that the `migrate` container ended OK.
 - [ ] Update `docs/superpowers/progreso.md` and the «Estado actual» of `AGENTS.md` (CRLF): what was done, decisions taken by the way and minor items left over. Commit `docs: conjuntos dinámicos terminados (1.9.28)`, push.
 - [ ] Tell the user it is ready for review in `:3101`. Do not merge to `master` without their explicit approval: there is a migration (`kit_slots`) for production.
+
+Correcciones del cierre (1.9.29): protección de variantes/copias/slots en catálogo, lecturas de instancia bajo `withDraft`, tipo inmutable en servidor y conservación interna de líneas durante estados incompletos (sin sumarlas ni mostrarlas). Sin nuevas migraciones. Recorrido técnico candidato PLC → emisión → revisión → ampliación → PDF comprobado en beta; la confirmación del autodespliegue se registra en `progreso.md`. Sin nueva revisión visual en Chrome: no está disponible en OpenCode.

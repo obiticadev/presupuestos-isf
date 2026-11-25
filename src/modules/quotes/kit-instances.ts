@@ -75,6 +75,11 @@ async function regenerate(tx: Tx, actor: CurrentUser, quoteId: string, instance:
   const section = await tx.quoteSection.findUniqueOrThrow({ where: { id: instance.sectionId }, select: { mode: true } });
   const input = { quantity: instance.quantity.toString(), params: instance.params as Record<string, string>, choices, slots };
   const expansion = expandKit(def, input, concepts, section.mode === "GLOBAL");
+  if (expansion.missing.length) {
+    // Keep copied prices and user edits until the kit is complete again; reads and totals exclude these lines.
+    await tx.kitInstance.update({ where: { id: instance.id }, data: { missing: expansion.missing } });
+    return expansion.missing;
+  }
 
   const existing = await tx.quoteLine.findMany({ where: { kitInstanceId: instance.id }, include: { adjustments: true } });
   const keep = new Set<string>();
@@ -133,10 +138,7 @@ export async function addKitInstance(actor: CurrentUser, subsectionId: string, r
 
 export async function updateKitInstance(actor: CurrentUser, instanceId: string, raw: KitInstanceInput): Promise<void> {
   const input = parseOrThrow(kitInstanceInput, raw);
-  const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
-  if (!found) throw new NotFoundError("El conjunto no existe");
-  const def = kitDefinition.parse(found.definition);
-  await withDraft(actor, found.section.quoteId, async (tx) => {
+  await withInstance(actor, instanceId, async (tx, { found, def }) => {
     const choices = { ...input.choices, ...placements(def, found.choices as Record<string, string>) };
     const instance = await tx.kitInstance.update({ where: { id: instanceId }, data: { quantity: def.main ? input.quantity : "1", ...clean(def, { ...input, choices }) } });
     const missing = await regenerate(tx, actor, found.section.quoteId, instance);
@@ -175,12 +177,9 @@ function carryOver(from: KitDefinition, to: KitDefinition, params: Record<string
 }
 
 export async function changeKitInstance(actor: CurrentUser, instanceId: string, templateId: string): Promise<void> {
-  const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
-  if (!found) throw new NotFoundError("El conjunto no existe");
-  const template = await prisma.kitTemplate.findUnique({ where: { id: templateId } });
-  if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
-  const from = kitDefinition.parse(found.definition);
-  await withDraft(actor, found.section.quoteId, async (tx) => {
+  await withInstance(actor, instanceId, async (tx, { found, def: from }) => {
+    const template = await tx.kitTemplate.findUnique({ where: { id: templateId } });
+    if (!template?.active) throw new ValidationError({ templateId: "Elige un conjunto activo" });
     const to = await copyDynamics(tx, kitDefinition.parse(template.definition));
     const kept = carryOver(from, to, found.params as Record<string, string>, found.choices as Record<string, string>);
     const cleaned = clean(to, { ...kept, choices: { ...fixedPlacements(to), ...kept.choices } });
@@ -205,52 +204,60 @@ export async function removeKitInstance(actor: CurrentUser, instanceId: string):
   });
 }
 
-async function loadInstance(instanceId: string) {
-  const found = await prisma.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
+async function loadInstance(tx: Tx, instanceId: string) {
+  const found = await tx.kitInstance.findUnique({ where: { id: instanceId }, include: { section: true } });
   if (!found) throw new NotFoundError("El conjunto no existe");
   return { found, def: kitDefinition.parse(found.definition), choices: found.choices as Record<string, string>, slots: kitSlotList.parse(found.slots) };
 }
 
+/** Only the quote id is read before locking; mutations use the instance reloaded inside the lock. */
+async function withInstance<T>(actor: CurrentUser, instanceId: string, fn: (tx: Tx, state: Awaited<ReturnType<typeof loadInstance>>) => Promise<T>): Promise<T> {
+  const route = await prisma.kitInstance.findUnique({ where: { id: instanceId }, select: { section: { select: { quoteId: true } } } });
+  if (!route) throw new NotFoundError("El conjunto no existe");
+  return withDraft(actor, route.section.quoteId, async (tx) => fn(tx, await loadInstance(tx, instanceId)));
+}
+
 /** Saves the slots (and choices) of an instance in a draft and brings its lines in line. */
-async function saveSlots(actor: CurrentUser, found: KitInstance & { section: { quoteId: string } }, data: { slots: KitSlot[]; choices?: Record<string, string> }, summary: string) {
-  await withDraft(actor, found.section.quoteId, async (tx) => {
-    const instance = await tx.kitInstance.update({ where: { id: found.id }, data: { slots: data.slots, ...(data.choices ? { choices: data.choices } : {}) } });
-    await regenerate(tx, actor, found.section.quoteId, instance);
-    await logQuote(tx, actor, found.section.quoteId, "update", summary);
-  });
+async function saveSlots(tx: Tx, actor: CurrentUser, found: KitInstance & { section: { quoteId: string } }, data: { slots: KitSlot[]; choices?: Record<string, string>; params?: Record<string, string> }, summary: string) {
+  const instance = await tx.kitInstance.update({ where: { id: found.id }, data });
+  await regenerate(tx, actor, found.section.quoteId, instance);
+  await logQuote(tx, actor, found.section.quoteId, "update", summary);
 }
 
 /** A new empty slot (no variant, quantity 1) of `type` in `group` ("self" or a placed dynamic); returns its id. */
 export async function addKitSlot(actor: CurrentUser, instanceId: string, group: string, type: string): Promise<string> {
-  const { found, def, choices, slots } = await loadInstance(instanceId);
-  const t = slotTypeOf(def, choices, group, type);
-  if (!t) throw new ValidationError({ _: "Ese tipo de slot no existe" });
-  const id = crypto.randomUUID().slice(0, 8);
-  await saveSlots(actor, found, { slots: [...slots, { id, group, type, conceptId: null, quantity: "1" }] }, `Slot añadido en ${found.name}: ${t.label}`);
-  return id;
+  return withInstance(actor, instanceId, async (tx, { found, def, choices, slots }) => {
+    const t = slotTypeOf(def, choices, group, type);
+    if (!t) throw new ValidationError({ _: "Ese tipo de slot no existe" });
+    const id = crypto.randomUUID().slice(0, 8);
+    await saveSlots(tx, actor, found, { slots: [...slots, { id, group, type, conceptId: null, quantity: "1" }] }, `Slot añadido en ${found.name}: ${t.label}`);
+    return id;
+  });
 }
 
 export async function updateKitSlot(actor: CurrentUser, instanceId: string, slotId: string, patch: { conceptId?: string | null; quantity?: string }): Promise<void> {
-  const { found, def, choices, slots } = await loadInstance(instanceId);
-  const slot = slots.find((x) => x.id === slotId);
-  if (!slot) throw new NotFoundError("El slot no existe");
-  let quantity = slot.quantity;
+  let quantity: string | undefined;
   if (patch.quantity !== undefined) {
     const parsed = decimalField().safeParse(patch.quantity);
     if (!parsed.success || !new P.Decimal(parsed.data).gt(0)) throw new ValidationError({ quantity: "Escribe una cantidad mayor que cero" });
     quantity = parsed.data;
   }
-  const conceptId = patch.conceptId === undefined ? slot.conceptId : patch.conceptId || null;
-  const label = slotTypeOf(def, choices, slot.group, slot.type)?.label ?? "slot";
-  await saveSlots(actor, found, { slots: slots.map((x) => (x.id === slotId ? { ...x, conceptId, quantity } : x)) }, `Slot modificado en ${found.name}: ${label}`);
+  await withInstance(actor, instanceId, async (tx, { found, def, choices, slots }) => {
+    const slot = slots.find((x) => x.id === slotId);
+    if (!slot) throw new NotFoundError("El slot no existe");
+    const conceptId = patch.conceptId === undefined ? slot.conceptId : patch.conceptId || null;
+    const label = slotTypeOf(def, choices, slot.group, slot.type)?.label ?? "slot";
+    await saveSlots(tx, actor, found, { slots: slots.map((x) => (x.id === slotId ? { ...x, conceptId, quantity: quantity ?? x.quantity } : x)) }, `Slot modificado en ${found.name}: ${label}`);
+  });
 }
 
 export async function removeKitSlot(actor: CurrentUser, instanceId: string, slotId: string): Promise<void> {
-  const { found, def, choices, slots } = await loadInstance(instanceId);
-  const slot = slots.find((x) => x.id === slotId);
-  if (!slot) throw new NotFoundError("El slot no existe");
-  const label = slotTypeOf(def, choices, slot.group, slot.type)?.label ?? "slot";
-  await saveSlots(actor, found, { slots: slots.filter((x) => x.id !== slotId) }, `Slot quitado en ${found.name}: ${label}`);
+  await withInstance(actor, instanceId, async (tx, { found, def, choices, slots }) => {
+    const slot = slots.find((x) => x.id === slotId);
+    if (!slot) throw new NotFoundError("El slot no existe");
+    const label = slotTypeOf(def, choices, slot.group, slot.type)?.label ?? "slot";
+    await saveSlots(tx, actor, found, { slots: slots.filter((x) => x.id !== slotId) }, `Slot quitado en ${found.name}: ${label}`);
+  });
 }
 
 /**
@@ -258,15 +265,17 @@ export async function removeKitSlot(actor: CurrentUser, instanceId: string, slot
  * made inside it: put back, it starts empty.
  */
 export async function setKitDynamic(actor: CurrentUser, instanceId: string, group: string, templateId: string | null): Promise<void> {
-  const { found, def, choices, slots } = await loadInstance(instanceId);
-  const d = def.dynamics?.find((x) => x.slot === group);
-  if (!d) throw new ValidationError({ _: "Ese conjunto dinámico no existe" });
-  if (templateId === null && !d.optional) throw new ValidationError({ templateId: `${d.label} es obligatorio: no se puede quitar` });
-  if (templateId !== null && (!allowedTemplates(d).includes(templateId) || !d.copies?.[templateId])) throw new ValidationError({ templateId: "Elige un conjunto dinámico de la lista" });
-  if (choices[group] === (templateId ?? undefined)) return;
-  const rest = Object.fromEntries(Object.entries(choices).filter(([k]) => k !== group && !k.startsWith(`${group}/`)));
-  await saveSlots(actor, found, {
-    slots: slots.filter((x) => x.group !== group),
-    choices: templateId ? { ...rest, [group]: templateId } : rest,
-  }, templateId ? `${d.label} en ${found.name}: ${d.copies![templateId].name}` : `Se quita ${d.label} de ${found.name}`);
+  await withInstance(actor, instanceId, async (tx, { found, def, choices, slots }) => {
+    const d = def.dynamics?.find((x) => x.slot === group);
+    if (!d) throw new ValidationError({ _: "Ese conjunto dinámico no existe" });
+    if (templateId === null && !d.optional) throw new ValidationError({ templateId: `${d.label} es obligatorio: no se puede quitar` });
+    if (templateId !== null && (!allowedTemplates(d).includes(templateId) || !d.copies?.[templateId])) throw new ValidationError({ templateId: "Elige un conjunto dinámico de la lista" });
+    if (choices[group] === (templateId ?? undefined)) return;
+    const rest = Object.fromEntries(Object.entries(choices).filter(([k]) => k !== group && !k.startsWith(`${group}/`)));
+    const params = Object.fromEntries(Object.entries(found.params as Record<string, string>).filter(([k]) => !k.startsWith(overrideKey(`${group}/`))));
+    await saveSlots(tx, actor, found, {
+      slots: slots.filter((x) => x.group !== group), params,
+      choices: templateId ? { ...rest, [group]: templateId } : rest,
+    }, templateId ? `${d.label} en ${found.name}: ${d.copies![templateId].name}` : `Se quita ${d.label} de ${found.name}`);
+  });
 }

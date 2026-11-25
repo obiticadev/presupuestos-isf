@@ -221,3 +221,18 @@ test("slotTypeOf lee el tipo propio o el de la copia del dinámico elegido", () 
   expect(slotTypeOf(plc(), { d1: "tpl-et" }, "d1", "t1")?.label).toBe("Entradas digitales");
   expect(slotTypeOf(plc(), {}, "d1", "t1")).toBeUndefined();
 });
+
+test("una variante sin precio deja todo el conjunto sin valorar en modo suma", () => {
+  const concepts = new Map(DYN_CONCEPTS);
+  concepts.set("di8", { ...concepts.get("di8")!, salePrice: null });
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("a", "t1", "di8"), slot("b", "t2", "f1")] }, concepts);
+  expect(x).toEqual({ lines: [], missing: ["Entradas digitales ya no está disponible"] });
+});
+
+test("una variante sin precio se admite como línea descriptiva en precio global", () => {
+  const concepts = new Map(DYN_CONCEPTS);
+  concepts.set("di8", { ...concepts.get("di8")!, salePrice: null });
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("a", "t1", "di8")] }, concepts, true);
+  expect(x.missing).toEqual([]);
+  expect(keys(x)).toEqual([["s:a", "1"]]);
+});

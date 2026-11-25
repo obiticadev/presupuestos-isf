@@ -6,7 +6,7 @@ import { Prisma, type Quote, type QuoteStatus } from "@/generated/prisma/client"
 import { authorLabel, logAction, type AuditEntry } from "@/modules/audit/service";
 import type { CurrentUser } from "@/modules/auth/session";
 import { STATUS_LABEL } from "./labels";
-import { insertSection, logQuote, quoteLabel, recalc, withDraft, type Tx } from "./service";
+import { insertSection, logQuote, quoteLabel, READY_LINES, recalc, withDraft, type Tx } from "./service";
 
 export const QUOTES_PAGE_SIZE = 50;
 type SettableStatus = Exclude<QuoteStatus, "DRAFT">;
@@ -185,7 +185,7 @@ export async function duplicateQuote(actor: CurrentUser, id: string): Promise<{ 
 /** Catalog lines the refresh can touch: global-price subsections (their lines carry no price) are left out, so the warning and the button agree. */
 async function catalogLines(tx: Tx, quoteId: string) {
   return tx.quoteLine.findMany({
-    where: { section: { quoteId, mode: "SUM" }, conceptId: { not: null }, unitPrice: { not: null } },
+    where: { ...READY_LINES, section: { quoteId, mode: "SUM" }, conceptId: { not: null }, unitPrice: { not: null } },
     include: { concept: { include: { unit: true, tax: true } }, adjustments: true },
     orderBy: [{ section: { position: "asc" } }, { position: "asc" }],
   });

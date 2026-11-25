@@ -214,3 +214,17 @@ test("si un borrado choca con una referencia, error y no se guarda nada", async 
   expect(await prisma.concept.count()).toBe(6);
   expect((await getConcept("concept-ser-prog")).salePrice?.toFixed(2)).not.toBe("99.00");
 });
+
+test("la importación completa conserva las variantes de los conjuntos dinámicos ausentes del Excel", async () => {
+  const admin = await makeUser("admin");
+  await saveKit(admin, { name: "Tarjetas", description: "", definition: {
+    kind: "dynamic", params: [], components: [],
+    slotTypes: [{ key: "t1", label: "Entradas", abbr: "ED", red: false, variants: { conceptIds: ["concept-man-12x075"] } }],
+  } });
+  const bytes = await onlyProg();
+  const review = await importConcepts(admin, bytes, { apply: false, mode: "full" });
+  expect(review.removals.find((r) => r.id === "concept-man-12x075")?.outcome).toBe("deactivate");
+  expect(review.incompleteKits).toEqual([{ name: "Tarjetas", codes: ["MAN-12X075"] }]);
+  expect((await importConcepts(admin, bytes, { apply: true, mode: "full" })).applied).toBe(true);
+  expect(await prisma.concept.findUnique({ where: { id: "concept-man-12x075" } })).toMatchObject({ active: false });
+});

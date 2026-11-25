@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/db";
 import type { Prisma } from "@/generated/prisma/client";
-import { kitDefinition, refConceptId, type KitDefinition } from "@/modules/kits/definition";
+import { kitDefinition, kitSlotList, refConceptId, type KitDefinition } from "@/modules/kits/definition";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
-const conceptsOf = (def: KitDefinition) => [def.main, ...def.components.map((c) => c.ref)].map(refConceptId).filter((x): x is string => !!x);
+function conceptsOf(def: KitDefinition): string[] {
+  return [...new Set([
+    ...[def.main, ...def.components.map((c) => c.ref)].map(refConceptId).filter((x): x is string => !!x),
+    ...(def.slotTypes ?? []).flatMap((t) => "conceptIds" in t.variants ? t.variants.conceptIds : []),
+    ...(def.dynamics ?? []).flatMap((d) => Object.values(d.copies ?? {}).flatMap((c) => conceptsOf(c.definition))),
+  ])];
+}
 
 /** Concepts that quotes, required lists or kits (templates in any state, quote instances) still point to: they are deactivated, not deleted. */
 export async function usedConceptIds(tx: Db): Promise<Set<string>> {
@@ -12,7 +18,7 @@ export async function usedConceptIds(tx: Db): Promise<Set<string>> {
     tx.quoteLine.findMany({ where: { conceptId: { not: null } }, select: { conceptId: true }, distinct: ["conceptId"] }),
     tx.requiredConcept.findMany(),
     tx.kitTemplate.findMany({ select: { definition: true } }),
-    tx.kitInstance.findMany({ select: { definition: true, choices: true } }),
+    tx.kitInstance.findMany({ select: { definition: true, choices: true, slots: true } }),
   ]);
   const ids = new Set<string>();
   for (const l of lines) if (l.conceptId) ids.add(l.conceptId);
@@ -21,6 +27,7 @@ export async function usedConceptIds(tx: Db): Promise<Set<string>> {
   for (const i of instances) {
     conceptsOf(kitDefinition.parse(i.definition)).forEach((id) => ids.add(id));
     Object.values(i.choices as Record<string, string>).forEach((id) => ids.add(id));
+    for (const slot of kitSlotList.parse(i.slots)) if (slot.conceptId) ids.add(slot.conceptId);
   }
   return ids;
 }

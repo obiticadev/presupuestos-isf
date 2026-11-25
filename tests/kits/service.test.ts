@@ -174,3 +174,40 @@ test("desactivar un dinámico avisa en el conjunto que lo usa", async () => {
   await setKitActive(admin, dyn.id, false);
   expect(await kitIssues(prisma, plc)).toEqual(["Periferia: ese conjunto ya no está disponible"]);
 });
+
+test("un dinámico usado por un padre no cambia a normal ni altera su definición o historial", async () => {
+  const p = await makeUser("presupuestador");
+  const dyn = await peri(p);
+  await saveKit(p, { name: "PLC", description: "", definition: withDynamic(dyn.id) });
+  const before = await getKit(dyn.id);
+  const history = await prisma.auditLog.findMany({ where: { entity: "kit", entityId: dyn.id }, orderBy: { id: "asc" } });
+
+  await expect(saveKit(p, { id: dyn.id, name: dyn.name, description: "", definition: def() })).rejects.toThrow(ValidationError);
+
+  expect((await getKit(dyn.id)).definition).toEqual(before.definition);
+  expect(await prisma.auditLog.findMany({ where: { entity: "kit", entityId: dyn.id }, orderBy: { id: "asc" } })).toEqual(history);
+});
+
+test("un conjunto normal guardado no puede cambiar a dinámico", async () => {
+  const p = await makeUser("presupuestador");
+  const normal = await saveKit(p, { name: "NORMAL", description: "", definition: def() });
+  const dynamic = {
+    kind: "dynamic" as const, params: [], components: [],
+    slotTypes: [{ key: "t1", label: "ED", abbr: "ED", red: false, variants: { conceptIds: ["concept-man-4x25"] } }],
+  };
+
+  await expect(saveKit(p, { id: normal.id, name: normal.name, description: "", definition: dynamic })).rejects.toThrow(ValidationError);
+
+  expect((await getKit(normal.id)).definition).toEqual(normal.definition);
+});
+
+test("un conjunto normal sin kind permite guardarse como normal explícito", async () => {
+  const p = await makeUser("presupuestador");
+  const normal = await saveKit(p, { name: "NORMAL", description: "", definition: def() });
+  expect(normal.definition.kind).toBeUndefined();
+
+  const updated = await saveKit(p, { id: normal.id, name: normal.name, description: "Actualizado", definition: { ...normal.definition, kind: "normal" } });
+
+  expect(updated.definition).toEqual({ ...normal.definition, kind: "normal" });
+  expect(updated.description).toBe("Actualizado");
+});
