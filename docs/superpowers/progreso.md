@@ -102,16 +102,17 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 - 1.9.19: casillas «Cant.» por línea y «Total» por subpartida (`QuoteLine.showQuantity`, `QuoteSection.showTotal`, migración `ocultar_cantidad_total`). El PDF las respeta y las instantáneas antiguas lo muestran todo. La columna de acciones del editor pasa de 214 a 262 px.
 - Comprobado en Chrome a 390, 820 y escritorio. Falta la revisión del usuario.
 
-### Conjuntos dinámicos (rama `mejoras-uso-real`): diseño y plan del 2026-11-25, en ejecución (tareas 1-4 de 9 hechas)
+### Conjuntos dinámicos (rama `mejoras-uso-real`): diseño y plan del 2026-11-25, en ejecución (tareas 1-8 de 10 hechas)
 
 - **Para retomar en un chat nuevo:** leer `docs/superpowers/specs/2026-11-25-conjuntos-dinamicos-design.md` y abrir la maqueta `docs/diseno/maquetas/conjuntos-dinamicos.html` (v4; pestañas: lista, conjunto dinámico, conjunto PLC, borrador, PDF).
 - Decisiones del usuario: P1 dinámico sin principal (ampliaciones que parten de un presupuesto vacío), P2 variantes por categoría y elegidas, P3 dinámico fijo y a elegir.
 - Siguiente paso: ejecutar `docs/superpowers/plans/2026-11-25-conjuntos-dinamicos.md` (9 tareas, 1.9.20 → 1.9.28; lleva la migración `kit_slots`).
 - **Hecho el 2026-11-25, ejecución en línea:** tareas 1-4 (1.9.20 → 1.9.23), todas con commit y push: definición, expansión, slots en el presupuesto (migración `kit_slots`) y validación, usos e historial de las plantillas. Solo servidor: aún no hay interfaz. Pruebas 494/494. Las decisiones tomadas están en `.superpowers/sdd/2026-11-25-conjuntos-dinamicos/progress.md` (ignorado por Git). Siguiente: la tarea 5, la lista con dos pestañas.
+- **Hecho el 2026-11-25 (2.º chat), tareas 5-8 (1.9.24 → 1.9.27), con commit y push:** pestaña de dinámicos en la lista, editor de dinámico, dinámicos dentro de un conjunto normal (fijo o a elegir, opcional, en el nombre) y el borrador: ramas de nivel 2, slots con su buscador, «Añadir slot» por tipo, quitar y volver a poner el opcional, vista cerrada agrupada con filete verde y dinámico suelto. Probado en Chrome a 1568, 820 y 390 px. Pruebas 498/498 (`pnpm exec vitest run --dir tests`; `pnpm test` a secas también recoge la copia de `.next/standalone` y falla allí). **Siguiente: tarea 9 (PDF A1) y 10 del plan, en un chat nuevo**; las decisiones de cada tarea están en el ledger `.superpowers/sdd/2026-11-25-conjuntos-dinamicos/progress.md`. En la BD local quedan de prueba los conjuntos ED-F-SD, IM-TEST (`test-dyn-im`, insertado por SQL) y BOM-ED, añadidos al borrador `cmwdcinu5000sicton3wkkb5t`.
 - Hecho el mismo día, en la versión 1.9.15 (commit `542ae86`):
   - la razón social de Configuración admite varias líneas y en el PDF sale línea a línea;
   - en el buscador (`Combobox`), los códigos largos ya no pisan la descripción (columnas compartidas con `subgrid`).
-- Siguen abiertos de conjuntos: las filas desalineadas del árbol en escritorio y una opción para borrar un conjunto desde el borrador.
+- Siguen abiertos de conjuntos: una opción para borrar un conjunto desde el borrador. Las filas desalineadas del árbol se corrigieron en 1.9.27 (la cantidad iba 5 px más alta que el artículo); falta que el usuario lo confirme.
 
 ### Conjuntos genéricos (rama `features`) — terminado el 2026-11-24, pendiente de revisión
 
