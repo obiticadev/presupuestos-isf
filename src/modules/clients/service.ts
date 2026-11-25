@@ -39,8 +39,8 @@ export async function listClients(filter: { q?: string; status?: "active" | "ina
 }
 
 /** Active clients in a light shape, for pickers. */
-export async function listClientOptions(): Promise<{ id: string; legalName: string; taxId: string }[]> {
-  return prisma.client.findMany({ where: { active: true }, select: { id: true, legalName: true, taxId: true }, orderBy: { legalName: "asc" } });
+export async function listClientOptions(): Promise<{ id: string; legalName: string; taxId: string; tradeName: string }[]> {
+  return prisma.client.findMany({ where: { active: true }, select: { id: true, legalName: true, taxId: true, tradeName: true }, orderBy: { legalName: "asc" } });
 }
 
 /** Every client, active or not, with its contacts and installations: the Excel export. */

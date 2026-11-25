@@ -27,6 +27,8 @@ export type EditorContext = {
   /** Every concept, to name the current choice of a kit even if it was deactivated. */
   allConcepts: ConceptOption[];
   kits: { id: string; name: string; description: string }[];
+  /** Category names by id, for the third column of the concept search. */
+  categories: Record<string, string>;
 };
 
 type Dec = { toString(): string };
@@ -148,6 +150,16 @@ export function Subsection({ ctx, sub, number, first, last }: { ctx: EditorConte
         <span className="acts c-acts">
           {ctx.editable && (
             <>
+              <ActionForm action={updateSectionAction} className="vis">
+                <input type="hidden" name="id" value={sub.id} />
+                <SubmitOnChange>
+                  <label className="check small" title="Total visible en el documento">
+                    <input type="checkbox" name="showTotal" value="1" defaultChecked={sub.showTotal} key={String(sub.showTotal)} />
+                    <input type="hidden" name="showTotal" value="0" />
+                    Total
+                  </label>
+                </SubmitOnChange>
+              </ActionForm>
               <ActionForm action={removeSectionAction}><input type="hidden" name="id" value={sub.id} /><ConfirmButton label="Eliminar" className="icon" confirm="¿Eliminar la subpartida con sus líneas?" /></ActionForm>
               <Move action={moveSectionAction} id={sub.id} first={first} last={last} />
               <CommentButton id={sub.id} has={!!sub.comment} reserve label="Añadir comentario a la subpartida" className="icon bub last" />
@@ -209,6 +221,11 @@ function LineRow({ ctx, line, global, first, last, inKit }: { ctx: EditorContext
                   <input type="checkbox" name="visible" value="1" defaultChecked={line.visible} key={String(line.visible)} />
                   <input type="hidden" name="visible" value="0" />
                   Ver
+                </label>
+                <label className="check small" title="Cantidad visible en el documento">
+                  <input type="checkbox" name="showQuantity" value="1" defaultChecked={line.showQuantity} key={String(line.showQuantity)} />
+                  <input type="hidden" name="showQuantity" value="0" />
+                  Cant.
                 </label>
               </SubmitOnChange>
             </ActionForm>
@@ -420,10 +437,9 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
         <ActionForm action={addCatalogLineAction} reset close className="addform">
           <span className="ttl">Añadir del catálogo</span>
           <input type="hidden" name="subsectionId" value={sub.id} />
-          <select name="conceptId" required defaultValue="" aria-label="Concepto">
-            <option value="" disabled>Elige un concepto…</option>
-            {concepts.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.description}{global ? "" : ` · ${formatDecimalEs(c.salePrice!, { max: 4 })} €/${c.unitName}`}</option>)}
-          </select>
+          <Combobox name="conceptId" value="" label="Concepto" placeholder="Escribe el código, la descripción o la categoría"
+            items={concepts.map((c) => ({ id: c.id, code: c.code, extra: ctx.categories[c.categoryId] ?? "",
+              description: global ? c.description : `${c.description} · ${formatDecimalEs(c.salePrice!, { max: 4 })} €/${c.unitName}` }))} />
           <input name="quantity" placeholder="Cantidad" inputMode="decimal" required aria-label="Cantidad" className="num" />
           <button className="btn pri">Añadir</button>
           <CloseButton />
@@ -453,10 +469,8 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
           <ActionForm action={addKitAction} reset close className="addform">
             <span className="ttl">Añadir conjunto</span>
             <input type="hidden" name="subsectionId" value={sub.id} />
-            <select name="templateId" required defaultValue="" aria-label="Conjunto">
-              <option value="" disabled>Elige un conjunto…</option>
-              {ctx.kits.map((k) => <option key={k.id} value={k.id} data-d={k.description || undefined}>{k.name}</option>)}
-            </select>
+            <Combobox name="templateId" value="" label="Conjunto" placeholder="Escribe el nombre o la descripción del conjunto"
+              items={ctx.kits.map((k) => ({ id: k.id, code: k.name, description: k.description, text: k.name }))} />
             <input name="quantity" placeholder="Cantidad" inputMode="decimal" required aria-label="Cantidad" className="num" />
             <button className="btn pri">Añadir</button>
             <CloseButton />

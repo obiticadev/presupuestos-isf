@@ -1,5 +1,6 @@
 // Search for the Combobox: case and accent insensitive, over code, description and an extra column (category).
-export type ComboItem = { id: string; code: string; description: string; extra?: string };
+// `text`: what the box shows once chosen (default «code · description»).
+export type ComboItem = { id: string; code: string; description: string; extra?: string; text?: string };
 
 // Folded letter by letter, so a position in the folded text is the same position in the original.
 const fold = (s: string) => [...s].map((c) => c.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase()[0] ?? c).join("");

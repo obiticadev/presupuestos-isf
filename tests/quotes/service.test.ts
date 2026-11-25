@@ -225,3 +225,18 @@ test("con un solo tipo activo, el borrador nuevo lo trae elegido; con dos, no", 
   const b = await makeDraft();
   expect(b.quote.typeId).toBeNull();
 });
+
+test("ocultar la cantidad de una línea y el total de una subpartida no cambia el importe", async () => {
+  const { actor, quote, sub } = await makeDraft();
+  const l = await addCatalogLine(actor, sub.id, { conceptId: "concept-ser-prog", quantity: "2" });
+  await updateLine(actor, l.id, { showQuantity: false });
+  await updateSection(actor, sub.id, { showTotal: false });
+  const q = await getQuote(quote.id);
+  const s = q.sections[0].children[0];
+  expect([q.base.toFixed(2), s.showTotal, s.lines[0].showQuantity, s.lines[0].visible]).toEqual(["100.00", false, false, true]);
+});
+
+test("vaciar el cliente de la cabecera da un error en español", async () => {
+  const { actor, quote } = await makeDraft();
+  await expect(updateHeader(actor, quote.id, { clientId: "", ownerId: actor.id })).rejects.toMatchObject({ issues: { clientId: "Elige un cliente" } });
+});

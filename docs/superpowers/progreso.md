@@ -93,6 +93,25 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 
 ## Pendiente
 
+### Ajustes del borrador (rama `mejoras-uso-real`, 2026-11-25): 1.9.16 → 1.9.19, hechos
+
+- Diseño `docs/superpowers/specs/2026-11-25-ajustes-borrador-design.md`, plan `docs/superpowers/plans/2026-11-25-ajustes-borrador.md`.
+- 1.9.16: «Actualizar precios desde catálogo» no hacía nada porque el aviso contaba líneas de subpartidas en precio global que el botón se salta. Ahora `catalogLines` solo toma subpartidas por suma.
+- 1.9.17: «Añadir del catálogo» (código · descripción y precio · categoría) y «Añadir conjunto» usan `Combobox`. El buscador vuelve a su valor al reiniciarse el formulario y, a ≤ 600 px, la tercera columna pasa debajo de la descripción.
+- 1.9.18: Cliente (razón social · CIF · nombre comercial), Nombre (nombre · instalación · dirección) y Contacto (nombre · cargo · email/teléfono) usan `Combobox`. `ComboItem.text` fija lo que queda en la casilla.
+- 1.9.19: casillas «Cant.» por línea y «Total» por subpartida (`QuoteLine.showQuantity`, `QuoteSection.showTotal`, migración `ocultar_cantidad_total`). El PDF las respeta y las instantáneas antiguas lo muestran todo. La columna de acciones del editor pasa de 214 a 262 px.
+- Comprobado en Chrome a 390, 820 y escritorio. Falta la revisión del usuario.
+
+### Conjuntos dinámicos (rama `mejoras-uso-real`): diseño y plan del 2026-11-25, pendiente de ejecutar
+
+- **Para retomar en un chat nuevo:** leer `docs/superpowers/specs/2026-11-25-conjuntos-dinamicos-design.md` y abrir la maqueta `docs/diseno/maquetas/conjuntos-dinamicos.html` (v4; pestañas: lista, conjunto dinámico, conjunto PLC, borrador, PDF).
+- Decisiones del usuario: P1 dinámico sin principal (ampliaciones que parten de un presupuesto vacío), P2 variantes por categoría y elegidas, P3 dinámico fijo y a elegir.
+- Siguiente paso: ejecutar `docs/superpowers/plans/2026-11-25-conjuntos-dinamicos.md` (9 tareas, 1.9.20 → 1.9.28; lleva la migración `kit_slots`).
+- Hecho el mismo día, en la versión 1.9.15 (commit `542ae86`):
+  - la razón social de Configuración admite varias líneas y en el PDF sale línea a línea;
+  - en el buscador (`Combobox`), los códigos largos ya no pisan la descripción (columnas compartidas con `subgrid`).
+- Siguen abiertos de conjuntos: las filas desalineadas del árbol en escritorio y una opción para borrar un conjunto desde el borrador.
+
 ### Conjuntos genéricos (rama `features`) — terminado el 2026-11-24, pendiente de revisión
 
 - Pantalla de árbol con panel (interfaz 1), nombre automático (opción D) con aviso de repetidos, descripción a mano, buscador de artículos con `datalist`, lista con «Principal → lo que lleva», eliminar si no se ha usado e historial de versiones (lista con + / −, no la vista de 3 modos del catálogo).

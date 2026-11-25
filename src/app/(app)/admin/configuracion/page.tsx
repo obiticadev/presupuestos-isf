@@ -33,7 +33,7 @@ export default async function ConfiguracionPage() {
         <SettingsSection
           title="Empresa"
           fields={[
-            { name: "legalName", label: "Razón social", value: s.legalName },
+            { name: "legalName", label: "Razón social", value: s.legalName, kind: "textarea" },
             { name: "taxId", label: "CIF", value: s.taxId },
             { name: "address", label: "Dirección", value: s.address, kind: "textarea" },
             { name: "phone", label: "Teléfono", value: s.phone },

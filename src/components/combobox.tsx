@@ -1,9 +1,9 @@
 "use client";
 
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { markParts, matchItems, type ComboItem } from "@/lib/combo-match";
 
-const textOf = (i: ComboItem | undefined) => (i ? `${i.code} · ${i.description}` : "");
+const textOf = (i: ComboItem | undefined) => (i ? (i.text ?? `${i.code} · ${i.description}`) : "");
 
 function Marked({ text, q }: { text: string; q: string }) {
   const [a, m, b] = markParts(text, q);
@@ -44,6 +44,15 @@ export function Combobox({ items, value, onPick, name, placeholder, submit, inva
     const top = ul.parentElement!.getBoundingClientRect().top;
     if (r.bottom > window.innerHeight - gap && top - r.height - 4 > gap) ul.classList.add("up");
   }, [open, query]);
+
+  // An add-form empties itself after a success (ActionForm reset): go back to the initial choice too.
+  useEffect(() => {
+    const form = field.current?.form;
+    if (!form) return;
+    const back = () => { chosen.current = value; setCurrent(value); setText(textOf(items.find((i) => i.id === value))); setQuery(""); setOpen(false); };
+    form.addEventListener("reset", back);
+    return () => form.removeEventListener("reset", back);
+  }, [items, value]);
 
   const pick = (item: ComboItem | undefined) => {
     const next = item?.id ?? "";

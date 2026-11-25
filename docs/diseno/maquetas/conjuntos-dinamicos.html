@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PLC y periferia · v4</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0f1f1d;--paper:#f6f7f4;--sheet:#fff;--rule:#d5dbd6;--band:#eceeea;--green:#004742;--green-deep:#00332f;--green-ink:#cfe0db;--amber:#8f5600;--amber-line:#b86e00;--amber-bg:#fff3dc;--red:#a3261e;--mut:#56645f;--tint:#f1f7f5}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Archivo,sans-serif;color:var(--ink);background:var(--paper);font-size:14px;line-height:1.4;font-variant-numeric:tabular-nums}
+button,input,select{font:inherit;color:inherit}
+.app{display:grid;grid-template-columns:224px 1fr;min-height:100vh}
+nav.rail{background:var(--green);color:var(--green-ink);padding:22px 0;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh}
+.brand{padding:0 22px 24px;font-weight:800;font-size:28px;font-stretch:110%;color:#fff}.brand small{display:block;font-size:10px;letter-spacing:.14em;color:#b9d3cc;margin-top:4px;font-weight:600}
+nav.rail a{padding:11px 22px;font-size:15px}
+nav.rail a.on{background:var(--green-deep);color:#fff;box-shadow:inset 4px 0 0 #7fd1b9;font-weight:600}
+main{padding:0 26px 80px;min-width:0}
+.mut{color:var(--mut)}
+.crumb{font-size:13px;color:var(--mut)}.crumb u{color:var(--ink)}
+.mtabs{display:flex;margin:0 0 18px;border-bottom:2px solid var(--ink);position:sticky;top:0;background:var(--paper);z-index:5;padding-top:14px}
+.mtabs button{border:1.5px solid var(--ink);border-bottom:0;background:var(--sheet);padding:8px 16px;font-weight:700;cursor:pointer;margin-right:-1.5px}
+.mtabs button[aria-pressed=true]{background:var(--ink);color:#fff}
+.mtabs .ex{margin-left:auto;align-self:center;font-size:12px;color:var(--mut)}
+.screen{display:none}.screen.on{display:block}
+.expl{border-left:4px solid var(--green);background:var(--sheet);padding:10px 14px;margin-bottom:16px;max-width:1000px;font-size:13px}
+/* símbolo (copia de .mini de la app) */
+.mini{display:flex;align-items:center;flex:none}
+.mini i{width:22px;height:22px;border:1.5px solid var(--ink);display:grid;place-items:center;font:800 10px Archivo,sans-serif;font-style:normal;background:var(--sheet)}
+.mini s{display:block;width:26px;height:1.5px;background:var(--ink);position:relative}
+.mini s::after{content:"";position:absolute;right:-1px;top:-6px;width:12px;height:12px;border:1.5px solid var(--ink);border-radius:50%;background:var(--sheet)}
+.mini s.sq::after{border-radius:0;width:13px;height:13px;top:-6.5px;background:var(--green);border-color:var(--green)}
+.mini s.dy::after{border-radius:0;border-style:dashed;border-color:var(--green);background:var(--tint)}
+.mini.lg i{width:30px;height:30px;font-size:12px}.mini.lg s{width:30px}.mini.lg s::after{width:15px;height:15px;top:-7.5px}
+/* ===== editor (kt-*) ===== */
+.kt-id{display:flex;align-items:center;gap:14px;margin-top:4px}
+.kt-name{font-size:30px;font-weight:800;color:var(--green);letter-spacing:.03em;font-stretch:90%}
+.kt-name u{text-decoration:none;border-bottom:3px solid var(--green)}
+.kt-note{font-size:12px;color:var(--mut)}
+.kt-fl{display:grid;gap:4px;font-size:12px;font-weight:600;color:var(--mut)}
+.kt-in{font:600 14px Archivo,sans-serif;border:1.5px solid var(--ink);background:var(--sheet);padding:0 10px;height:38px;width:100%}
+textarea.kt-in{height:auto;padding:8px 10px;font-weight:400}
+.kt-seg{display:inline-flex;border:1.5px solid var(--ink);justify-self:start;align-self:start}
+.kt-seg button{border:0;background:var(--sheet);padding:0 12px;min-height:34px;font-weight:600;font-size:13px;cursor:pointer}
+.kt-seg button+button{border-left:1.5px solid var(--ink)}
+.kt-seg button[aria-pressed=true]{background:var(--ink);color:#fff}
+.kt-layout{display:grid;grid-template-columns:minmax(0,1fr) 410px;gap:24px;align-items:start;margin-top:18px}
+.kt-root{border:2px solid var(--green);background:var(--sheet);padding:14px;display:grid;gap:10px}
+.pt{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:800}
+.kt-rgrid{display:grid;grid-template-columns:minmax(0,1fr) 11rem;gap:12px;align-items:end}
+.kt-fixed{height:38px;display:flex;align-items:center;border:1.5px dashed var(--mut);padding:0 10px;font-size:13px;font-weight:600;color:var(--mut);background:var(--paper)}
+.cbx{height:38px;border:1.5px solid var(--ink);background:var(--sheet);display:flex;align-items:center;padding:0 10px;justify-content:space-between;font-size:14px;white-space:nowrap;overflow:hidden}
+.cbx::after{content:"✕";color:var(--mut);font-size:13px;margin-left:8px}
+.kt-bus{position:relative;margin:14px 0 0 22px;padding-left:30px}
+.kt-bus::before{content:"";position:absolute;left:0;top:-14px;bottom:21px;border-left:2px solid var(--ink)}
+.kt-row{position:relative;margin-bottom:8px}
+.kt-row::before{content:"";position:absolute;left:-30px;top:21px;width:30px;border-top:2px solid var(--ink)}
+.kt-dep{display:grid;grid-template-columns:minmax(0,1fr) auto 1.2rem;gap:12px;align-items:center;border:1.5px solid var(--ink);background:var(--sheet);padding:8px 12px;cursor:pointer;width:100%;text-align:left}
+.kt-dep[aria-pressed=true]{box-shadow:inset 4px 0 0 var(--green);background:var(--tint)}
+.kt-dep small{display:block;color:var(--mut);font-size:12px;font-weight:400}
+.kt-pf{display:inline-block;font-size:11px;font-weight:800;color:#fff;background:var(--green);padding:1px 6px;margin-right:6px}
+.kt-pf.off{background:var(--band);color:var(--mut)}
+.kt-sum{font-size:13px;font-weight:700;white-space:nowrap}
+.kt-chev{color:var(--mut)}
+.kt-add2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.kt-add2 button{border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font-weight:600;height:42px;cursor:pointer}
+.kt-add2 button.g{border-color:var(--green);color:var(--green)}
+.kt-panel{border:1.5px solid var(--ink);background:var(--sheet);padding:16px;display:grid;gap:12px;position:sticky;top:64px}
+.kt-erow{display:grid;grid-template-columns:9rem minmax(0,1fr);align-items:center;gap:10px;font-size:13px;font-weight:600}
+.kt-hint{font-size:12px;color:var(--mut);font-weight:400}
+.kt-ck{width:18px;height:18px;accent-color:var(--green)}
+.btn{border:1.5px solid var(--ink);background:var(--sheet);padding:8px 14px;font-weight:600;cursor:pointer}
+.btn.pri{background:var(--green);border-color:var(--green);color:#fff}
+/* bloque de tipos de slot en el editor */
+.slotdef{border:1.5px solid var(--ink);background:var(--sheet);margin-top:22px}
+.slotdef>header{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:10px 14px;border-bottom:1.5px solid var(--ink)}
+.slotdef>header h2{font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800}
+.st{display:grid;grid-template-columns:3.2rem minmax(0,12rem) minmax(0,1fr) auto;gap:12px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--rule);cursor:pointer}
+.st[aria-pressed=true]{box-shadow:inset 4px 0 0 var(--green);background:var(--tint)}
+.st b{font-weight:700}
+.st .vs{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt{font-size:10px;font-weight:800;letter-spacing:.06em;border:1.5px solid var(--green);color:var(--green);padding:2px 4px;text-align:center;background:var(--sheet)}
+.tt.f{border-color:#b3261e;color:#b3261e}
+.st-add{display:block;width:calc(100% - 28px);margin:10px 14px;border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font-weight:600;height:38px;cursor:pointer}
+.vlist{display:grid;border:1.5px solid var(--ink)}
+.vlist label{display:flex;gap:8px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--rule);font-size:13px;font-weight:500}
+.vlist label:last-child{border-bottom:0}
+.vlist label b{font-weight:700;min-width:5.5rem}
+.vlist label small{margin-left:auto;color:var(--mut)}
+/* ===== borrador ===== */
+.kit{border:1.5px solid var(--ink);background:var(--sheet);margin-bottom:10px}
+.kit>.sm{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:9px 12px;border-bottom:1px solid var(--rule)}
+.kit>.sm::before{content:"▾";font-weight:800}
+.kit.cl>.sm::before{content:"▸"}
+.kit>.sm b{text-transform:uppercase;letter-spacing:.04em}
+.kit>.sm .s{flex:1;min-width:160px;color:var(--mut)}
+.kitsum{padding:10px 12px;font-size:14px;color:var(--mut)}
+.kitfoot{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--rule)}
+.kitfoot .ok{margin-left:auto;width:40px;height:36px;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:800}
+.tree{padding:12px 16px 14px;display:grid;grid-template-columns:235px minmax(0,1fr) 200px;column-gap:12px;border-top:1px solid var(--rule)}
+.r{display:contents}
+.r>*{padding:4px 0}
+.nd{position:relative;display:flex;align-items:center;gap:6px;min-height:42px;font-size:13px;font-weight:600;padding-left:34px;white-space:nowrap}
+.nd.l0{padding-left:0}
+.nd.l2{padding-left:68px}
+.nd.l1::before,.nd.l2::before{content:"";position:absolute;top:0;bottom:0;border-left:1.5px solid var(--ink)}
+.nd.l1::after,.nd.l2::after{content:"";position:absolute;top:25px;width:13px;border-top:1.5px solid var(--ink)}
+.nd.l1::before,.nd.l1::after{left:21px}
+.nd.l2::before,.nd.l2::after{left:55px}
+.nd.last::before{bottom:auto;height:26px}
+.nd .dn{position:absolute;top:36px;bottom:0;border-left:1.5px solid var(--ink)}
+.nd.l0 .dn{left:21px}.nd.l1 .dn{left:55px}
+.tag{font-size:10px;font-weight:800;letter-spacing:.08em;padding:2px 5px;border:1.5px solid var(--rule);color:var(--mut);text-transform:uppercase;min-width:42px;text-align:center;background:var(--sheet)}
+.tag.el{border-color:var(--green);color:var(--green)}
+.tag.f{border-color:#b3261e;color:#b3261e}
+.tag.pe{background:var(--green);color:#fff;border-color:var(--green)}
+.a{display:flex;align-items:center;min-width:0;gap:8px}
+.ro{flex:1;min-width:0;display:flex;align-items:center;font-size:14px;border:1.5px solid var(--rule);background:var(--band);padding:0 10px;height:38px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cb{flex:1;min-width:0;height:38px;border:1.5px solid var(--ink);display:flex;align-items:center;padding:0 10px;background:var(--sheet);font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;appearance:none;cursor:pointer}
+.m{display:grid;grid-template-columns:5rem minmax(0,1fr) 34px;gap:6px;align-items:center}
+.m input{width:100%;text-align:right;border:1.5px solid var(--ink);background:var(--sheet);padding:0 10px;height:38px}
+.m input[readonly]{background:var(--band);color:var(--mut);border-color:var(--rule)}
+.m small{font-size:12px;color:var(--mut);white-space:nowrap}
+.x{all:unset;cursor:pointer;width:34px;height:34px;display:grid;place-items:center;border:1.5px solid var(--rule);box-sizing:border-box;color:var(--mut)}
+.x:hover{border-color:var(--red);color:var(--red)}
+.r.pe>*{background:var(--tint)}
+.r.pe>.nd{font-weight:700}
+.pe-sum{font-size:12px;color:var(--mut);font-weight:600;white-space:nowrap}
+.addbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;grid-column:2/4}
+.addbar span{font-size:12px;font-weight:700;color:var(--mut);margin-right:2px}
+.addbar button{border:1.5px dashed var(--green);background:var(--sheet);color:var(--green);font-weight:700;font-size:12px;padding:0 10px;height:32px;cursor:pointer}
+.addbar button.f{border-color:#b3261e;color:#b3261e}
+.addbar button:hover{background:var(--tint)}
+.addpe{grid-column:2/4;border:1.5px dashed var(--ink);background:transparent;color:var(--ink);font-weight:700;height:38px;cursor:pointer}
+.lines{width:100%;border-collapse:collapse}
+.lines td{padding:8px 12px;border-bottom:1px solid var(--rule);font-size:14px}
+.lines td.c{color:var(--mut);font-size:12px;width:120px}
+.lines td.q{text-align:right;width:80px;white-space:nowrap}
+.lines td.v{width:60px;font-size:12px;color:var(--mut)}
+.lines tr.gh td{font-weight:700;padding-top:10px;border-bottom:1.5px solid var(--ink)}
+.lines tr.gh td .tag{margin-right:6px}
+.lines tr.in td:nth-child(2){padding-left:26px;position:relative}
+.lines tr.in td:nth-child(2)::before{content:"";position:absolute;left:12px;top:0;bottom:0;border-left:1.5px solid var(--green)}
+.split2{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:1350px){.split2{grid-template-columns:1fr}}
+.cap{font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--mut);margin:0 0 6px}
+.qpart{display:flex;gap:12px;align-items:center;padding:8px 10px;background:var(--band);border:1.5px solid var(--ink);border-bottom:0;font-weight:800;text-transform:uppercase;font-size:13px}
+.qpart+.kit{margin-top:0}
+/* ===== PDF ===== */
+.pdfs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px;align-items:start}
+@media (max-width:1300px){.pdfs{grid-template-columns:1fr}}
+.pv{cursor:pointer;border:1.5px solid var(--ink);background:var(--sheet)}
+.pv.selected{outline:4px solid var(--green);outline-offset:2px}
+.pv>header{background:var(--green);color:#fff;padding:9px 12px}
+.pv>header .l{font-size:11px;letter-spacing:.14em;color:#b9d3cc;font-weight:700}
+.pv>header h3{font-size:16px;font-weight:800}
+.pv>p{padding:8px 12px;font-size:12px;color:var(--mut);border-bottom:1px solid var(--rule)}
+.sheet{margin:14px;border:1px solid var(--rule);padding:18px 22px 22px;box-shadow:0 1px 5px rgba(0,0,0,.08);font-size:11.5px;background:#fff}
+.sheet table{width:100%;border-collapse:collapse}
+.sheet th{font-size:8px;letter-spacing:.12em;text-transform:uppercase;text-align:left;border-bottom:1.5px solid var(--ink);padding:4px 5px;font-weight:700}
+.sheet td{padding:3.5px 5px;border-bottom:.5px solid var(--rule);vertical-align:top;line-height:1.25}
+.sheet .p{width:30px;font-weight:700}.sheet .n{text-align:right;white-space:nowrap}
+.sheet tr.part td{background:var(--band);font-weight:800;text-transform:uppercase;font-size:12px}
+.sheet tr.sub td{font-weight:700}
+.sheet tr.line td:nth-child(2){padding-left:18px}
+/* A mejorada */
+.sheet tr.ghd td{border-bottom:0;padding-top:8px}
+.sheet tr.ghd td:nth-child(2){padding-left:18px}
+.sheet tr.ghd .gt{display:flex;align-items:center;gap:6px;font-weight:700;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+.sheet tr.ghd .gt::after{content:"";flex:1;border-top:.75px solid var(--green)}
+.sheet tr.in td:nth-child(2){padding-left:30px;position:relative}
+.sheet tr.in td:nth-child(2)::before{content:"";position:absolute;left:20px;top:0;bottom:0;border-left:1.25px solid var(--green)}
+.sheet tr.in.lst td{border-bottom:.5px solid var(--rule)}
+.sheet .ty{display:inline-block;min-width:96px;margin-right:6px;font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.sheet .sl{display:inline-block;font-size:8.5px;color:var(--mut);font-weight:700;margin-left:6px}
+.qs{display:grid;gap:14px;margin-top:22px;max-width:1100px}
+.qq{border:1.5px solid var(--ink);background:var(--sheet);padding:12px 14px}
+.qq h3{font-size:15px;margin-bottom:3px}
+.qq p{color:var(--mut);font-size:13px;margin-bottom:8px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{border:1.5px solid var(--ink);padding:7px 11px;cursor:pointer;background:#fff;max-width:380px}
+.opt b{display:block;font-size:13px}.opt span{font-size:12px;color:var(--mut)}
+.opt.selected{background:var(--green);color:#fff;border-color:var(--green)}.opt.selected span{color:var(--green-ink)}
+.ltabs{display:flex;margin-top:16px}
+.ltabs button{border:1.5px solid var(--ink);border-bottom:0;padding:7px 14px;font-weight:700;font-size:13px;margin-right:-1.5px;background:var(--sheet);cursor:pointer}
+.ltabs button[aria-pressed=true]{background:var(--ink);color:#fff}
+.ltabs button small{font-weight:600;opacity:.75;margin-left:4px}
+.lpane{display:none}.lpane.on{display:block}
+.list{width:100%;border-collapse:collapse;background:var(--sheet);border:1.5px solid var(--ink)}
+.list th{font-size:11px;letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:9px 12px;border-bottom:1.5px solid var(--ink);font-weight:700}
+.list td{padding:9px 12px;border-bottom:1px solid var(--rule);font-size:13px;vertical-align:top}
+.list td.k b{color:var(--green);text-decoration:underline;font-weight:700;font-size:14px}
+.list td.k small{display:block;color:var(--mut)}
+.list .num{text-align:right}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.dyn{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--green);padding:2px 8px 2px 2px;font-weight:600;font-size:12px;color:var(--green);background:var(--tint)}
+.dyn.opt{border-style:dashed}
+.dyn .mini i{width:18px;height:18px;font-size:8px;background:var(--green);color:#fff;border-color:var(--green)}
+.lhead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
+.lhead h1{font-size:30px;font-weight:800;font-stretch:108%}
+.lhead p{color:var(--mut);font-size:13px;max-width:760px}
+.addlab{align-self:flex-start;margin-top:13px;font-size:13px;font-weight:600;color:var(--mut);line-height:17px}
+.tree .addbar{align-self:start;padding-top:9px}
+.cb2{position:relative;flex:1;min-width:0}
+.cb2 input{width:100%;font:400 14px Archivo,sans-serif;color:var(--ink);border:1.5px solid var(--ink);background:var(--sheet);padding:8px 34px 8px 10px;height:38px;text-overflow:ellipsis}
+.cb2 input:focus{outline:2px solid var(--green);outline-offset:1px}
+.cb2 .clr{all:unset;position:absolute;right:5px;top:50%;transform:translateY(-50%);width:28px;height:28px;display:grid;place-items:center;font-size:14px;color:var(--mut);cursor:pointer}
+.cb2 .clr:hover{color:var(--ink);background:var(--band)}
+.cb2:not(.filled) .clr{display:none}
+.cb2 ul{position:absolute;z-index:30;left:0;top:calc(100% + 4px);min-width:100%;width:max-content;max-width:min(640px,calc(100vw - 32px));margin:0;padding:0;list-style:none;border:1.5px solid var(--ink);background:var(--sheet);max-height:300px;overflow:auto;display:grid;grid-template-columns:fit-content(17rem) minmax(0,1fr);align-content:start}
+.cb2 ul.cols{grid-template-columns:fit-content(17rem) minmax(0,1fr) auto}
+.cb2 ul.up{top:auto;bottom:calc(100% + 4px)}
+.cb2 li{grid-column:1/-1;display:grid;grid-template-columns:subgrid;gap:12px;align-items:baseline;padding:9px 12px;border-bottom:1px solid var(--rule);cursor:pointer;font:400 14px Archivo,sans-serif;color:var(--ink)}
+.cb2 li:last-child{border-bottom:0}
+.cb2 li[aria-selected=true]{background:var(--band)}
+.cb2 li b{font-weight:600;overflow-wrap:anywhere}.cb2 li small{color:var(--mut);font-size:12px;text-align:right}
+.cb2 li mark{background:var(--amber-bg);color:inherit}
+.cb2 li.none,.cb2 li.hint{display:block;color:var(--mut);cursor:default}
+.cb2 li.hint{font-size:12px;padding:6px 12px;background:var(--band)}
+.vlist{min-height:0}
+.vlist label .vx{all:unset;margin-left:auto;cursor:pointer;color:var(--mut);padding:0 4px}
+.vlist label .vx:hover{color:var(--red)}
+.tree .m .cb2{display:none}
+.dyng[data-g=RA] .nd.l2{background:linear-gradient(var(--ink),var(--ink)) 21px 0/1.5px 100% no-repeat}
+.r.slot .a .cb2 input{font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+<nav class="rail"><div class="brand">ISF<small>PRESUPUESTOS</small></div>
+  <a>Presupuestos</a><a>Clientes</a><a>Catálogo</a><a class="on">Conjuntos</a><a>Mi cuenta</a></nav>
+<main>
+<div class="mtabs">
+  <button data-s="s0" aria-pressed="true">1 · Lista de Conjuntos</button>
+  <button data-s="s1" aria-pressed="false">2 · Conjunto dinámico</button>
+  <button data-s="s2" aria-pressed="false">3 · Conjunto PLC</button>
+  <button data-s="s3" aria-pressed="false">4 · En el borrador</button>
+  <button data-s="s4" aria-pressed="false">5 · En el PDF</button>
+  <span class="ex">Maqueta v4 · los buscadores funcionan como en la app</span>
+</div>
+
+<!-- ======================= 0 · LISTA ======================= -->
+<section class="screen on" id="s0">
+<div class="expl"><b>Dos pestañas dentro de Conjuntos.</b> Un <b>conjunto dinámico</b> es una pieza reutilizable con slots que se rellenan en el borrador: el rack del PLC con sus tarjetas, una periferia descentralizada… Un conjunto normal puede llevar <b>uno o varios</b> dinámicos, cada uno opcional o no. Así un PLC puede llevar sus tarjetas locales y además su periferia.</div>
+<div class="lhead"><div><h1>Conjuntos</h1><p>Un conjunto agrupa los materiales que dependen de un material principal; al presupuestar se elige el principal y su cantidad, y lo demás lo añade y calcula él.</p></div>
+<button class="btn pri" id="newbtn">Nuevo conjunto</button></div>
+<div class="ltabs"><button data-p="pc" aria-pressed="true">Conjuntos <small>6</small></button><button data-p="pd" aria-pressed="false">Conjuntos dinámicos <small>4</small></button></div>
+<div class="lpane on" id="pc"><table class="list">
+ <thead><tr><th style="width:20%">Conjunto</th><th>Principal → lo que lleva</th><th>Conjuntos dinámicos</th><th class="num">Materiales</th><th>Estado</th></tr></thead>
+ <tbody>
+  <tr><td class="k"><b>PLC-RA-IM</b><small>S7-1500 con tarjetas locales y periferia</small></td><td><b>CPU S7-1500</b> (se elige) → Memory Card 24 MB, Fuente 24 V</td><td><div class="chips"><span class="dyn"><span class="mini"><i>RA</i></span>RA-S71500 · tarjetas locales</span><span class="dyn opt"><span class="mini"><i>IM</i></span>IM-ET200SP · opcional</span></div></td><td class="num">4</td><td>Activo</td></tr>
+  <tr><td class="k"><b>PLC-IM</b><small>S7-1500 solo con periferia</small></td><td><b>CPU S7-1500</b> (se elige) → Memory Card 24 MB, Fuente 24 V</td><td><span class="dyn opt"><span class="mini"><i>IM</i></span>IM-ET200SP · opcional</span></td><td class="num">3</td><td>Activo</td></tr>
+  <tr><td class="k"><b>PLC-RA</b><small>S7-1200 con módulos de ampliación</small></td><td><b>CPU S7-1200</b> (se elige) → Memory Card 4 MB</td><td><span class="dyn"><span class="mini"><i>RA</i></span>RA-S71200 · módulos SM</span></td><td class="num">2</td><td>Activo</td></tr>
+  <tr><td class="k"><b>PLC</b><small>Autómata compacto</small></td><td><b>CPU S7-1200</b> (se elige) → Memory Card 4 MB</td><td class="mut">—</td><td class="num">1</td><td>Activo</td></tr>
+  <tr><td class="k"><b>BOM-MAN</b><small>Instalación de bomba con manguera</small></td><td><b>Bombas</b> → Mangueras</td><td class="mut">—</td><td class="num">1</td><td>Activo</td></tr>
+  <tr><td class="k"><b>SER-SER-BOM</b><small>Programación con desplazamiento</small></td><td><b>Hora de programador</b> → Desplazamiento, Mangueras, Bomba</td><td class="mut">—</td><td class="num">3</td><td>Activo</td></tr>
+ </tbody></table></div>
+<div class="lpane" id="pd"><table class="list">
+ <thead><tr><th style="width:20%">Conjunto dinámico</th><th>Principal → materiales fijos</th><th>Tipos de slot</th><th>Lo usan</th><th>Estado</th></tr></thead>
+ <tbody>
+  <tr><td class="k"><b>RA-S71500</b><small>Tarjetas locales S7-1500</small></td><td><b>Perfil soporte S7-1500 482 mm</b></td><td><div class="chips"><span class="tt">ED</span><span class="tt">SD</span><span class="tt">EA</span><span class="tt">SA</span><span class="tt">COM</span></div></td><td>PLC-RA-IM</td><td>Activo</td></tr>
+  <tr><td class="k"><b>RA-S71200</b><small>Módulos de ampliación S7-1200</small></td><td><b>— sin principal —</b></td><td><div class="chips"><span class="tt">SM</span><span class="tt">SB</span><span class="tt">CM</span></div></td><td>PLC-RA</td><td>Activo</td></tr>
+  <tr><td class="k"><b>IM-ET200SP</b><small>Periferia ET 200SP</small></td><td><b>Cabecera IM 155-6 PN ST</b> → Módulo servidor</td><td><div class="chips"><span class="tt">ED</span><span class="tt">SD</span><span class="tt">EA</span><span class="tt">SA</span><span class="tt f">F</span></div></td><td>PLC-RA-IM, PLC-IM · y suelto en presupuestos</td><td>Activo</td></tr>
+  <tr><td class="k"><b>IM-ET200MP</b><small>Periferia ET 200MP</small></td><td><b>Cabecera IM 155-5 PN ST</b> → Perfil soporte 482 mm</td><td><div class="chips"><span class="tt">ED</span><span class="tt">SD</span><span class="tt">EA</span><span class="tt">SA</span></div></td><td class="mut">suelto en presupuestos</td><td>Activo</td></tr>
+ </tbody></table></div>
+<div class="qq" style="margin-top:18px;max-width:1100px"><h3>¿Un conjunto dinámico puede no tener principal?</h3><p>Los módulos de ampliación del S7-1200 no llevan perfil ni cabecera: serían solo slots. Propongo que el principal sea opcional en los dinámicos (en la fila RA-S71200).</p>
+  <div class="opts"><div class="opt" data-choice="dyn-principal-opcional" onclick="sel(this,'.opt',this.parentElement)"><b>Sí, opcional</b><span>Un dinámico puede ser solo slots</span></div>
+  <div class="opt" data-choice="dyn-principal-obligatorio" onclick="sel(this,'.opt',this.parentElement)"><b>No, siempre con principal</b><span>Como los conjuntos de hoy</span></div></div></div>
+</section>
+
+<!-- ======================= 1 · PERIFERIA ======================= -->
+<section class="screen" id="s1">
+<div class="expl"><b>Conjunto dinámico</b>: un conjunto con principal y materiales fijos (se puede usar solo en otra partida, p. ej. el armario de filtros) con una parte nueva: <b>tipos de slot</b>. Cada tipo tiene sus variantes; en el borrador se añaden tantos slots como hagan falta, de los tipos que quieras, y en cada uno se elige la variante. Un slot es <b>solo ese artículo</b>: nada más se añade solo.</div>
+<div class="crumb"><u>Conjuntos</u> / <u>Conjuntos dinámicos</u> / IM-ET200SP</div>
+<div class="kt-id"><h1 class="kt-name"><u>IM</u>-ET200SP</h1><span class="mini lg"><i>IM</i><s></s><s class="dy"></s></span></div>
+<p class="kt-note">Nombre automático: prefijo del principal + los materiales marcados «en el nombre». El □ del símbolo indica que lleva slots.</p>
+<div class="kt-layout">
+ <div>
+  <div class="kt-root"><span class="pt">Principal</span>
+    <div class="kt-seg"><button aria-pressed="false">Se elige al presupuestar</button><button aria-pressed="true">Siempre el mismo</button></div>
+    <div class="kt-rgrid"><label class="kt-fl">Artículo del catálogo<div class="cbx">ET-IM1556 · Cabecera IM 155-6 PN ST</div></label>
+    <div class="kt-fl">Cantidad<div class="kt-fixed">Se pide al presupuestar</div></div></div>
+  </div>
+  <div class="kt-bus">
+    <div class="kt-row"><button class="kt-dep" aria-pressed="false"><span><span class="kt-pf off">SRV</span><b>Módulo servidor</b><small>ET-SRV · Módulo servidor</small></span><span class="kt-sum">1 ud × principal</span><span class="kt-chev">›</span></button></div>
+    <div class="kt-row"><button style="display:block;width:100%;border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font-weight:600;height:42px;cursor:pointer">+ Añadir material fijo</button></div>
+  </div>
+
+  <div class="slotdef">
+    <header><h2>Slots · tipos que se pueden añadir</h2><span class="kt-hint">En el borrador: «+ Entradas digitales», «+ Salidas digitales»…</span></header>
+    <div class="st" aria-pressed="true"><span class="tt">ED</span><b>Entradas digitales</b><span class="vs">DI 8×24 V DC · DI 16×24 V DC · DI 16×24 V DC HF</span><span class="kt-chev">⌄</span></div>
+    <div class="st"><span class="tt">SD</span><b>Salidas digitales</b><span class="vs">DQ 8×24 V DC/0,5 A · DQ 16×24 V DC/0,5 A · RQ 4×120 V relé</span><span class="kt-chev">›</span></div>
+    <div class="st"><span class="tt">EA</span><b>Entradas analógicas</b><span class="vs">Toda la categoría «Tarjetas EA» (5)</span><span class="kt-chev">›</span></div>
+    <div class="st"><span class="tt">SA</span><b>Salidas analógicas</b><span class="vs">AQ 2×I/U ST · AQ 4×I/U ST</span><span class="kt-chev">›</span></div>
+    <div class="st"><span class="tt f">F</span><b>Safety</b><span class="vs">F-DI 8×24 V DC · F-DQ 4×24 V DC/2 A · F-RQ 1×24 V DC/24..230 V AC</span><span class="kt-chev">›</span></div>
+    <button class="st-add">+ Añadir tipo de slot</button>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;margin-top:20px"><button class="btn pri">Guardar</button><span class="kt-hint">Cambiar el conjunto no altera los presupuestos donde ya se usó.</span></div>
+ </div>
+
+ <div class="kt-panel">
+  <span class="pt" style="color:var(--mut)">Tipo de slot: Entradas digitales</span>
+  <label class="kt-erow"><span>Nombre</span><input class="kt-in" value="Entradas digitales"></label>
+  <label class="kt-erow"><span>Abreviatura</span><input class="kt-in" value="ED" style="width:5rem"></label>
+  <div class="kt-erow"><span>Color</span><div class="kt-seg" id="colseg"><button aria-pressed="true" data-c="">Normal</button><button aria-pressed="false" data-c="f" style="color:#b3261e">Rojo</button></div></div>
+  <span class="kt-hint" style="margin:-6px 0 0 calc(9rem + 10px)">Rojo resalta el tipo (p. ej. safety) en el borrador y en las listas. No sale en el PDF.</span>
+  <div class="kt-erow"><span>Variantes</span><div class="kt-seg"><button aria-pressed="false">Toda una categoría</button><button aria-pressed="true">Elegidas</button></div></div>
+  <div class="kt-erow" style="align-items:start"><span></span>
+    <div style="display:grid;gap:6px">
+      <div class="vlist" id="vlist"></div>
+      <div class="cb2" id="addvar"></div>
+    </div></div>
+  <span class="kt-hint">Escribe código, descripción o categoría; Tab o Intro añade la resaltada. Con «Toda una categoría», un artículo nuevo de la categoría aparece solo como variante.</span>
+  <button class="btn" style="justify-self:start">Quitar tipo</button>
+ </div>
+</div>
+</section>
+
+<!-- ======================= 2 · PLC ======================= -->
+<section class="screen" id="s2">
+<div class="expl"><b>Un conjunto normal con dos conjuntos dinámicos dentro</b>: el rack con las tarjetas locales (siempre) y la periferia (opcional). Cada uno se añade con «+ Añadir conjunto dinámico» y puede ir fijo o elegirse en el borrador.</div>
+<div class="crumb"><u>Conjuntos</u> / PLC-RA-IM</div>
+<div class="kt-id"><h1 class="kt-name"><u>PL</u>C-RA-IM</h1><span class="mini lg"><i>PL</i><s></s><s></s><s class="sq"></s><s class="sq"></s></span></div>
+<p class="kt-note">Nombre automático: prefijo del principal + lo marcado «en el nombre». Cada ■ del símbolo es un conjunto dinámico.</p>
+<div class="kt-layout">
+ <div>
+  <div class="kt-root"><span class="pt">Principal</span>
+    <div class="kt-seg"><button aria-pressed="true">Se elige al presupuestar</button><button aria-pressed="false">Siempre el mismo</button></div>
+    <div class="kt-rgrid"><label class="kt-fl">De la categoría<div class="cbx">CPU S7-1500</div></label>
+    <div class="kt-fl">Cantidad<div class="kt-fixed">Se pide al presupuestar</div></div></div>
+  </div>
+  <div class="kt-bus">
+    <div class="kt-row"><button class="kt-dep" aria-pressed="false"><span><span class="kt-pf off">MEM</span><b>Tarjeta de memoria</b><small>PLC-SMC24 · SIMATIC Memory Card 24 MB</small></span><span class="kt-sum">1 ud × principal</span><span class="kt-chev">›</span></button></div>
+    <div class="kt-row"><button class="kt-dep" aria-pressed="false"><span><span class="kt-pf off">FUE</span><b>Fuente de alimentación</b><small>se elige de «Fuentes 24 V» al presupuestar</small></span><span class="kt-sum">1 ud × principal</span><span class="kt-chev">›</span></button></div>
+    <div class="kt-row"><button class="kt-dep" aria-pressed="false"><span><span class="kt-pf">RA</span><b>Tarjetas locales</b><small>conjunto dinámico RA-S71500 · siempre · sus slots se añaden en el borrador</small></span><span class="kt-sum">obligatorio</span><span class="kt-chev">›</span></button></div>
+    <div class="kt-row"><button class="kt-dep" aria-pressed="true"><span><span class="kt-pf">IM</span><b>Periferia descentralizada</b><small>conjunto dinámico IM-ET200SP · opcional</small></span><span class="kt-sum">opcional</span><span class="kt-chev">⌄</span></button></div>
+    <div class="kt-row"><div class="kt-add2"><button>+ Añadir material</button><button class="g">+ Añadir conjunto dinámico</button></div></div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;margin-top:20px"><button class="btn pri">Guardar</button></div>
+ </div>
+ <div class="kt-panel">
+  <span class="pt" style="color:var(--mut)">Conjunto dinámico: Periferia descentralizada</span>
+  <div class="kt-erow"><span>Cuál</span><div class="kt-seg"><button aria-pressed="false">Se elige al presupuestar</button><button aria-pressed="true">Siempre el mismo</button></div></div>
+  <div class="kt-erow"><span>Conjunto dinámico</span><div class="cb2" data-src="dyn" data-val="IM-ET200SP"></div></div>
+  <label class="kt-erow"><span>Nombre</span><input class="kt-in" value="Periferia descentralizada"></label>
+  <label class="kt-erow"><span>Opcional</span><span><input type="checkbox" class="kt-ck" checked></span></label>
+  <span class="kt-hint" style="margin:-6px 0 0 calc(9rem + 10px)">En el borrador sale «+ Añadir periferia descentralizada»; sin ella el conjunto está completo.</span>
+  <label class="kt-erow"><span>En el nombre (IM)</span><span><input type="checkbox" class="kt-ck" checked></span></label>
+  <button class="btn" style="justify-self:start">Quitar</button>
+ </div>
+</div>
+</section>
+
+<!-- ======================= 3 · BORRADOR ======================= -->
+<section class="screen" id="s3">
+<div class="expl">Cada conjunto dinámico es una rama del árbol con sus slots debajo. El buscador de cada slot es el de la app, limitado a las variantes de su tipo: escribe, Tab para coger la resaltada, ✕ para vaciar. <b>Prueba a añadir, cambiar y quitar slots, y a quitar o volver a poner la periferia.</b></div>
+<div class="split2">
+<div>
+<p class="cap">Editando el conjunto</p>
+<div class="kit">
+  <div class="sm"><span class="mini" id="sym"><i>PL</i><s></s><s></s><s class="sq"></s><s class="sq" id="symIM"></s></span><b>Conjunto · PLC-RA-IM</b><span class="s" id="sumtxt"></span><b>11.906,10 €</b></div>
+  <p class="kitsum">Autómata S7-1500 con tarjetas locales y periferia descentralizada opcional.</p>
+  <div class="tree" id="tree">
+    <div class="r"><div class="nd l0"><span class="tag el">CPU</span>Principal<span class="dn"></span></div><div class="a"><div class="cb">PLC-1513 · CPU 1513-1 PN</div></div><div class="m"><input value="1"><small>ud</small><span></span></div></div>
+    <div class="r"><div class="nd l1"><span class="tag">MEM</span>Tarjeta memoria</div><div class="a"><div class="ro">PLC-SMC24 · SIMATIC Memory Card 24 MB</div></div><div class="m"><input value="1" readonly><small>ud</small><span></span></div></div>
+    <div class="r"><div class="nd l1"><span class="tag el">FUE</span>Fuente</div><div class="a"><div class="cb">FUE-PM70 · PM 1507 24 V / 3 A</div></div><div class="m"><input value="1" readonly><small>ud</small><span></span></div></div>
+    <!-- dinámico 1: rack local -->
+    <div class="dyng" data-g="RA" style="display:contents">
+      <div class="r pe"><div class="nd l1"><span class="tag pe">RA</span>Tarjetas locales<span class="dn"></span></div><div class="a"><div class="ro dynro">RA-S71500 · Perfil soporte S7-1500 482 mm</div></div><div class="m"><input value="1" readonly><small class="pe-sum"></small><span></span></div></div>
+      <div class="slots" style="display:contents"></div>
+      <div class="r"><div class="nd l2 last"><span class="addlab">Añadir slot</span></div><div class="addbar"></div></div>
+    </div>
+    <!-- dinámico 2: periferia -->
+    <div class="dyng" data-g="IM" id="gIM" style="display:contents">
+      <div class="r pe"><div class="nd l1 last"><span class="tag pe">IM</span>Periferia<span class="dn"></span></div><div class="a"><div class="ro dynro">IM-ET200SP · Cabecera IM 155-6 PN ST</div></div><div class="m"><input value="1" readonly><small class="pe-sum"></small><button class="x" title="Quitar la periferia" id="rmpe">✕</button></div></div>
+      <div class="r"><div class="nd l2"><span class="tag">SRV</span>Servidor</div><div class="a"><div class="ro">ET-SRV · Módulo servidor</div></div><div class="m"><input value="1" readonly><small>ud</small><span></span></div></div>
+      <div class="slots" style="display:contents"></div>
+      <div class="r"><div class="nd l2 last"><span class="addlab">Añadir slot</span></div><div class="addbar"></div></div>
+    </div>
+    <div class="r" id="nope" style="display:none"><div class="nd l1 last"><span class="tag" style="border-style:dashed">IM</span><span class="mut">Periferia</span></div><button class="addpe" id="addpe">+ Añadir periferia descentralizada</button></div>
+  </div>
+  <div class="kitfoot"><button class="btn">Quitar</button><button class="btn">Cambiar conjunto</button><button class="btn">💬</button><span class="ok">✓</span></div>
+</div>
+</div>
+
+<div>
+<p class="cap">Cerrado (líneas del conjunto)</p>
+<div class="kit cl">
+  <div class="sm"><span class="mini"><i>PL</i><s></s><s></s><s class="sq"></s><s class="sq"></s></span><b>Conjunto · PLC-RA-IM</b><span class="s">1 × CPU 1513-1 PN · 6 tarjetas locales · periferia con 7 slots</span><b>11.906,10 €</b></div>
+  <table class="lines">
+    <tr><td class="c">PLC-1513</td><td>CPU 1513-1 PN</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+    <tr><td class="c">PLC-SMC24</td><td>SIMATIC Memory Card 24 MB</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+    <tr><td class="c">FUE-PM70</td><td>PM 1507 24 V / 3 A</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="gh"><td class="c"><span class="tag pe">RA</span></td><td>Tarjetas locales S7-1500</td><td class="q"></td><td></td></tr>
+    <tr class="in"><td class="c">RA-PERF482</td><td>Perfil soporte S7-1500 482 mm</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="in"><td class="c">SM-DI32</td><td>DI 32×24 V DC HF</td><td class="q">4 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="in"><td class="c">SM-DQ32</td><td>DQ 32×24 V DC/0,5 A</td><td class="q">2 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="gh"><td class="c"><span class="tag pe">IM</span></td><td>Periferia descentralizada ET 200SP</td><td class="q"></td><td></td></tr>
+    <tr class="in"><td class="c">ET-IM1556</td><td>Cabecera IM 155-6 PN ST</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="in"><td class="c">ET-SRV</td><td>Módulo servidor</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="in"><td class="c">ET-DI16</td><td>DI 16×24 V DC</td><td class="q">3 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="in"><td class="c">ET-DI8</td><td>DI 8×24 V DC</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="in"><td class="c">ET-DQ16</td><td>DQ 16×24 V DC/0,5 A</td><td class="q">2 ud</td><td class="v">☑ Ver</td></tr>
+    <tr class="in"><td class="c">ET-FDI8</td><td>F-DI 8×24 V DC</td><td class="q">1 ud</td><td class="v">☑ Ver</td></tr>
+  </table>
+  <div class="kitfoot"><button class="btn">Editar</button><button class="btn">Quitar</button><button class="btn">Cambiar conjunto</button><span class="ok">✓</span></div>
+</div>
+<p class="cap" style="margin-top:22px">La periferia de otro armario, suelta en su partida</p>
+<div class="qpart">2 · Cuadro de filtros</div>
+<div class="kit cl">
+  <div class="sm"><span class="mini"><i>IM</i><s></s><s class="dy"></s></span><b>Conjunto · IM-ET200SP</b><span class="s">1 × Cabecera IM 155-6 PN ST · 3 slots</span><b>1.842,00 €</b></div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ======================= 4 · PDF ======================= -->
+<section class="screen" id="s4">
+<div class="expl"><b>A1, la elegida.</b> Cada conjunto dinámico es un bloque con título y filete verde; cada slot, una línea con la descripción del catálogo.</div>
+<div class="pdfs" style="grid-template-columns:minmax(0,760px)">
+  <div class="pv selected"><header><div class="l">PDF · A1</div><h3>Bloques por conjunto dinámico</h3></header>
+    <div class="sheet"><table><thead><tr><th class="p">P</th><th>Denominación</th><th class="n">Cantidad</th><th class="n">Total</th></tr></thead><tbody>
+      <tr class="part"><td class="p">1</td><td>Cuadro de control</td><td></td><td class="n">11.906,10 €</td></tr>
+      <tr class="sub"><td class="p">1.1</td><td>Autómata y periferia</td><td></td><td class="n">11.906,10 €</td></tr>
+      <tr class="line"><td></td><td>CPU 1513-1 PN</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="line"><td></td><td>SIMATIC Memory Card 24 MB</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="line"><td></td><td>PM 1507 24 V / 3 A</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="ghd"><td></td><td colspan="3"><span class="gt">Tarjetas locales S7-1500</span></td></tr>
+      <tr class="in"><td></td><td>Perfil soporte S7-1500 482 mm</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="in"><td></td><td>DI 32×24 V DC HF</td><td class="n">4 ud</td><td></td></tr>
+      <tr class="in lst"><td></td><td>DQ 32×24 V DC/0,5 A</td><td class="n">2 ud</td><td></td></tr>
+      <tr class="ghd"><td></td><td colspan="3"><span class="gt">Periferia descentralizada ET 200SP</span></td></tr>
+      <tr class="in"><td></td><td>Cabecera IM 155-6 PN ST</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="in"><td></td><td>Módulo servidor</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="in"><td></td><td>DI 16×24 V DC</td><td class="n">3 ud</td><td></td></tr>
+      <tr class="in"><td></td><td>DI 8×24 V DC</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="in"><td></td><td>DQ 16×24 V DC/0,5 A</td><td class="n">2 ud</td><td></td></tr>
+      <tr class="in lst"><td></td><td>F-DI 8×24 V DC</td><td class="n">1 ud</td><td></td></tr>
+      <tr class="sub"><td class="p">1.2</td><td>Montaje y cableado</td><td></td><td class="n">—</td></tr>
+    </tbody></table></div></div>
+</div>
+</section>
+</main>
+</div>
+
+<script>
+function sel(el,cls,scope){ (scope||document).querySelectorAll(cls).forEach(o=>o.classList.toggle('selected',o===el)); }
+document.querySelectorAll('.mtabs button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('.mtabs button').forEach(x=>x.setAttribute('aria-pressed',x===b));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===b.dataset.s)); window.scrollTo(0,0);
+});
+document.querySelectorAll('.ltabs button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('.ltabs button').forEach(x=>x.setAttribute('aria-pressed',x===b)); document.querySelectorAll('.lpane').forEach(p=>p.classList.toggle('on',p.id===b.dataset.p)); document.getElementById('newbtn').textContent=b.dataset.p==='pd'?'Nuevo conjunto dinámico':'Nuevo conjunto'; });
+document.querySelectorAll('#colseg button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#colseg button').forEach(x=>x.setAttribute('aria-pressed',x===b)); document.querySelector('.st[aria-pressed=true] .tt').classList.toggle('f',b.dataset.c==='f'); });
+
+/* ---------- catálogo de ejemplo ---------- */
+const CAT=[
+ ["ET-DI8","DI 8×24 V DC","Tarjetas ED"],["ET-DI16","DI 16×24 V DC","Tarjetas ED"],["ET-DI16HF","DI 16×24 V DC HF","Tarjetas ED"],["ET-DI8NAM","DI 8×NAMUR","Tarjetas ED"],["ET-DI4AC","DI 4×120..230 V AC ST","Tarjetas ED"],
+ ["ET-DQ8","DQ 8×24 V DC/0,5 A","Tarjetas SD"],["ET-DQ16","DQ 16×24 V DC/0,5 A","Tarjetas SD"],["ET-RQ4","RQ 4×120 V relé","Tarjetas SD"],
+ ["ET-AI4","AI 4×I/U ST","Tarjetas EA"],["ET-AI8","AI 8×I ST","Tarjetas EA"],["ET-AIRTD","AI 4×RTD/TC HF","Tarjetas EA"],
+ ["ET-AQ2","AQ 2×I/U ST","Tarjetas SA"],["ET-AQ4","AQ 4×I/U ST","Tarjetas SA"],
+ ["ET-FDI8","F-DI 8×24 V DC","Tarjetas safety"],["ET-FDQ4","F-DQ 4×24 V DC/2 A","Tarjetas safety"],["ET-FRQ1","F-RQ 1×24 V DC/24..230 V AC","Tarjetas safety"],
+ ["SM-DI32","DI 32×24 V DC HF","Tarjetas S7-1500"],["SM-DI16","DI 16×24 V DC BA","Tarjetas S7-1500"],["SM-DQ32","DQ 32×24 V DC/0,5 A","Tarjetas S7-1500"],["SM-AI8","AI 8×U/I/RTD/TC ST","Tarjetas S7-1500"],["SM-AQ4","AQ 4×U/I ST","Tarjetas S7-1500"],["SM-CP1542","CM 1542-5 PROFIBUS","Tarjetas S7-1500"],
+ ["BOM-HASTA75","Bomba de potencia menor o igual que 7,5 kW","Bombas"],["MAN-4X25","Manguera 4 hilos x 2,5 mm²","Mangueras"],["SER-DESPL","Desplazamiento","Servicios"]];
+const IT=CAT.map(([code,description,extra])=>({id:code,code,description,extra}));
+const DYN=[{id:"IM-ET200SP",code:"IM-ET200SP",description:"Periferia ET 200SP",extra:"Periferias"},{id:"IM-ET200MP",code:"IM-ET200MP",description:"Periferia ET 200MP",extra:"Periferias"},{id:"RA-S71500",code:"RA-S71500",description:"Tarjetas locales S7-1500",extra:"Racks"},{id:"RA-S71200",code:"RA-S71200",description:"Módulos de ampliación S7-1200",extra:"Racks"}];
+
+/* ---------- buscador: mismo comportamiento que src/components/combobox.tsx ---------- */
+const fold=s=>[...s].map(c=>c.normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase()[0]??c).join("");
+const esc=s=>s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const mark=(t,q)=>{const n=fold(q.trim()),i=n?fold(t).indexOf(n):-1;return i<0?esc(t):esc(t.slice(0,i))+"<mark>"+esc(t.slice(i,i+n.length))+"</mark>"+esc(t.slice(i+n.length));};
+const textOf=i=>i?`${i.code} · ${i.description}`:"";
+function combo(wrap,items,{value="",placeholder="",onPick,keepEmpty,autofocus}={}){
+  wrap.innerHTML=`<input role="combobox" autocomplete="off" placeholder="${esc(placeholder)}"><button type="button" class="clr" tabindex="-1" aria-label="Borrar">✕</button>`;
+  const inp=wrap.firstChild,clr=wrap.children[1]; let ul=null,q="",act=0,moved=false,chosen=value;
+  const its=()=>typeof items==="function"?items():items;
+  const set=t=>{inp.value=t;wrap.classList.toggle("filled",!!t);};
+  set(textOf(its().find(i=>i.id===value)));
+  const list=()=>{const n=fold(q.trim());return n?its().filter(i=>fold(`${i.code} ${i.description} ${i.extra??""}`).includes(n)):its();};
+  const close=()=>{ul?.remove();ul=null;};
+  const render=()=>{ if(!ul){ul=document.createElement("ul");ul.setAttribute("role","listbox");wrap.appendChild(ul);}
+    const L=list(),cols=its().some(i=>i.extra); ul.className=cols?"cols":"";
+    ul.innerHTML=(q.trim()?`<li class="hint">${L.length} de ${its().length}</li>`:"")+(L.length?L.map((i,k)=>`<li role="option" data-k="${k}" aria-selected="${k===act}"><b>${mark(i.code,q)}</b><span>${mark(i.description,q)}</span>${cols?`<small>${mark(i.extra??"",q)}</small>`:""}</li>`).join(""):`<li class="none">Nada coincide con «${esc(q.trim())}»</li>`);
+    ul.style.left="";ul.classList.remove("up");
+    const r=ul.getBoundingClientRect(),vw=document.documentElement.clientWidth,g=8;
+    if(r.right>vw-g) ul.style.left=Math.max(vw-g-r.right,g-r.left)+"px";
+    const top=wrap.getBoundingClientRect().top; if(r.bottom>innerHeight-g&&top-r.height-4>g) ul.classList.add("up");
+    ul.querySelector('[aria-selected=true]')?.scrollIntoView({block:"nearest"});
+    ul.onmousedown=e=>{e.preventDefault();const li=e.target.closest("li[data-k]");if(li)pick(list()[+li.dataset.k]);};
+    ul.onmousemove=e=>{const li=e.target.closest("li[data-k]");if(li&&+li.dataset.k!==act){act=+li.dataset.k;render();}};
+  };
+  const pick=i=>{ q="";close(); if(keepEmpty){ if(i) onPick?.(i); set(""); return; } set(textOf(i)); if((i?.id??"")!==chosen){chosen=i?.id??"";onPick?.(i);} };
+  const reopen=()=>{q="";act=0;moved=false;render();};
+  inp.onfocus=()=>{inp.select();reopen();};
+  inp.oninput=()=>{set(inp.value);q=inp.value;act=0;render();};
+  inp.onblur=()=>{ close(); const t=inp.value.trim(); if(keepEmpty){set("");return;} if(!t) return pick(undefined);
+    const ex=its().find(i=>i.code.toUpperCase()===t.toUpperCase()); pick(ex??its().find(i=>i.id===chosen)); };
+  inp.onkeydown=e=>{ const L=list();
+    if(e.key==="ArrowDown"){e.preventDefault(); if(!ul) reopen(); else {moved=true;act=Math.min(act+1,L.length-1);render();}}
+    else if(e.key==="ArrowUp"){e.preventDefault();moved=true;act=Math.max(act-1,0);render();}
+    else if(e.key==="Enter"){e.preventDefault(); if(ul&&L[act]) pick(L[act]);}
+    else if(e.key==="Tab"&&ul&&(q.trim()||moved)&&L[act]) pick(L[act]);
+    else if(e.key==="Escape"&&ul){e.preventDefault();close();set(textOf(its().find(i=>i.id===chosen)));q="";} };
+  clr.onmousedown=e=>{e.preventDefault();set("");inp.focus();reopen();};
+  if(autofocus) setTimeout(()=>inp.focus(),0);
+  return inp;
+}
+
+/* ---------- pantalla 2: variantes del tipo de slot ---------- */
+const variants=["ET-DI8","ET-DI16","ET-DI16HF"];
+function drawVariants(){ document.getElementById("vlist").innerHTML=variants.map(c=>{const i=IT.find(x=>x.id===c);return `<label><b>${i.code}</b> ${esc(i.description)} <button class="vx" data-c="${c}" title="Quitar variante">✕</button></label>`;}).join("")||'<span class="kt-hint" style="padding:8px">Sin variantes todavía.</span>'; }
+drawVariants();
+combo(document.getElementById("addvar"),()=>IT.filter(i=>!variants.includes(i.id)),{placeholder:"Añadir variante: código, descripción o categoría",keepEmpty:true,onPick:i=>{variants.push(i.id);drawVariants();}});
+document.addEventListener("click",e=>{const v=e.target.closest(".vx");if(v){variants.splice(variants.indexOf(v.dataset.c),1);drawVariants();}});
+document.querySelectorAll('.cb2[data-src=dyn]').forEach(w=>combo(w,DYN,{value:w.dataset.val}));
+
+/* ---------- pantalla 4: borrador ---------- */
+const TYPES={
+ RA:{ED:["Entradas digitales",["SM-DI32","SM-DI16"]],SD:["Salidas digitales",["SM-DQ32"]],EA:["Entradas analógicas",["SM-AI8"]],SA:["Salidas analógicas",["SM-AQ4"]],COM:["Comunicación",["SM-CP1542"]]},
+ IM:{ED:["Entradas digitales",["ET-DI8","ET-DI16","ET-DI16HF","ET-DI8NAM","ET-DI4AC"]],SD:["Salidas digitales",["ET-DQ8","ET-DQ16","ET-RQ4"]],EA:["Entradas analógicas",["ET-AI4","ET-AI8","ET-AIRTD"]],SA:["Salidas analógicas",["ET-AQ2","ET-AQ4"]],F:["Safety",["ET-FDI8","ET-FDQ4","ET-FRQ1"],"f"]}};
+function addSlot(g,t,v,n,focus){
+  const grp=document.querySelector(`.dyng[data-g="${g}"]`),slots=grp.querySelector(".slots"),[name,vs,red]=TYPES[g][t];
+  const row=document.createElement("div"); row.className="r slot"; row.dataset.t=t; row.style.display="contents";
+  row.innerHTML=`<div class="nd l2"><span class="tag el${red?" f":""}">${t}</span>${name}</div><div class="a"><div class="cb2"></div></div><div class="m"><input value="${n}" class="nq"><small>ud</small><button class="x" title="Quitar slot">✕</button></div>`;
+  const order=Object.keys(TYPES[g]),same=[...slots.querySelectorAll(`.slot[data-t="${t}"]`)].pop();
+  const after=same||[...slots.querySelectorAll(".slot")].filter(s=>order.indexOf(s.dataset.t)<order.indexOf(t)).pop();
+  after?after.after(row):slots.prepend(row);
+  combo(row.querySelector(".cb2"),IT.filter(i=>vs.includes(i.id)),{value:v??"",placeholder:`Elige ${name.toLowerCase()}…`,autofocus:focus});
+  count();
+}
+function count(){ let txt=["1 × CPU 1513-1 PN"];
+  document.querySelectorAll(".dyng").forEach(g=>{ const k=[...g.querySelectorAll(".slot .nq")].reduce((t,i)=>t+(parseInt(i.value)||0),0); g.querySelector(".pe-sum").textContent=k+(k===1?" slot":" slots");
+    if(g.style.display!=="none") txt.push(g.dataset.g==="RA"?`${k} tarjetas locales`:`periferia con ${k} slots`); });
+  document.getElementById("sumtxt").textContent=txt.join(" · "); }
+document.querySelectorAll(".dyng").forEach(g=>{ g.querySelector(".addbar").innerHTML=Object.entries(TYPES[g.dataset.g]).map(([t,[n,,red]])=>`<button data-t="${t}" class="${red?"f":""}">+ ${n}</button>`).join(""); });
+[["RA","ED","SM-DI32",4],["RA","SD","SM-DQ32",2],["IM","ED","ET-DI16",3],["IM","ED","ET-DI8",1],["IM","SD","ET-DQ16",2],["IM","F","ET-FDI8",1]].forEach(a=>addSlot(...a));
+document.addEventListener("input",e=>{ if(e.target.matches(".nq")) count(); });
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".addbar button"); if(b){ addSlot(b.closest(".dyng").dataset.g,b.dataset.t,null,1,true); return; }
+  const x=e.target.closest(".slot .x"); if(x){ x.closest(".slot").remove(); count(); return; }
+  if(e.target.closest("#rmpe")){ gIM.style.display="none"; nope.style.display="contents"; symIM.style.display="none"; count(); return; }
+  if(e.target.closest("#addpe")){ gIM.style.display="contents"; nope.style.display="none"; symIM.style.display=""; count(); }
+});
+</script>
+</body>
+</html>
