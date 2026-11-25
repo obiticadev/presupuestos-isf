@@ -40,3 +40,15 @@ test("alta, cambio y desactivación dan 3 versiones, la más nueva primero", asy
   expect(h[1].snapshot!.name).toBe("Uno");
   expect((await getKit(k.id)).name).toBe("Uno");
 });
+
+test("el historial lista los tipos de slot y los dinámicos", () => {
+  const dyn: KitDefinition = { kind: "dynamic", params: [], components: [], slotTypes: [
+    { key: "t1", label: "Entradas digitales", abbr: "ED", red: false, variants: { conceptIds: ["a", "b"] } },
+    { key: "t2", label: "Safety", abbr: "F", red: true, variants: { categoryId: "cat-safety" } },
+  ] };
+  expect(kitLines({ definition: dyn, names: { "cat-safety": "Seguridad" } })).toEqual([
+    "Principal: —", "Tipo de slot ED Entradas digitales: 2 variantes", "Tipo de slot F Safety (rojo): categoría Seguridad",
+  ]);
+  const plc: KitDefinition = { ...SEED, dynamics: [{ slot: "d1", label: "Periferia", choice: { templateIds: ["x", "y"] }, optional: true }] };
+  expect(kitLines({ definition: plc, names: { x: "ET200SP", y: "ET200MP" } }).at(-1)).toBe("Conjunto dinámico Periferia: ET200SP / ET200MP · opcional");
+});

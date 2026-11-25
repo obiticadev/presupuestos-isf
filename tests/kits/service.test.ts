@@ -2,7 +2,7 @@ import { ValidationError } from "@/lib/errors";
 import { prisma } from "@/lib/db";
 import { setConceptActive } from "@/modules/catalog/service";
 import type { KitDefinition } from "@/modules/kits/definition";
-import { getKit, kitUses, listKits, removeKit, saveKit, setKitActive } from "@/modules/kits/service";
+import { getKit, kitIssues, kitUses, listKits, removeKit, saveKit, setKitActive } from "@/modules/kits/service";
 import { addKitInstance } from "@/modules/quotes/kit-instances";
 import { makeDraft } from "../helpers/quotes";
 import { makeUser } from "../helpers/users";
@@ -127,7 +127,7 @@ test("el símbolo no lleva guiones aunque el prefijo del principal sea de una le
 
 test("un dinámico sin principal se nombra con las abreviaturas de sus tres primeros tipos", async () => {
   const p = await makeUser("presupuestador");
-  const type = (key: string, abbr: string) => ({ key, label: abbr, abbr, red: false, variants: { categoryId: "cat-x" } });
+  const type = (key: string, abbr: string) => ({ key, label: abbr, abbr, red: false, variants: { categoryId: "cat-bombas" } });
   const k = await saveKit(p, { description: "", definition: { kind: "dynamic", params: [], components: [], slotTypes: [type("t1", "ED"), type("t2", "SD"), type("t3", "F"), type("t4", "AI")] } });
   expect(k.name).toBe("ED-SD-F");
   expect(k.definition.main).toBeUndefined();
@@ -135,7 +135,42 @@ test("un dinámico sin principal se nombra con las abreviaturas de sus tres prim
 
 test("un dinámico marcado «en el nombre» añade las dos primeras letras de su plantilla", async () => {
   const p = await makeUser("presupuestador");
-  const dyn = await saveKit(p, { name: "ET200SP", description: "", definition: { kind: "dynamic", params: [], components: [], slotTypes: [{ key: "t1", label: "ED", abbr: "ED", red: false, variants: { categoryId: "cat-x" } }] } });
+  const dyn = await saveKit(p, { name: "ET200SP", description: "", definition: { kind: "dynamic", params: [], components: [], slotTypes: [{ key: "t1", label: "ED", abbr: "ED", red: false, variants: { categoryId: "cat-bombas" } }] } });
   const k = await saveKit(p, { description: "", definition: def({ params: [], components: [], dynamics: [{ slot: "d1", label: "Periferia", choice: { templateId: dyn.id }, optional: false, inName: true }] }) });
   expect(k.name).toMatch(/-ET$/);
+});
+
+const peri = (p: Parameters<typeof saveKit>[0]) => saveKit(p, { name: "PERI", description: "", definition: {
+  kind: "dynamic", params: [], components: [],
+  slotTypes: [{ key: "t1", label: "Entradas digitales", abbr: "ED", red: false, variants: { conceptIds: ["concept-man-4x25"] } }],
+} });
+const withDynamic = (templateId: string) => def({ dynamics: [{ slot: "d1", label: "Periferia", choice: { templateId }, optional: false }] });
+
+test("un normal no puede usar un conjunto normal como dinámico", async () => {
+  const p = await makeUser("presupuestador");
+  await expect(saveKit(p, { name: "PLC", description: "", definition: withDynamic("kit-bomba") })).rejects.toThrow(ValidationError);
+  await expect(saveKit(p, { name: "PLC", description: "", definition: withDynamic("no-existe") })).rejects.toThrow(ValidationError);
+});
+
+test("una variante desactivada o que no existe impide guardar el dinámico", async () => {
+  const p = await makeUser("presupuestador");
+  const bad = { kind: "dynamic" as const, params: [], components: [], slotTypes: [{ key: "t1", label: "ED", abbr: "ED", red: false, variants: { conceptIds: ["no-existe"] } }] };
+  await expect(saveKit(p, { name: "X", description: "", definition: bad })).rejects.toThrow(ValidationError);
+});
+
+test("no se borra un dinámico que usa otro conjunto", async () => {
+  const p = await makeUser("presupuestador");
+  const dyn = await peri(p);
+  await saveKit(p, { name: "PLC", description: "", definition: withDynamic(dyn.id) });
+  expect(await kitUses(dyn.id)).toBe(1);
+  await expect(removeKit(p, dyn.id)).rejects.toThrow("Se usa en 1 presupuestos o conjuntos: desactívalo en su lugar");
+});
+
+test("desactivar un dinámico avisa en el conjunto que lo usa", async () => {
+  const admin = await makeUser("admin");
+  const dyn = await peri(admin);
+  const plc = await saveKit(admin, { name: "PLC", description: "", definition: withDynamic(dyn.id) });
+  expect(await kitIssues(prisma, plc)).toEqual([]);
+  await setKitActive(admin, dyn.id, false);
+  expect(await kitIssues(prisma, plc)).toEqual(["Periferia: ese conjunto ya no está disponible"]);
 });

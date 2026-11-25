@@ -35,7 +35,13 @@ export async function getKit(id: string): Promise<Kit> {
 
 /** What is wrong with the concepts and categories a definition names: each must exist and be active. Keyed by field path. */
 async function refIssues(tx: Db, def: KitDefinition): Promise<Record<string, string>> {
-  const refs = [{ path: "definition.main", ref: def.main }, ...def.components.map((c, i) => ({ path: `definition.components.${i}.ref`, ref: c.ref }))];
+  type Ref = { path: string; ref?: { conceptId: string } | { categoryId: string } };
+  const refs: Ref[] = [
+    { path: "definition.main", ref: def.main }, ...def.components.map((c, i) => ({ path: `definition.components.${i}.ref`, ref: c.ref })),
+    ...(def.slotTypes ?? []).flatMap((t, i): Ref[] => ("conceptIds" in t.variants
+      ? t.variants.conceptIds.map((conceptId) => ({ path: `definition.slotTypes.${i}.variants`, ref: { conceptId } }))
+      : [{ path: `definition.slotTypes.${i}.variants`, ref: { categoryId: t.variants.categoryId } }])),
+  ];
   const issues: Record<string, string> = {};
   for (const { path, ref } of refs) {
     const conceptId = refConceptId(ref);
@@ -48,6 +54,13 @@ async function refIssues(tx: Db, def: KitDefinition): Promise<Record<string, str
       const c = await tx.category.findUnique({ where: { id: categoryId } });
       if (!c) issues[path] = "Falta una categoría que ya no existe";
       else if (!c.active) issues[path] = `La categoría ${c.name} está desactivada`;
+    }
+  }
+  for (const [i, d] of (def.dynamics ?? []).entries()) {
+    for (const id of allowedTemplates(d)) {
+      const t = await tx.kitTemplate.findUnique({ where: { id } });
+      if (!t?.active) issues[`definition.dynamics.${i}.choice`] = `${d.label}: ese conjunto ya no está disponible`;
+      else if (kitDefinition.parse(t.definition).kind !== "dynamic") issues[`definition.dynamics.${i}.choice`] = `${d.label}: no es un conjunto dinámico`;
     }
   }
   return issues;
@@ -115,9 +128,17 @@ export async function setKitActive(actor: CurrentUser, id: string, active: boole
 }
 
 /** How many quotes contain this kit (their copies keep working if it is deleted: templateId is set to null). */
+/** The kits whose dynamic parts can hold template `id`. */
+async function kitParents(db: Db, id: string): Promise<string[]> {
+  // shortcut: reads every template definition; fine for tens of kits, use a JSON query if there are thousands.
+  const rows = await db.kitTemplate.findMany({ select: { id: true, definition: true } });
+  return rows.filter((r) => kitDefinition.parse(r.definition).dynamics?.some((d) => allowedTemplates(d).includes(id))).map((r) => r.id);
+}
+
+/** Quotes that use the kit plus kits that contain it as a dynamic. */
 export async function kitUses(id: string, db: Db = prisma): Promise<number> {
   const rows = await db.kitInstance.findMany({ where: { templateId: id }, select: { section: { select: { quoteId: true } } } });
-  return new Set(rows.map((r) => r.section.quoteId)).size;
+  return new Set(rows.map((r) => r.section.quoteId)).size + (await kitParents(db, id)).length;
 }
 
 /** Deletes a kit no quote has used; a used one can only be deactivated. */
@@ -126,7 +147,8 @@ export async function removeKit(actor: CurrentUser, id: string): Promise<void> {
     const row = await tx.kitTemplate.findUnique({ where: { id } });
     if (!row) throw new NotFoundError("Conjunto no encontrado");
     const uses = await kitUses(id, tx);
-    if (uses) throw new ValidationError({ _: `Se usa en ${uses} presupuesto${uses === 1 ? "" : "s"}: desactívalo en su lugar` });
+    const inKits = (await kitParents(tx, id)).length > 0;
+    if (uses) throw new ValidationError({ _: inKits ? `Se usa en ${uses} presupuestos o conjuntos: desactívalo en su lugar` : `Se usa en ${uses} presupuesto${uses === 1 ? "" : "s"}: desactívalo en su lugar` });
     await tx.kitTemplate.delete({ where: { id } });
     await logAction(tx, { userId: actor.id, entity: "kit", entityId: id, action: "delete", summary: `Baja del conjunto ${row.name}` });
   });
