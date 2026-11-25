@@ -35,6 +35,15 @@ tr.note td{font-style:italic;color:var(--mut);padding-top:0;white-space:pre-line
 tr.note.line td:nth-child(2),tr.note.kit td:nth-child(2){padding-left:6mm}
 tr.note.part td{background:var(--band);padding-top:.7mm}
 tr:has(+ tr.note) td{border-bottom:none}
+/* A1: a dynamic kit placed in its kit, under a green uppercase title with a rule; its lines hang from a green left rule. */
+tr.ghd td{border-bottom:0;padding-top:2mm}
+tr.ghd td:nth-child(2){padding-left:6mm}
+tr.ghd .gt{display:flex;align-items:center;gap:1.5mm;font-weight:700;font-size:10.5pt;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+tr.ghd .gt::after{content:"";flex:1;border-top:.75pt solid var(--green)}
+tr.in td{border-bottom:0}
+tr.in td:nth-child(2){padding-left:10mm;position:relative}
+tr.in td:nth-child(2)::before{content:"";position:absolute;left:7.5mm;top:0;bottom:0;border-left:1.25pt solid var(--green)}
+tr.in.lst td{border-bottom:.5pt solid var(--rule)}
 /* A kit with a comment: its rows on a light green tint (not the partida's grey), closed by a dashed rule over the comment. */
 tr.k td:not(:first-child){background:#edf5f2}
 tr.note.kit td:not(:first-child){border-top:.5pt dashed var(--mut);padding-top:.7mm;padding-bottom:1mm}

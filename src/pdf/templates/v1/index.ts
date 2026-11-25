@@ -19,8 +19,9 @@ const joinDot = (parts: string[]) => parts.map((p) => p.trim()).filter(Boolean).
 
 const row = (r: PdfRow) =>
   r.kind === "note" ? html`<tr class="note ${r.of}${r.kit ? " k" : ""}"><td></td><td colspan="3">${r.text}</td></tr>`
+  : r.kind === "group" ? html`<tr class="ghd"><td></td><td colspan="3"><span class="gt">${r.title}</span></td></tr>`
   : r.kind === "line"
-    ? html`<tr class="line${r.kit ? " k" : ""}"><td></td><td>${r.text}</td><td class="n">${r.quantity}</td><td></td></tr>`
+    ? html`<tr class="line${r.grouped ? " in" : ""}${r.last ? " lst" : ""}${r.kit ? " k" : ""}"><td></td><td>${r.text}</td><td class="n">${r.quantity}</td><td></td></tr>`
     : html`<tr class="${r.kind}"><td class="p">${r.number}</td><td>${r.title}</td><td></td><td class="n">${r.total}</td></tr>`;
 
 /** «Firma y sello» of the close: the stamp with the issuer's signature over it, or the empty box when there is none. */

@@ -210,3 +210,37 @@ describe("buildDocument: instalación", () => {
     expect(d.letter.intro).toMatch(/bombeo\.$/);
   });
 });
+
+describe("conjuntos dinámicos (A1)", () => {
+  const withKit = (lines: { description: string; visible?: boolean; kitSlot?: string | null }[]) => {
+    const s = src();
+    s.quote.sections[0].children[0].kits = [{ id: "k1", definition: { dynamics: [{ slot: "d1", label: "Periferia ET 200SP" }] } }];
+    s.quote.sections[0].children[0].lines = lines.map((l) => ({ quantity: "1", unitName: "ud", visible: true, kitInstanceId: "k1", ...l }));
+    return buildDocument(s, { draft: false }).rows.slice(2, -1);
+  };
+
+  it("las líneas de un dinámico salen bajo su título", () => {
+    expect(withKit([
+      { description: "CPU", kitSlot: "c1" },
+      { description: "Cabecera", kitSlot: "d1/c1" },
+      { description: "DI 16", kitSlot: "d1/s:x" },
+    ])).toEqual([
+      { kind: "line", text: "CPU", quantity: "1 ud" },
+      { kind: "group", title: "Periferia ET 200SP" },
+      { kind: "line", text: "Cabecera", quantity: "1 ud", grouped: true },
+      { kind: "line", text: "DI 16", quantity: "1 ud", grouped: true, last: true },
+    ]);
+  });
+
+  it("un dinámico sin líneas visibles no deja título", () => {
+    expect(withKit([{ description: "CPU", kitSlot: "c1" }, { description: "Oculta", kitSlot: "d1/c1", visible: false }]))
+      .toEqual([{ kind: "line", text: "CPU", quantity: "1 ud" }]);
+  });
+
+  it("un snapshot antiguo sin kitSlot sale como hoy", () => {
+    expect(withKit([{ description: "CPU" }, { description: "Tarjeta" }])).toEqual([
+      { kind: "line", text: "CPU", quantity: "1 ud" },
+      { kind: "line", text: "Tarjeta", quantity: "1 ud" },
+    ]);
+  });
+});

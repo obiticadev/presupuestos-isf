@@ -108,3 +108,16 @@ test("el cuerpo del PDF lleva el bloque de firma del documento", () => {
   expect(TEMPLATES.v1.body({ ...doc(), signer: { name: "Ana", signature: "AAAA" } })).toContain("Fdo.: Ana");
   expect(TEMPLATES.v1.body({ ...doc(), signer: null })).toContain("Firma y sello");
 });
+
+test("fila de grupo y líneas agrupadas en el HTML", () => {
+  const d = { ...doc(), rows: [
+    { kind: "group" as const, title: "Periferia <ET>" },
+    { kind: "line" as const, text: "Cabecera", quantity: "1 ud", grouped: true as const },
+    { kind: "line" as const, text: "DI 16", quantity: "3 ud", grouped: true as const, last: true as const },
+  ] };
+  const body = TEMPLATES.v1.body(d);
+  expect(body).toContain('<tr class="ghd"><td></td><td colspan="3"><span class="gt">Periferia &lt;ET&gt;</span></td></tr>');
+  expect(body).toContain('<tr class="line in"><td></td><td>Cabecera</td>');
+  expect(body).toContain('<tr class="line in lst"><td></td><td>DI 16</td>');
+  expect(body).toMatch(/tr\.ghd \.gt\{[^}]*text-transform:uppercase/);
+});

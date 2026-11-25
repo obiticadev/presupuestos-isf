@@ -12,8 +12,8 @@ export type SnapshotQuote = {
     id: string; title: string; comment?: string;
     children: {
       // showTotal and showQuantity arrived on 2026-11-25: older snapshots lack them and show everything.
-      id: string; title: string; mode: "SUM" | "GLOBAL"; comment?: string; kits?: { id: string; comment?: string }[]; showTotal?: boolean;
-      lines: { description: string; quantity: string; unitName: string; visible: boolean; kitInstanceId?: string | null; comment?: string; showQuantity?: boolean }[];
+      id: string; title: string; mode: "SUM" | "GLOBAL"; comment?: string; kits?: { id: string; comment?: string; definition?: unknown }[]; showTotal?: boolean;
+      lines: { description: string; quantity: string; unitName: string; visible: boolean; kitInstanceId?: string | null; kitSlot?: string | null; comment?: string; showQuantity?: boolean }[];
     }[];
   }[];
   totals: {
@@ -37,7 +37,9 @@ export type Signer = { name: string; signature: string };
 export type PdfRow =
   | { kind: "part" | "sub"; number: string; title: string; total: string }
   // kit: the row belongs to a kit that has a comment, so the PDF highlights the whole block.
-  | { kind: "line"; text: string; quantity: string; kit?: true }
+  // grouped: the line belongs to a dynamic kit placed in its kit (A1), under its group row; last closes the block.
+  | { kind: "line"; text: string; quantity: string; kit?: true; grouped?: true; last?: true }
+  | { kind: "group"; title: string }
   | { kind: "note"; of: "line" | "kit" | "sub" | "part"; text: string; kit?: true };
 
 export type PdfDocument = {
@@ -72,11 +74,21 @@ export function buildDocument({ company, quote: q, signer }: PdfSource, opts: { 
     s.children.forEach((c, j) => {
       rows.push({ kind: "sub", number: `${i + 1}.${j + 1}`, title: c.title.trim() || "Sin título", total: c.showTotal === false ? "" : money(q.totals.subsections[c.id] ?? "0") });
       const visible = c.lines.filter((x) => x.visible);
+      // kitSlot «dN/…» (2026-11-25): the line comes from the dynamic placed in slot dN; older snapshots lack it.
+      const group = (l: (typeof visible)[number]) => (l.kitInstanceId ? /^(d\d+)\//.exec(l.kitSlot ?? "")?.[1] : undefined);
+      const groupTitle = (l: (typeof visible)[number], g: string) => {
+        const def = c.kits?.find((x) => x.id === l.kitInstanceId)?.definition as { dynamics?: { slot: string; label: string }[] } | undefined;
+        return def?.dynamics?.find((d) => d.slot === g)?.label ?? "";
+      };
       visible.forEach((l, k) => {
+        const g = group(l);
+        const same = (x: (typeof visible)[number] | undefined) => !!g && !!x && x.kitInstanceId === l.kitInstanceId && group(x) === g;
+        if (g && !same(visible[k - 1])) rows.push({ kind: "group", title: groupTitle(l, g) });
         const qty = formatDecimalEs(l.quantity, { min: 0, max: 4 });
         const kitComment = l.kitInstanceId ? c.kits?.find((x) => x.id === l.kitInstanceId)?.comment : undefined;
         const kit = !!kitComment?.trim();
-        rows.push({ kind: "line", text: l.description, quantity: l.showQuantity === false ? "" : l.unitName ? `${qty} ${l.unitName}` : qty, ...(kit && { kit: true as const }) });
+        rows.push({ kind: "line", text: l.description, quantity: l.showQuantity === false ? "" : l.unitName ? `${qty} ${l.unitName}` : qty,
+          ...(kit && { kit: true as const }), ...(g && { grouped: true as const }), ...(g && !same(visible[k + 1]) && { last: true as const }) });
         note(rows, "line", l.comment, kit);
         // A kit's comment follows the last of its visible lines.
         if (l.kitInstanceId && visible[k + 1]?.kitInstanceId !== l.kitInstanceId) note(rows, "kit", kitComment, kit);
