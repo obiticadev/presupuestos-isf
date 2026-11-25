@@ -55,6 +55,8 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - Si `pnpm dev` da `$$FORM_ACTION` de `undefined` tras añadir una Server Action a un archivo ya compilado, reinicia el servidor.
   - Con Playwright, `getByLabel(..., { exact: true })` no encuentra un `select` o un `textarea` con valor: la etiqueta envuelve al control y su texto incluye las opciones o el contenido. Localízalos por `name` o por el primer texto de la `label`.
 
+**Cierre verificado de conjuntos dinámicos (1.9.29, `7084984`):** 477/477 pruebas, lint sin errores y build correcto. `:3101` muestra 1.9.29, app saludable y migraciones terminadas; acceso/fichas/PDF verificados con ambos roles. Plan cerrado técnicamente, pendiente del visto bueno visual del usuario. No se ha fusionado en `master` ni desplegado producción.
+
 Actualiza esta sección cuando cambie el estado.
 
 ## Stack
