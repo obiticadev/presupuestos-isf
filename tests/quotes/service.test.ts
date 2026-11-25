@@ -235,3 +235,8 @@ test("ocultar la cantidad de una línea y el total de una subpartida no cambia e
   const s = q.sections[0].children[0];
   expect([q.base.toFixed(2), s.showTotal, s.lines[0].showQuantity, s.lines[0].visible]).toEqual(["100.00", false, false, true]);
 });
+
+test("vaciar el cliente de la cabecera da un error en español", async () => {
+  const { actor, quote } = await makeDraft();
+  await expect(updateHeader(actor, quote.id, { clientId: "", ownerId: actor.id })).rejects.toMatchObject({ issues: { clientId: "Elige un cliente" } });
+});

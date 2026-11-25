@@ -106,7 +106,7 @@ Registro de lo hecho, de las decisiones tomadas por el camino y de lo pendiente,
 
 - **Para retomar en un chat nuevo:** leer `docs/superpowers/specs/2026-11-25-conjuntos-dinamicos-design.md` y abrir la maqueta `docs/diseno/maquetas/conjuntos-dinamicos.html` (v4; pestañas: lista, conjunto dinámico, conjunto PLC, borrador, PDF).
 - Decisiones del usuario: P1 dinámico sin principal (ampliaciones que parten de un presupuesto vacío), P2 variantes por categoría y elegidas, P3 dinámico fijo y a elegir.
-- Siguiente paso: ejecutar `docs/superpowers/plans/2026-11-25-conjuntos-dinamicos.md` (10 tareas, 1.9.20 → 1.9.28; lleva la migración `kit_slots`).
+- Siguiente paso: ejecutar `docs/superpowers/plans/2026-11-25-conjuntos-dinamicos.md` (9 tareas, 1.9.20 → 1.9.28; lleva la migración `kit_slots`).
 - Hecho el mismo día, en la versión 1.9.15 (commit `542ae86`):
   - la razón social de Configuración admite varias líneas y en el PDF sale línea a línea;
   - en el buscador (`Combobox`), los códigos largos ya no pisan la descripción (columnas compartidas con `subgrid`).
