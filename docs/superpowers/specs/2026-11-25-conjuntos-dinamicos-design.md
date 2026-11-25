@@ -2,7 +2,7 @@
 
 Diseño acordado con el usuario el 2026-11-25 sobre la maqueta `docs/diseno/maquetas/conjuntos-dinamicos.html`, tras cuatro versiones: idea C → v2 → v3 → v4. La maqueta es la **v4**. Rama `mejoras-uso-real`, que se despliega en `:3101`.
 
-**Estado: diseño cerrado salvo las tres decisiones de «Pendiente de decidir».** El siguiente paso es resolverlas con el usuario y escribir el plan con `superpowers:writing-plans`. Hasta entonces no se escribe código.
+**Estado: diseño cerrado (P1-P3 decididas el 2026-11-25); plan escrito, pendiente de ejecutar.**
 
 ## Por qué
 
@@ -12,7 +12,7 @@ Los conjuntos de hoy no lo resuelven. Cada material es **un** hueco fijo: «siem
 
 ## Conceptos
 
-- **Conjunto dinámico:** una pieza reutilizable con un principal (ver P1), materiales fijos y **tipos de slot**. Ejemplos: el rack local de un S7-1500 con sus tarjetas, una periferia ET 200SP, los módulos de ampliación de un S7-1200. Se usa de dos maneras:
+- **Conjunto dinámico:** una pieza reutilizable con un principal opcional (P1), materiales fijos y **tipos de slot**. Ejemplos: el rack local de un S7-1500 con sus tarjetas, una periferia ET 200SP, los módulos de ampliación de un S7-1200. Se usa de dos maneras:
   - **dentro** de un conjunto normal: el PLC lleva sus tarjetas locales y su periferia;
   - **suelto** en cualquier partida, como cualquier conjunto: la periferia de otro armario.
 - **Tipo de slot:** nombre («Entradas digitales»), abreviatura («ED»), color (normal o **rojo**, a elección del usuario) y **variantes** (los artículos del catálogo que se pueden elegir).
@@ -134,11 +134,13 @@ Es una propuesta: el plan la concreta.
 - **Incompleto:** un slot sin variante («Falta elegir la variante en Entradas digitales») o un dinámico obligatorio que falta. Uno opcional que no está no cuenta. Un dinámico sin slots es válido, salvo que se decida un mínimo (no pedido).
 - **Cantidades:** el dinámico cuenta como 1, y sus materiales fijos aplican sus fórmulas sobre esa unidad. Los slots llevan cantidad absoluta, no multiplicada por el principal. Si se quiere otra cosa, lo concreta el plan.
 
-## Pendiente de decidir (preguntar antes del plan)
+## Decisiones P1-P3 (usuario, 2026-11-25)
 
-- **P1. ¿Un conjunto dinámico puede no tener principal?** Por ejemplo, los módulos de ampliación del S7-1200 serían solo slots. Propuesta: **sí, opcional** solo en los dinámicos.
-- **P2. ¿Cómo se definen las variantes de un tipo de slot?** Opciones: toda una categoría del catálogo, artículos elegidos a mano o las dos (lo que muestra la maqueta). Propuesta: **las dos**.
-- **P3. ¿El dinámico de un conjunto es fijo o se elige en el borrador?** La maqueta enseña las dos opciones en el panel, igual que los materiales de hoy. Propuesta: **las dos**; con «se elige», el borrador muestra un buscador de dinámicos en la fila del dinámico.
+- **P1. Sí: un conjunto dinámico puede no tener principal.** Caso real: una ampliación que parte de un presupuesto vacío y solo añade un slot nuevo. El dinámico se mete **suelto en el borrador**, sin principal, y se presupuestan solo sus slots.
+- **P2. Las dos.** Cada tipo de slot elige si sus variantes son toda una categoría o artículos elegidos a mano.
+- **P3. Las dos.** El dinámico de un conjunto puede ir fijo («Siempre el mismo») o elegirse en el borrador entre varios («Se elige al presupuestar»).
+
+Plan: `docs/superpowers/plans/2026-11-25-conjuntos-dinamicos.md`.
 
 ## Fuera de alcance
 
