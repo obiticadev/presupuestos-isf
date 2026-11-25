@@ -27,6 +27,8 @@ export type EditorContext = {
   /** Every concept, to name the current choice of a kit even if it was deactivated. */
   allConcepts: ConceptOption[];
   kits: { id: string; name: string; description: string }[];
+  /** Category names by id, for the third column of the concept search. */
+  categories: Record<string, string>;
 };
 
 type Dec = { toString(): string };
@@ -420,10 +422,9 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
         <ActionForm action={addCatalogLineAction} reset close className="addform">
           <span className="ttl">Añadir del catálogo</span>
           <input type="hidden" name="subsectionId" value={sub.id} />
-          <select name="conceptId" required defaultValue="" aria-label="Concepto">
-            <option value="" disabled>Elige un concepto…</option>
-            {concepts.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.description}{global ? "" : ` · ${formatDecimalEs(c.salePrice!, { max: 4 })} €/${c.unitName}`}</option>)}
-          </select>
+          <Combobox name="conceptId" value="" label="Concepto" placeholder="Escribe el código, la descripción o la categoría"
+            items={concepts.map((c) => ({ id: c.id, code: c.code, extra: ctx.categories[c.categoryId] ?? "",
+              description: global ? c.description : `${c.description} · ${formatDecimalEs(c.salePrice!, { max: 4 })} €/${c.unitName}` }))} />
           <input name="quantity" placeholder="Cantidad" inputMode="decimal" required aria-label="Cantidad" className="num" />
           <button className="btn pri">Añadir</button>
           <CloseButton />
@@ -453,10 +454,8 @@ function AddToSubsection({ ctx, sub }: { ctx: EditorContext; sub: SubsectionDeta
           <ActionForm action={addKitAction} reset close className="addform">
             <span className="ttl">Añadir conjunto</span>
             <input type="hidden" name="subsectionId" value={sub.id} />
-            <select name="templateId" required defaultValue="" aria-label="Conjunto">
-              <option value="" disabled>Elige un conjunto…</option>
-              {ctx.kits.map((k) => <option key={k.id} value={k.id} data-d={k.description || undefined}>{k.name}</option>)}
-            </select>
+            <Combobox name="templateId" value="" label="Conjunto" placeholder="Escribe el nombre o la descripción del conjunto"
+              items={ctx.kits.map((k) => ({ id: k.id, code: k.name, description: k.description, text: k.name }))} />
             <input name="quantity" placeholder="Cantidad" inputMode="decimal" required aria-label="Cantidad" className="num" />
             <button className="btn pri">Añadir</button>
             <CloseButton />

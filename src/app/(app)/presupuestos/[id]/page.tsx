@@ -8,6 +8,7 @@ import { NotFoundError } from "@/lib/errors";
 import { getSignature } from "@/modules/account/service";
 import { requireUser } from "@/modules/auth/session";
 import { listConceptOptions } from "@/modules/catalog/service";
+import { listCategories } from "@/modules/catalog/lists";
 import { installationLabel } from "@/modules/clients/labels";
 import { getClient, listClientOptions } from "@/modules/clients/service";
 import { listKits } from "@/modules/kits/service";
@@ -50,9 +51,9 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
     );
   }
   const editable = q.status === "DRAFT";
-  const [client, clients, taxes, concepts, kits, notes, required, history, warnings, revisions, types] = await Promise.all([
+  const [client, clients, taxes, concepts, kits, notes, required, history, warnings, revisions, types, categories] = await Promise.all([
     getClient(q.clientId), listClientOptions(), listTaxes(), listConceptOptions(), listKits(), listNotes(q.id), listRequiredConcepts(),
-    listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [], listRevisions(q.id), listQuoteTypes({ includeInactive: true }),
+    listQuoteHistory(q.id), editable ? priceWarnings(prisma, q.id) : [], listRevisions(q.id), listQuoteTypes({ includeInactive: true }), listCategories({ includeInactive: true }),
   ]);
   const ctx: EditorContext = {
     editable, quoteId: q.id, totals: q.totals,
@@ -60,6 +61,7 @@ export default async function PresupuestoPage({ params, searchParams }: PageProp
     concepts: concepts.filter((c) => c.active),
     kits: kits.map((k) => ({ id: k.id, name: k.name, description: k.description })),
     allConcepts: concepts,
+    categories: Object.fromEntries(categories.map((k) => [k.id, k.name])),
   };
   const title = quoteLabel(q);
   const activeOrCurrent = <T extends { id: string; active: boolean }>(rows: T[], current: string | null) => rows.filter((r) => r.active || r.id === current);

@@ -608,6 +608,9 @@ textarea.kt-in{height:auto;padding:8px 10px;resize:vertical;font-weight:400}
 .cb li mark{background:var(--amber-bg);color:inherit}
 .cb li.none,.cb li.hint{display:block;color:var(--mut);cursor:default}
 .cb li.hint{font-size:12px;padding:6px 12px;background:var(--band)}
+.addform .cb{flex:1 1 260px}
+/* Narrow screens: the third column goes under the description, inside the same option (no sideways scroll). */
+@media (max-width:600px){.cb ul.cols{grid-template-columns:fit-content(45%) minmax(0,1fr)}.cb ul.cols small{grid-column:2;text-align:left}}
 
 /* Conjunto en el borrador: árbol elemento | artículo | medida (spec 2026-11-24 §2; geometría medida en la maqueta conjunto-borrador.html) */
 .kq{container-type:inline-size;border-top:1px solid var(--rule)}
