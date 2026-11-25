@@ -1,7 +1,7 @@
 import { Prisma } from "@/generated/prisma/client";
 import type { KitDefinition } from "@/modules/kits/definition";
 import { kitDefinition as kitDefinitionSchema } from "@/modules/kits/definition";
-import { expandKit, type ConceptForKit } from "@/modules/kits/formulas";
+import { expandKit, slotTypeOf, type ConceptForKit } from "@/modules/kits/formulas";
 import { calculateQuote } from "@/modules/quotes/calculation";
 
 const concept = (id: string, categoryId: string, price: string | null, active = true): ConceptForKit => ({
@@ -139,4 +139,85 @@ test("medida modificada 0 deja fuera el material sin error", () => {
 test("k_<slot> se ignora en materiales con cantidad escrita", () => {
   const x = expandKit(BOMBA_DEF, { quantity: "2", params: { distancia: "10", k_c1: "9" }, choices: { main: "bomba", c1: "manguera" } }, CONCEPTS);
   expect(x.lines.map((l) => [l.slot, l.quantity.toFixed(0)])).toEqual([["main", "2"], ["c1", "20"]]);
+});
+
+// Conjuntos dinámicos (plan 2026-11-25, tarea 2).
+const DYN_CONCEPTS = new Map([
+  ...CONCEPTS,
+  ["cpu", concept("cpu", "cat-cpu", "800")],
+  ["im", concept("im", "cat-im", "300")],
+  ["di8", concept("di8", "cat-di", "50")],
+  ["di16", concept("di16", "cat-di", "70")],
+  ["dioff", concept("dioff", "cat-di", "50", false)],
+  ["f1", concept("f1", "cat-safety", "200")],
+]);
+const ED = { key: "t1", label: "Entradas digitales", abbr: "ED", red: false, variants: { categoryId: "cat-di" } };
+const SAFETY = { key: "t2", label: "Safety", abbr: "F", red: true, variants: { conceptIds: ["f1"] } };
+const SUELTO: KitDefinition = { kind: "dynamic", params: [], components: [], slotTypes: [ED, SAFETY] };
+const PERIFERIA: KitDefinition = {
+  kind: "dynamic", main: { conceptId: "im", label: "Cabecera" }, params: [], slotTypes: [ED],
+  components: [{ slot: "c1", label: "Bastidor", ref: { conceptId: "cuadro" }, required: true, formula: { type: "FIXED", k: "1" } }],
+};
+const plc = (dyn: Partial<NonNullable<KitDefinition["dynamics"]>[number]> = {}): KitDefinition => ({
+  main: { conceptId: "cpu", label: "CPU" }, params: [],
+  components: [{ slot: "c1", label: "Manguera", ref: { conceptId: "manguera" }, required: true, formula: { type: "FIXED", k: "1" } }],
+  dynamics: [{ slot: "d1", label: "Periferia", choice: { templateId: "tpl-et" }, optional: false, copies: { "tpl-et": { name: "ET", definition: PERIFERIA } }, ...dyn }],
+});
+const slot = (id: string, type: string, conceptId: string | null, quantity = "1", group = "self") => ({ id, group, type, conceptId, quantity });
+const keys = (x: ReturnType<typeof expandKit>) => x.lines.map((l) => [l.slot, l.quantity.toFixed()]);
+
+test("un dinámico suelto sin principal solo lleva sus slots", () => {
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("a", "t1", "di8", "3"), slot("b", "t2", "f1")] }, DYN_CONCEPTS);
+  expect(x.missing).toEqual([]);
+  expect(keys(x)).toEqual([["s:a", "3"], ["s:b", "1"]]);
+});
+
+test("un PLC con dinámico fijo coloca su principal, sus fijos y sus slots tras los materiales", () => {
+  const x = expandKit(plc(), { quantity: "2", params: {}, choices: { d1: "tpl-et" }, slots: [slot("a", "t1", "di8", "2", "d1")] }, DYN_CONCEPTS);
+  expect(x.missing).toEqual([]);
+  expect(keys(x)).toEqual([["main", "2"], ["c1", "1"], ["d1/main", "1"], ["d1/c1", "1"], ["d1/s:a", "2"]]);
+});
+
+test("los slots salen en el orden de los tipos y luego en el de alta", () => {
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("x", "t2", "f1"), slot("y", "t1", "di8"), slot("z", "t1", "di16")] }, DYN_CONCEPTS);
+  expect(x.lines.map((l) => l.slot)).toEqual(["s:y", "s:z", "s:x"]);
+});
+
+test("un dinámico opcional sin colocar no falta; uno obligatorio sí", () => {
+  expect(expandKit(plc({ optional: true }), { quantity: "1", params: {}, choices: {} }, DYN_CONCEPTS).missing).toEqual([]);
+  expect(expandKit(plc(), { quantity: "1", params: {}, choices: {} }, DYN_CONCEPTS).missing).toEqual(["Falta Periferia"]);
+  expect(expandKit(plc({ choice: { templateIds: ["tpl-et", "tpl-b"] } }), { quantity: "1", params: {}, choices: {} }, DYN_CONCEPTS).missing).toEqual(["Falta elegir Periferia"]);
+});
+
+test("elegir dinámico: uno fuera de la lista no cuenta", () => {
+  const d = plc({ choice: { templateIds: ["tpl-et", "tpl-b"] } });
+  expect(expandKit(d, { quantity: "1", params: {}, choices: { d1: "otro" } }, DYN_CONCEPTS).missing).toEqual(["Falta elegir Periferia"]);
+  expect(expandKit(d, { quantity: "1", params: {}, choices: { d1: "tpl-b" } }, DYN_CONCEPTS).missing).toEqual(["Periferia ya no está disponible"]);
+});
+
+test("slot sin variante, con cantidad 0 o con un artículo que no es variante deja el conjunto incompleto y sin líneas", () => {
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("a", "t1", null), slot("b", "t1", "di8", "0"), slot("c", "t1", "manguera"), slot("d", "t2", "f1")] }, DYN_CONCEPTS);
+  expect(x.lines).toEqual([]);
+  expect(x.missing).toEqual(["Falta elegir la variante en Entradas digitales", "Entradas digitales: cantidad no válida", "Entradas digitales: manguera no es una variante válida"]);
+});
+
+test("variante por categoría acepta cualquier artículo de esa categoría", () => {
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("a", "t1", "di16", "1,5")] }, DYN_CONCEPTS);
+  expect(keys(x)).toEqual([["s:a", "1.5"]]);
+});
+
+test("una variante desactivada deja el conjunto incompleto", () => {
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("a", "t1", "dioff")] }, DYN_CONCEPTS);
+  expect(x.missing).toEqual(["Entradas digitales ya no está disponible"]);
+});
+
+test("un slot de un dinámico no colocado o de un tipo que ya no existe se ignora", () => {
+  const x = expandKit(SUELTO, { quantity: "1", params: {}, choices: {}, slots: [slot("a", "t9", "di8"), slot("b", "t1", "di8", "1", "d1")] }, DYN_CONCEPTS);
+  expect(x).toEqual({ lines: [], missing: [] });
+});
+
+test("slotTypeOf lee el tipo propio o el de la copia del dinámico elegido", () => {
+  expect(slotTypeOf(SUELTO, {}, "self", "t2")?.label).toBe("Safety");
+  expect(slotTypeOf(plc(), { d1: "tpl-et" }, "d1", "t1")?.label).toBe("Entradas digitales");
+  expect(slotTypeOf(plc(), {}, "d1", "t1")).toBeUndefined();
 });

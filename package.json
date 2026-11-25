@@ -1,6 +1,6 @@
 {
   "name": "presupuestos-isf",
-  "version": "1.9.20",
+  "version": "1.9.21",
   "private": true,
   "packageManager": "pnpm@12.18.0",
   "scripts": {
