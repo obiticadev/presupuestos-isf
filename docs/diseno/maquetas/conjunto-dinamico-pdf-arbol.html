@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conjunto con dinámicos: PDF y árbol</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../../src/app/globals.css">
+<style>
+:root{--font-archivo:"Archivo"}
+body{padding:24px;max-width:1280px;margin:0 auto;background:var(--paper)}
+h1{font-size:30px}
+.intro{max-width:880px;font-size:14px;margin:8px 0 0}
+.intro li{margin-left:18px}
+.lbl{font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin:48px 0 10px;border-top:1.5px solid var(--ink);padding-top:10px}
+.variant{font-size:20px;font-weight:800;margin:0 0 4px}
+.why{font-size:13px;color:var(--mut);margin:0 0 12px;max-width:900px}
+.why b{color:var(--ink)}
+
+/* ================= PDF (mismas medidas que src/pdf/templates/v1/styles.ts) ================= */
+.pdfs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px 24px}
+.pdfs .page{zoom:.76}
+.page{width:210mm;max-width:100%;background:#fff;padding:12mm 18mm;box-shadow:0 2px 10px rgba(15,31,29,.18);font-family:Archivo,sans-serif;color:var(--ink);font-size:10pt;line-height:1.4;font-variant-numeric:tabular-nums}
+.page .hdr{display:flex;justify-content:space-between;align-items:end;border-bottom:1.5pt solid var(--green);padding-bottom:2mm;font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;color:var(--green);font-weight:700}
+.page .hdr small{display:block;color:var(--mut);font-size:6.5pt}
+.page .hdr b{color:var(--ink);font-size:9pt;letter-spacing:.04em}
+.page .client{color:var(--mut);font-size:9pt;margin-top:4mm}
+.page h3{text-transform:none;letter-spacing:0;color:var(--ink);margin:0;font-size:14pt;font-weight:800;font-stretch:88%;padding-bottom:2.5mm;border-bottom:.75pt solid #c9d1cb}
+.page table{width:100%;border-collapse:collapse;margin-top:3mm}
+.page thead th{font-size:7.5pt;letter-spacing:.12em;text-transform:uppercase;text-align:left;border-bottom:1.5pt solid var(--ink);padding:1.4mm 1.5mm}
+.page td{padding:.7mm 1.5mm;line-height:1.2;border-bottom:.5pt solid #c9d1cb;vertical-align:top}
+.page .n{text-align:right;white-space:nowrap}
+.page .p{width:14mm;font-weight:700}
+.page .qty,.page .tot{width:28mm}
+.page tr.part td{background:#eef1ee;font-weight:800;text-transform:uppercase;font-size:9.5pt;padding-top:1.1mm;padding-bottom:1.1mm}
+.page tr.sub td{font-weight:700}
+.page tr.line td:nth-child(2){padding-left:6mm}
+/* A1 actual */
+.page tr.ghd td{border-bottom:0;padding-top:2mm}
+.page tr.ghd td:nth-child(2){padding-left:6mm}
+.page .gt{display:flex;align-items:center;gap:1.5mm;font-weight:700;font-size:10.5pt;letter-spacing:.08em;text-transform:uppercase;color:var(--green)}
+.page .gt::after{content:"";flex:1;border-top:.75pt solid var(--green)}
+.page tr.in td{border-bottom:0}
+.page tr.in td:nth-child(2){padding-left:10mm;position:relative}
+.page tr.in td:nth-child(2)::before{content:"";position:absolute;left:7.5mm;top:0;bottom:0;border-left:1.25pt solid var(--green)}
+.page tr.in.lst td{border-bottom:.5pt solid #c9d1cb}
+/* Variante B: título del conjunto y ramas de esquema */
+.page tr.kt td{font-weight:700;padding-top:1.6mm}
+.page tr.kt td:nth-child(2){padding-left:6mm}
+.page tr.kt small{font-weight:400;color:var(--mut);margin-left:2mm}
+.page tr.br td{border-bottom:0}
+.page tr.br td:nth-child(2){padding-left:12mm;position:relative}
+.page tr.br td:nth-child(2)::before{content:"";position:absolute;left:8mm;top:0;bottom:0;border-left:.75pt solid var(--ink)}
+.page tr.br td:nth-child(2)::after{content:"";position:absolute;left:8mm;top:2.6mm;width:2.6mm;border-top:.75pt solid var(--ink)}
+.page tr.br.ge td:nth-child(2)::before{bottom:auto;height:2.6mm}
+.page tr.br.ge td{border-bottom:.5pt solid #c9d1cb}
+.page tr.br.gd td{font-weight:700;color:var(--green)}
+.page tr.br.g2 td:nth-child(2){padding-left:18mm}
+.page tr.br.g2 td:nth-child(2)::before{left:8mm;bottom:0;height:auto}
+.page tr.br.g2 td:nth-child(2) i{position:absolute;left:14mm;top:0;bottom:0;border-left:.75pt solid var(--green)}
+.page tr.br.g2 td:nth-child(2) i::after{content:"";position:absolute;left:0;top:2.6mm;width:2.6mm;border-top:.75pt solid var(--green)}
+.page tr.br.g2 td:nth-child(2)::after{display:none}
+.page tr.br.g2.gi td:nth-child(2) i{bottom:auto;height:2.6mm}
+.page tr.br.g2.last td:nth-child(2)::before{display:none}
+.page tr.br.g2.last td{border-bottom:.5pt solid #c9d1cb}
+/* Variante C: subtotal por dinámico */
+.page tr.gsub td{font-weight:700;padding-top:1.6mm;border-bottom:.5pt solid var(--green)}
+.page tr.gsub td:nth-child(2){padding-left:6mm;color:var(--green)}
+.page tr.gsub td.n{color:var(--green)}
+.page tr.gin td:nth-child(2){padding-left:11mm}
+/* Variante D: resumen en una línea */
+.page tr.sum td{padding-top:1.2mm;padding-bottom:1.2mm}
+.page tr.sum td:nth-child(2){padding-left:6mm}
+.page tr.sum b{display:block}
+.page tr.sum span{display:block;color:var(--mut);font-size:8.5pt}
+.note{font-size:12px;color:var(--mut);margin-top:6px}
+
+/* ================= Borrador: un solo árbol para vista y edición ================= */
+.mode{display:inline-flex;border:1.5px solid var(--ink);margin:0 0 10px}
+.mode button{font:600 13px var(--font-archivo),sans-serif;border:0;background:var(--sheet);color:var(--ink);padding:0 14px;min-height:34px;cursor:pointer}
+.mode button+button{border-left:1.5px solid var(--ink)}
+.mode button[aria-pressed=true]{background:var(--ink);color:#fff}
+.mode small{align-self:center;padding:0 12px;font-size:12px;color:var(--mut)}
+.k{border:1.5px solid var(--ink);background:var(--sheet)}
+.khead{display:flex;align-items:center;gap:12px;padding:10px 12px;border-bottom:1px solid var(--rule)}
+.khead b{font-size:14px;letter-spacing:.06em;text-transform:uppercase}
+.khead .sum{flex:1;font-size:13px;color:var(--mut);min-width:0}
+.khead .tot{font-weight:800;font-size:15px}
+.sym{display:inline-flex;align-items:center}
+.sym .bx{border:1.5px solid var(--ink);font-size:10px;font-weight:800;padding:1px 3px}
+.sym .w{width:10px;border-top:1.5px solid var(--ink)}
+.sym .sq{width:10px;height:10px;background:var(--green)}
+.sym .dsq{width:10px;height:10px;border:1.5px dashed var(--green);background:var(--band)}
+.kfoot{display:flex;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid var(--rule);font-size:13px}
+.kfoot .r{margin-left:auto;display:flex;gap:8px}
+.k:not(.ed) .edonly{display:none!important}
+.ed .viewonly{display:none!important}
+
+/* B1: árbol con las columnas de la subpartida */
+.t1{display:grid;grid-template-columns:210px minmax(0,1fr) 108px 74px 92px 206px;column-gap:10px;padding:8px 12px 12px;align-items:center}
+.t1 .r{display:contents}
+.t1 .r>*{padding:4px 0;min-height:40px;display:flex;align-items:center}
+.t1 .hd>*{min-height:0;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700;border-bottom:1.5px solid var(--ink);padding:6px 0}
+.t1 .num{justify-content:flex-end;font-variant-numeric:tabular-nums;font-size:14px}
+.t1 .amt{font-weight:600}
+.nm{position:relative;gap:6px;font-size:13px;font-weight:600;min-width:0}
+.nm span.t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pf{font-size:10px;font-weight:800;border:1.5px solid var(--green);color:var(--green);padding:1px 5px;letter-spacing:.04em;flex:none;background:var(--sheet)}
+.pf.f{background:var(--green);color:#fff}
+.pf.off{border-color:var(--rule);color:var(--mut)}
+.pf.red{border-color:var(--red);color:var(--red)}
+/* ramas */
+.l1{padding-left:24px!important}
+.l2{padding-left:52px!important}
+.l1::before,.l2::before{content:"";position:absolute;top:0;bottom:0;border-left:1.5px solid var(--ink)}
+.l1::before{left:9px}
+.l2::before{left:37px;border-color:var(--green)}
+.l1::after,.l2::after{content:"";position:absolute;top:50%;width:11px;border-top:1.5px solid var(--ink)}
+.l1::after{left:9px}.l2::after{left:37px;border-color:var(--green)}
+.l1.end::before,.l2.end::before{bottom:50%}
+.l2.thru{box-shadow:inset 10.5px 0 0 -9px var(--ink)}
+.cell{width:100%;min-width:0;font:400 14px var(--font-archivo),sans-serif;color:var(--ink);border:1.5px solid transparent;background:transparent;padding:0 10px;height:38px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.cell .cx{color:var(--mut);font-size:13px;visibility:hidden}
+.cell.q{justify-content:flex-end;gap:4px}
+.cell.q u{text-decoration:none;color:var(--mut);font-size:12px}
+.cell.lock{color:var(--mut)}
+.cell .tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ed .cell{border-color:var(--ink);background:var(--sheet)}
+.ed .cell .cx{visibility:visible}
+.ed .cell.lock{border-style:dashed;border-color:var(--mut);background:var(--paper)}
+.ed .cell.lock .cx{visibility:hidden}
+.acts{gap:4px;justify-content:flex-end}
+.ic{display:inline-grid;place-items:center;min-width:32px;height:32px;border:1.5px solid var(--ink);background:var(--sheet);font-size:12px;font-weight:700;padding:0 6px;cursor:pointer}
+.ic.on{background:var(--ink);color:#fff}
+.ic.ghost{border-color:transparent}
+.ck{display:inline-flex;gap:4px;align-items:center;font-size:12px;font-weight:600}
+.ck i{width:15px;height:15px;background:var(--green);display:inline-block}
+.dynrow{background:#f1f7f5}
+.dynrow>*{border-top:1px solid #cfe2dc}
+.addrow .ad{border:1.5px dashed var(--ink);background:transparent;color:var(--mut);font:600 13px var(--font-archivo),sans-serif;height:32px;padding:0 10px;margin-right:6px;cursor:pointer}
+.addrow .ad.red{border-color:var(--red);color:var(--red)}
+.addrow .ad.g{border-color:var(--green);color:var(--green)}
+.addrow>*{min-height:0!important}
+.cmt{grid-column:2/-1;font-size:12px;color:var(--mut);font-style:italic;padding:0 0 6px 10px!important;min-height:0!important}
+
+/* B2: denominación en árbol, columnas de la tabla y opciones en «⋯» */
+.t2{display:grid;grid-template-columns:minmax(0,1fr) 108px 74px 92px 40px;column-gap:10px;padding:8px 12px 12px}
+.t2 .r{display:contents}
+.t2 .r>*{padding:3px 0;min-height:38px;display:flex;align-items:center;border-bottom:1px solid var(--rule)}
+.t2 .hd>*{min-height:0;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:700;border-bottom:1.5px solid var(--ink);padding:6px 0}
+.t2 .num{justify-content:flex-end;font-variant-numeric:tabular-nums;font-size:14px}
+.t2 .den{gap:8px;position:relative;min-width:0}
+.t2 .den .lab{font-size:12px;color:var(--mut);width:118px;flex:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t2 .den .cell{flex:1}
+.t2 .grp>*{border-bottom:1px solid var(--green);background:#f1f7f5}
+.t2 .grp .den b{color:var(--green);font-size:13px;letter-spacing:.06em;text-transform:uppercase}
+.t2 .grp .num{color:var(--green);font-weight:700}
+.t2 .dots{justify-content:center}
+.t2 .dots>button{border:0!important;background:none!important;padding:0!important;min-height:0!important;font-size:18px;line-height:1;cursor:pointer;color:var(--mut);width:32px;height:32px}
+.t2 .dots button:hover{background:var(--band);color:var(--ink)}
+.t2 .haspop{position:relative}
+.t2 .pop{position:absolute;right:0;top:36px;z-index:3;background:var(--sheet);border:1.5px solid var(--ink);display:block;width:210px;font-size:13px;box-shadow:0 6px 16px rgba(15,31,29,.16)}
+.t2 .pop label,.t2 .pop button{width:100%;min-height:0;color:var(--ink);font-weight:500;display:flex;gap:8px;align-items:center;padding:8px 10px;border:0;border-top:1px solid var(--rule);background:none;font:inherit;text-align:left;cursor:pointer}
+.t2 .pop>:first-child{border-top:0}
+.t2 .agg{font-size:12px;color:var(--mut);margin-left:6px}
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:8px}
+</style>
+</head>
+<body>
+
+<h1>Conjunto con conjuntos dinámicos: PDF y borrador</h1>
+<div class="intro">
+<p>Ejemplo único para todas las variantes: el conjunto <b>PLC</b> (principal CPU 1513-1 PN, manguera y horas de programador) lleva dentro dos conjuntos dinámicos:</p>
+<ul>
+<li><b>Periferia descentralizada</b>: <em>con principal</em> (cabecera IM 155-6 PN), un material fijo y 4 + 2 slots.</li>
+<li><b>Tarjetas locales</b>: <em>sin principal</em>, solo slots (2 entradas digitales y 1 analógica).</li>
+</ul>
+<p class="mut" style="font-size:12px;margin-top:6px">Precios y artículos ilustrativos. Total del conjunto: 2.280,00 €.</p>
+</div>
+
+<!-- =============================== PDF =============================== -->
+<div class="lbl">1 · PDF: hoja de partidas</div>
+
+<div class="pdfs">
+<div>
+<p class="variant">P1 · A1, como está hoy</p>
+<p class="why">Cada dinámico es un título verde con filete y sus líneas cuelgan de un filete vertical. <b>Problema:</b> el conjunto en sí no tiene título, y cada slot es una línea, así que «Entrada digital» sale repetida 4 veces.</p>
+<div class="page">
+<div class="hdr"><span>Instalaciones eléctricas · Automatización y control</span><span style="text-align:right"><small>Referencia</small><b>PR-2026001008-R00</b></span></div>
+<p class="client">Talleres Demostración, S.L.</p><h3>Automatización de la línea 2</h3>
+<table><thead><tr><th class="p">P</th><th>Denominación</th><th class="qty n">Cantidad</th><th class="tot n">Total</th></tr></thead><tbody>
+<tr class="part"><td>1</td><td>Cuadro de control</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="sub"><td>1.1</td><td>Autómata</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="line"><td></td><td>CPU 1513-1 PN</td><td class="n">1 ud</td><td></td></tr>
+<tr class="line"><td></td><td>Manguera 12 hilos x 0,75 mm²</td><td class="n">2 m</td><td></td></tr>
+<tr class="line"><td></td><td>Hora de programador</td><td class="n">12 h</td><td></td></tr>
+<tr class="ghd"><td></td><td><span class="gt">Periferia descentralizada</span></td><td></td><td></td></tr>
+<tr class="in"><td></td><td>Cabecera IM 155-6 PN</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in"><td></td><td>Manguera 4 hilos x 2,5 mm²</td><td class="n">1 m</td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in"><td></td><td>Salida digital 16 DO</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in lst"><td></td><td>Salida digital 16 DO</td><td class="n">1 ud</td><td></td></tr>
+<tr class="ghd"><td></td><td><span class="gt">Tarjetas locales</span></td><td></td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">1 ud</td><td></td></tr>
+<tr class="in lst"><td></td><td>Entrada analógica 8 AI</td><td class="n">1 ud</td><td></td></tr>
+</tbody></table>
+</div>
+</div>
+
+<div>
+<p class="variant">P2 · A1 agrupado</p>
+<p class="why">Igual que hoy, pero <b>los artículos iguales de un mismo grupo se suman</b> en una línea («4 ud»), y la cabecera del dinámico <em>con principal</em> va en el propio título. El dinámico <em>sin principal</em> solo lleva su nombre.</p>
+<div class="page">
+<div class="hdr"><span>Instalaciones eléctricas · Automatización y control</span><span style="text-align:right"><small>Referencia</small><b>PR-2026001008-R00</b></span></div>
+<p class="client">Talleres Demostración, S.L.</p><h3>Automatización de la línea 2</h3>
+<table><thead><tr><th class="p">P</th><th>Denominación</th><th class="qty n">Cantidad</th><th class="tot n">Total</th></tr></thead><tbody>
+<tr class="part"><td>1</td><td>Cuadro de control</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="sub"><td>1.1</td><td>Autómata</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="line"><td></td><td>CPU 1513-1 PN</td><td class="n">1 ud</td><td></td></tr>
+<tr class="line"><td></td><td>Manguera 12 hilos x 0,75 mm²</td><td class="n">2 m</td><td></td></tr>
+<tr class="line"><td></td><td>Hora de programador</td><td class="n">12 h</td><td></td></tr>
+<tr class="ghd"><td></td><td><span class="gt">Periferia descentralizada · IM 155-6 PN</span></td><td class="n">1 ud</td><td></td></tr>
+<tr class="in"><td></td><td>Manguera 4 hilos x 2,5 mm²</td><td class="n">1 m</td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">4 ud</td><td></td></tr>
+<tr class="in lst"><td></td><td>Salida digital 16 DO</td><td class="n">2 ud</td><td></td></tr>
+<tr class="ghd"><td></td><td><span class="gt">Tarjetas locales</span></td><td></td><td></td></tr>
+<tr class="in"><td></td><td>Entrada digital 16 DI</td><td class="n">2 ud</td><td></td></tr>
+<tr class="in lst"><td></td><td>Entrada analógica 8 AI</td><td class="n">1 ud</td><td></td></tr>
+</tbody></table>
+</div>
+</div>
+
+<div>
+<p class="variant">P3 · Esquema unifilar</p>
+<p class="why">El conjunto tiene título (su principal) y todo cuelga de él en ramas finas en tinta: es el mismo dibujo que el árbol del borrador. Los dinámicos son ramas verdes de segundo nivel. Agrupado como P2.</p>
+<div class="page">
+<div class="hdr"><span>Instalaciones eléctricas · Automatización y control</span><span style="text-align:right"><small>Referencia</small><b>PR-2026001008-R00</b></span></div>
+<p class="client">Talleres Demostración, S.L.</p><h3>Automatización de la línea 2</h3>
+<table><thead><tr><th class="p">P</th><th>Denominación</th><th class="qty n">Cantidad</th><th class="tot n">Total</th></tr></thead><tbody>
+<tr class="part"><td>1</td><td>Cuadro de control</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="sub"><td>1.1</td><td>Autómata</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="kt"><td></td><td>CPU 1513-1 PN</td><td class="n">1 ud</td><td></td></tr>
+<tr class="br"><td></td><td>Manguera 12 hilos x 0,75 mm²</td><td class="n">2 m</td><td></td></tr>
+<tr class="br"><td></td><td>Hora de programador</td><td class="n">12 h</td><td></td></tr>
+<tr class="br gd"><td></td><td>Periferia descentralizada · IM 155-6 PN</td><td class="n">1 ud</td><td></td></tr>
+<tr class="br g2"><td></td><td><i></i>Manguera 4 hilos x 2,5 mm²</td><td class="n">1 m</td><td></td></tr>
+<tr class="br g2"><td></td><td><i></i>Entrada digital 16 DI</td><td class="n">4 ud</td><td></td></tr>
+<tr class="br g2 gi"><td></td><td><i></i>Salida digital 16 DO</td><td class="n">2 ud</td><td></td></tr>
+<tr class="br gd ge"><td></td><td>Tarjetas locales</td><td></td><td></td></tr>
+<tr class="br g2 last"><td></td><td><i></i>Entrada digital 16 DI</td><td class="n">2 ud</td><td></td></tr>
+<tr class="br g2 last gi"><td></td><td><i></i>Entrada analógica 8 AI</td><td class="n">1 ud</td><td></td></tr>
+</tbody></table>
+</div>
+</div>
+
+<div>
+<p class="variant">P4 · Bloques con subtotal</p>
+<p class="why">Cada dinámico es un bloque con su <b>importe</b> en la columna Total, como una subpartida pequeña. Sirve si el cliente quiere ver cuánto cuesta la periferia aparte. Agrupado como P2.</p>
+<div class="page">
+<div class="hdr"><span>Instalaciones eléctricas · Automatización y control</span><span style="text-align:right"><small>Referencia</small><b>PR-2026001008-R00</b></span></div>
+<p class="client">Talleres Demostración, S.L.</p><h3>Automatización de la línea 2</h3>
+<table><thead><tr><th class="p">P</th><th>Denominación</th><th class="qty n">Cantidad</th><th class="tot n">Total</th></tr></thead><tbody>
+<tr class="part"><td>1</td><td>Cuadro de control</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="sub"><td>1.1</td><td>Autómata</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="line"><td></td><td>CPU 1513-1 PN</td><td class="n">1 ud</td><td></td></tr>
+<tr class="line"><td></td><td>Manguera 12 hilos x 0,75 mm²</td><td class="n">2 m</td><td></td></tr>
+<tr class="line"><td></td><td>Hora de programador</td><td class="n">12 h</td><td></td></tr>
+<tr class="gsub"><td></td><td>Periferia descentralizada · IM 155-6 PN</td><td class="n">1 ud</td><td class="n">630,00 €</td></tr>
+<tr class="line gin"><td></td><td>Manguera 4 hilos x 2,5 mm²</td><td class="n">1 m</td><td></td></tr>
+<tr class="line gin"><td></td><td>Entrada digital 16 DI</td><td class="n">4 ud</td><td></td></tr>
+<tr class="line gin"><td></td><td>Salida digital 16 DO</td><td class="n">2 ud</td><td></td></tr>
+<tr class="gsub"><td></td><td>Tarjetas locales</td><td></td><td class="n">220,00 €</td></tr>
+<tr class="line gin"><td></td><td>Entrada digital 16 DI</td><td class="n">2 ud</td><td></td></tr>
+<tr class="line gin"><td></td><td>Entrada analógica 8 AI</td><td class="n">1 ud</td><td></td></tr>
+</tbody></table>
+</div>
+<p class="note">Ojo: hoy el PDF solo da importes por partida y subpartida. Este sería el primer importe por debajo.</p>
+</div>
+
+<div>
+<p class="variant">P5 · Resumen en una línea</p>
+<p class="why">Lo más corto: cada dinámico es <b>una sola línea</b> con su nombre y, debajo en gris, lo que lleva. No se ven cantidades por artículo en la columna Cantidad.</p>
+<div class="page">
+<div class="hdr"><span>Instalaciones eléctricas · Automatización y control</span><span style="text-align:right"><small>Referencia</small><b>PR-2026001008-R00</b></span></div>
+<p class="client">Talleres Demostración, S.L.</p><h3>Automatización de la línea 2</h3>
+<table><thead><tr><th class="p">P</th><th>Denominación</th><th class="qty n">Cantidad</th><th class="tot n">Total</th></tr></thead><tbody>
+<tr class="part"><td>1</td><td>Cuadro de control</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="sub"><td>1.1</td><td>Autómata</td><td></td><td class="n">2.280,00 €</td></tr>
+<tr class="line"><td></td><td>CPU 1513-1 PN</td><td class="n">1 ud</td><td></td></tr>
+<tr class="line"><td></td><td>Manguera 12 hilos x 0,75 mm²</td><td class="n">2 m</td><td></td></tr>
+<tr class="line"><td></td><td>Hora de programador</td><td class="n">12 h</td><td></td></tr>
+<tr class="sum"><td></td><td><b>Periferia descentralizada</b><span>Cabecera IM 155-6 PN, 1 m de manguera 4 hilos x 2,5 mm², 4 × entrada digital 16 DI y 2 × salida digital 16 DO</span></td><td class="n">1 ud</td><td></td></tr>
+<tr class="sum"><td></td><td><b>Tarjetas locales</b><span>2 × entrada digital 16 DI y 1 × entrada analógica 8 AI</span></td><td class="n">1 ud</td><td></td></tr>
+</tbody></table>
+</div>
+</div>
+</div>
+
+<!-- =============================== BORRADOR =============================== -->
+<div class="lbl">2 · Borrador: un solo árbol para ver y para editar</div>
+<p class="why" style="max-width:980px">Hoy el conjunto abierto enseña <b>dos veces lo mismo</b>: arriba la lista de líneas con precios y casillas, y abajo el árbol para cambiar artículos. Las dos variantes quitan la lista: el árbol lleva ya cantidad, precio e importe. Pulsa <b>Vista / Edición</b> para ver qué cambia al pasar de una a otra: solo aparecen los bordes de los campos y los botones; nada se mueve de sitio.</p>
+
+<p class="variant">B1 · Árbol con columnas</p>
+<p class="why">Columnas fijas: elemento (rama) · artículo · cantidad · precio · importe · opciones. Ver, Cant., € y comentario siguen a la vista en cada fila, como hoy. Los dinámicos son filas verdes con su subtotal.</p>
+<div class="mode" data-for="b1"><button aria-pressed="true">Vista</button><button aria-pressed="false">Edición</button><small>Vista = conjunto plegado o presupuesto emitido</small></div>
+<div class="k" id="b1">
+  <div class="khead"><span>▾</span><span class="sym"><span class="bx">PL</span><span class="w"></span><span class="sq"></span><span class="w"></span><span class="sq"></span></span><b>Conjunto · PLC</b><span class="sum">1 × CPU 1513-1 PN · periferia con 6 slots · 3 tarjetas locales</span><span class="tot">2.280,00 €</span></div>
+  <div class="t1">
+    <div class="r hd"><span>Elemento</span><span>Artículo</span><span style="justify-content:flex-end">Cantidad</span><span style="justify-content:flex-end">Precio</span><span style="justify-content:flex-end">Importe</span><span></span></div>
+
+    <div class="r"><span class="nm"><span class="pf">PLC</span><span class="t">Principal</span></span><span><span class="cell"><span class="tx">CPU-1513 · CPU 1513-1 PN</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">1 <u>ud</u></span></span><span class="num">800,00</span><span class="num amt">800,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span></span></div>
+    <div class="r"><span class="nm l1"><span class="pf">MAN</span><span class="t">Mangueras</span></span><span><span class="cell lock"><span class="tx">MAN-12X075 · Manguera 12 hilos x 0,75 mm²</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">2 <u>m</u></span></span><span class="num">15,00</span><span class="num amt">30,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span></span></div>
+    <div class="r"><span class="nm l1"><span class="pf off">SER</span><span class="t">Hora de programador</span></span><span><span class="cell lock"><span class="tx">SER-PROG · Hora de programador</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">12 <u>h</u></span></span><span class="num">50,00</span><span class="num amt">600,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span></span></div>
+
+    <div class="r dynrow"><span class="nm l1"><span class="pf f">PE</span><span class="t">Periferia descentralizada</span></span><span><span class="cell"><span class="tx">IM155-6 · Cabecera IM 155-6 PN</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">1 <u>ud</u></span></span><span class="num">300,00</span><span class="num amt" style="color:var(--green)">630,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span></span></div>
+    <div class="r"><span class="nm l2 thru"><span class="pf">MAN</span><span class="t">Mangueras</span></span><span><span class="cell lock"><span class="tx">MAN-4X25 · Manguera 4 hilos x 2,5 mm²</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">1 <u>m</u></span></span><span class="num">10,00</span><span class="num amt">10,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span></span></div>
+    <div class="r"><span class="nm l2 thru"><span class="pf">ED</span><span class="t">Entradas digitales</span></span><span><span class="cell"><span class="tx">DI16 · Entrada digital 16 DI</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">4 <u>ud</u></span></span><span class="num">50,00</span><span class="num amt">200,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span><span class="edonly ic">✕</span></span></div>
+    <div class="r"><span class="nm l2 thru"><span class="pf red">SD</span><span class="t">Salidas digitales</span></span><span><span class="cell"><span class="tx">DO16 · Salida digital 16 DO</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">2 <u>ud</u></span></span><span class="num">60,00</span><span class="num amt">120,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span><span class="edonly ic">✕</span></span></div>
+    <div class="r addrow edonly"><span class="nm l2 thru" style="color:var(--mut);font-weight:400">Añadir slot</span><span style="grid-column:2/-1"><button class="ad g">+ Entradas digitales</button><button class="ad red">+ Salidas digitales</button></span></div>
+
+    <div class="r dynrow"><span class="nm l1 end"><span class="pf f">TL</span><span class="t">Tarjetas locales</span></span><span><span class="cell lock" style="border-color:transparent;background:none"><span class="tx" style="color:var(--mut)">Sin principal</span></span></span><span class="num"></span><span class="num"></span><span class="num amt" style="color:var(--green)">220,00 €</span><span class="acts"></span></div>
+    <div class="r"><span class="nm l2"><span class="pf">ED</span><span class="t">Entradas digitales</span></span><span><span class="cell"><span class="tx">DI16 · Entrada digital 16 DI</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">2 <u>ud</u></span></span><span class="num">50,00</span><span class="num amt">100,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span><span class="edonly ic">✕</span></span></div>
+    <div class="r"><span class="nm l2"><span class="pf">AI</span><span class="t">Entradas analógicas</span></span><span><span class="cell"><span class="tx">AI8 · Entrada analógica 8 AI</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">1 <u>ud</u></span></span><span class="num">120,00</span><span class="num amt">120,00 €</span><span class="acts"><span class="edonly ck"><i></i>Ver</span><span class="edonly ck"><i></i>Cant.</span><span class="edonly ic">€</span><span class="ic ghost">▭</span><span class="edonly ic">✕</span></span></div>
+    <span class="cmt">Comentario de la línea: «Tarjeta en el hueco 3 del bastidor».</span>
+    <div class="r addrow edonly"><span class="nm l2 end" style="color:var(--mut);font-weight:400">Añadir slot</span><span style="grid-column:2/-1"><button class="ad g">+ Entradas digitales</button><button class="ad">+ Entradas analógicas</button></span></div>
+  </div>
+  <div class="kfoot"><span class="mut">800 + 30 + 600 + 630 + 220 = <b style="color:var(--ink)">2.280,00 €</b></span><span class="r"><span class="edonly btn" style="min-height:34px">Cambiar conjunto</span><span class="edonly ic" title="Quitar conjunto">✕</span></span></div>
+</div>
+<p class="why" style="margin-top:8px">La cantidad 4 de «Entradas digitales» sustituye a las cuatro filas iguales de hoy: un slot con cantidad, no cuatro slots. Si hace falta mezclar artículos distintos del mismo tipo, «+ Entradas digitales» añade otra fila.</p>
+
+<p class="variant" style="margin-top:36px">B2 · Árbol dentro de la tabla, opciones en «⋯»</p>
+<p class="why">Mismas columnas que las líneas sueltas de la subpartida (Denominación · Cantidad · Precio · Importe), así el conjunto se lee como el resto del presupuesto. El tipo de slot va en gris a la izquierda del artículo. Ver, Cant., € y comentario pasan a un menú «⋯» por fila: menos ruido, un clic más.</p>
+<div class="mode" data-for="b2"><button aria-pressed="true">Vista</button><button aria-pressed="false">Edición</button><small>El «⋯» de la segunda fila está abierto como ejemplo</small></div>
+<div class="k" id="b2">
+  <div class="khead"><span>▾</span><span class="sym"><span class="bx">PL</span><span class="w"></span><span class="sq"></span><span class="w"></span><span class="sq"></span></span><b>Conjunto · PLC</b><span class="sum">1 × CPU 1513-1 PN · periferia con 6 slots · 3 tarjetas locales</span><span class="tot">2.280,00 €</span></div>
+  <div class="t2">
+    <div class="r hd"><span>Denominación</span><span style="justify-content:flex-end">Cantidad</span><span style="justify-content:flex-end">Precio</span><span style="justify-content:flex-end">Importe</span><span></span></div>
+    <div class="r"><span class="den"><span class="lab"><span class="pf">PLC</span> Principal</span><span class="cell"><span class="tx">CPU 1513-1 PN</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">1 <u>ud</u></span></span><span class="num">800,00</span><span class="num">800,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r"><span class="den"><span class="lab l1" style="padding-left:20px!important">Mangueras</span><span class="cell lock"><span class="tx">Manguera 12 hilos x 0,75 mm²</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">2 <u>m</u></span></span><span class="num">15,00</span><span class="num">30,00 €</span><span class="dots haspop"><button>⋯</button><span class="pop"><label><span class="ck"><i></i></span>Ver en el PDF</label><label><span class="ck"><i></i></span>Mostrar cantidad</label><button>€ Cambiar precio</button><button>▭ Comentario</button></span></span></div>
+    <div class="r"><span class="den"><span class="lab l1 end" style="padding-left:20px!important">Programación</span><span class="cell lock"><span class="tx">Hora de programador</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">12 <u>h</u></span></span><span class="num">50,00</span><span class="num">600,00 €</span><span class="dots"><button>⋯</button></span></div>
+
+    <div class="r grp"><span class="den"><b>Periferia descentralizada</b></span><span class="num"></span><span class="num"></span><span class="num">630,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r"><span class="den"><span class="lab">Cabecera</span><span class="cell"><span class="tx">Cabecera IM 155-6 PN</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">1 <u>ud</u></span></span><span class="num">300,00</span><span class="num">300,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r"><span class="den"><span class="lab">Mangueras</span><span class="cell lock"><span class="tx">Manguera 4 hilos x 2,5 mm²</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q lock">1 <u>m</u></span></span><span class="num">10,00</span><span class="num">10,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r"><span class="den"><span class="lab"><span class="pf">ED</span> Entradas dig.</span><span class="cell"><span class="tx">Entrada digital 16 DI</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">4 <u>ud</u></span></span><span class="num">50,00</span><span class="num">200,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r"><span class="den"><span class="lab"><span class="pf red">SD</span> Salidas dig.</span><span class="cell"><span class="tx">Salida digital 16 DO</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">2 <u>ud</u></span></span><span class="num">60,00</span><span class="num">120,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r addrow edonly"><span class="den" style="grid-column:1/-1"><span class="lab" style="color:var(--mut)">Añadir slot</span><button class="ad g">+ Entradas digitales</button><button class="ad red">+ Salidas digitales</button></span></div>
+
+    <div class="r grp"><span class="den"><b>Tarjetas locales</b><small class="mut" style="font-size:12px">sin principal</small></span><span class="num"></span><span class="num"></span><span class="num">220,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r"><span class="den"><span class="lab"><span class="pf">ED</span> Entradas dig.</span><span class="cell"><span class="tx">Entrada digital 16 DI</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">2 <u>ud</u></span></span><span class="num">50,00</span><span class="num">100,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r"><span class="den"><span class="lab"><span class="pf">AI</span> Entradas anal.</span><span class="cell"><span class="tx">Entrada analógica 8 AI</span><span class="cx">✕</span></span></span><span class="num"><span class="cell q">1 <u>ud</u></span></span><span class="num">120,00</span><span class="num">120,00 €</span><span class="dots"><button>⋯</button></span></div>
+    <div class="r addrow edonly"><span class="den" style="grid-column:1/-1"><span class="lab" style="color:var(--mut)">Añadir slot</span><button class="ad g">+ Entradas digitales</button><button class="ad">+ Entradas analógicas</button></span></div>
+  </div>
+  <div class="kfoot"><span class="mut">Total del conjunto <b style="color:var(--ink)">2.280,00 €</b></span><span class="r"><span class="edonly btn" style="min-height:34px">Cambiar conjunto</span><span class="edonly ic" title="Quitar conjunto">✕</span></span></div>
+</div>
+<div class="legend"><span><span class="pf">ED</span> tipo de slot</span><span><span class="pf red">SD</span> tipo marcado en rojo</span><span><span class="pf f">PE</span> conjunto dinámico</span><span>campo discontinuo = lo fija el conjunto</span></div>
+
+<script>
+document.querySelectorAll('.mode').forEach(m=>{
+  const box=document.getElementById(m.dataset.for);
+  m.querySelectorAll('button').forEach((b,i)=>b.addEventListener('click',()=>{
+    m.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+    box.classList.toggle('ed',i===1);
+  }));
+});
+</script>
+</body>
+</html>
