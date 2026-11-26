@@ -36,6 +36,7 @@ Aplicación web interna de presupuestos de ISF (catálogo → cliente → presup
   - en producción: emisión de prueba, reinicio y redespliegue, estado del contenedor `backup` y prueba de restauración (SSH `isf` ya tiene acceso a Docker, comprobado el 2026-11-17);
   - seguridad: rotar las credenciales que se pegaron en el chat;
   - manual de usuario: decidir si sus scripts van al repositorio y retirar la instancia local `presupuestos-manual`.
+- **Siguiente trabajo (2026-11-26): ejecutar el plan `docs/superpowers/plans/2026-11-26-ajustes-uso-real.md` (13 tareas, 1.9.30 → 1.9.41) en `mejoras-uso-real`, desde un chat nuevo.** Diseño `docs/superpowers/specs/2026-11-26-ajustes-uso-real-design.md`, maqueta B3 en `docs/diseno/maquetas/conjunto-dinamico-pdf-arbol.html`. Al acabar se propone PR a `master` (exige visto bueno).
 - Siguiente paso: revisar y corregir lo de «Pendiente tras el despliegue». Despliegue, copias y restauración: `docs/despliegue.md`. Para restaurar, usar `-f compose.yaml -f compose.restore.yaml` y el mismo proyecto `-p`: el override habilita escritura en el volumen correcto; nunca se usa para `up`.
 - El código se trabaja en una ruta sin `#` (worktree `D:\dev\presupuestos-isf` en el equipo original): Vite/Vitest no admiten el `#` de `D:\# Otros\...`. En el equipo Linux, Node 24 y pnpm van fijados en `mise.local.toml` (no se sube).
 - Reglas aprendidas:
